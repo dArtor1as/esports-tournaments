@@ -1,0 +1,49 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Patch,
+  Delete,
+} from '@nestjs/common';
+import { TeamsService } from './teams.service';
+import { CreateTeamDto } from './dto/create-team.dto';
+import { UpdateTeamDto } from './dto/update-team.dto';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
+
+@ApiTags('Teams (Команди)')
+@Controller('teams')
+export class TeamsController {
+  constructor(private readonly teamsService: TeamsService) {}
+
+  @Post()
+  @ApiOperation({ summary: 'Створити нову команду' })
+  create(@Body() createTeamDto: CreateTeamDto) {
+    return this.teamsService.create(createTeamDto);
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'Отримати список всіх команд' })
+  findAll() {
+    return this.teamsService.findAll();
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Отримати інформацію про команду та її гравців' })
+  findOne(@Param('id') id: string) {
+    return this.teamsService.findOne(id);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Оновити дані команди (ребрендинг)' })
+  update(@Param('id') id: string, @Body() updateTeamDto: UpdateTeamDto) {
+    return this.teamsService.update(id, updateTeamDto);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Видалити команду (дісбанд)' })
+  remove(@Param('id') id: string) {
+    return this.teamsService.remove(id);
+  }
+}

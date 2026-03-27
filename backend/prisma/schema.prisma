@@ -1,0 +1,284 @@
+// 1. Налаштування генератора та підключення до БД
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ------------------------------------------------------
+// 2. ENUMS (Перерахування для фіксованих значень)
+// ------------------------------------------------------
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum RosterRole {
+  CAPTAIN
+  PLAYER
+  COACH
+  SUBSTITUTE
+}
+
+enum Stage {
+  CQ       // Закриті кваліфікації
+  GROUP    // Груповий етап
+  PLAYOFF  // Плей-оф
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum TeamStatus {
+  ACTIVE
+  DISBANDED
+}
+
+enum Bracket {
+  UPPER      // Верхня сітка
+  LOWER      // Нижня сітка
+  GRAND_FINAL // Гранд-фінал
+  NONE       // Для Групового етапу
+}
+enum Region { 
+  EU
+  NA
+  CIS
+  ASIA
+  SA
+  GLOBAL 
+  }
+enum TournamentFormat {
+  TEAM // 5v5, 2v2 і т.д.
+  SOLO // 1v1
+}
+
+// ------------------------------------------------------
+// 3. ТАБЛИЦІ (Моделі)
+// ------------------------------------------------------
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique // Додав базовий логін
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now())
+
+  players      Player[] // Замінено на масив! Один юзер може мати кілька ігрових профілів
+  teamInvitations TeamInvitation[]
+}
+
+model Player {
+  id        String   @id @default(uuid())
+  
+  userId    String   // Зроблено обов'язковим (прибрав '?')
+  user      User     @relation(fields: [userId], references: [id])
+  
+  gameId    String   // Додано прив'язку до гри
+  game      Game     @relation(fields: [gameId], references: [id])
+
+  teamId    String?
+  team      Team?    @relation("TeamPlayers", fields: [teamId], references: [id])
+
+  captainedTeams Team[]  @relation("TeamCaptain")
+
+  nickname  String   // Ігровий нік (може відрізнятися від username)
+  rating    Int      @default(1000)
+
+  @@unique([userId, gameId]) // Юзер не може мати два профілі для однієї ігри!
+  @@index([rating])
+
+  tournamentRosters TournamentRoster[]
+  ratingHistories RatingHistory[]
+
+}
+
+model Team {
+  id            String   @id @default(uuid())
+  name          String
+  tag           String
+  logoUrl       String?
+  averageRating Int      @default(1000)
+  tier          Int      @default(3) // 1, 2 або 3 на основі рейтингу
+  status        TeamStatus @default(ACTIVE)
+  region        Region     @default(GLOBAL) // ДОДАНО РЕГІОН
+  
+  players       Player[]   @relation("TeamPlayers")
+
+  captainId     String
+  captain       Player     @relation("TeamCaptain", fields: [captainId], references: [id])
+  
+  // Зв'язки з турнірами та матчами
+  tournaments   TournamentParticipant[]
+  matchesAsA    Match[] @relation("TeamAMatches")
+  matchesAsB    Match[] @relation("TeamBMatches")
+
+  teamInvites         TeamInvitation[]       // Запрошення гравців у цю команду
+  tournamentInvites   TournamentInvitation[] // Запрошення цієї команди на турніри
+
+  @@index([averageRating]) // Критично для автоматичних інвайтів
+  ratingHistories RatingHistory[]
+}
+
+model Game {
+  id          String       @id @default(uuid())
+  name        String       // "Counter-Strike 2"
+  slug        String       @unique // "cs2"
+  players Player[]
+  tournaments Tournament[]
+}
+
+model Tournament {
+  id           String   @id @default(uuid())
+  title        String
+  gameId       String
+  game         Game     @relation(fields: [gameId], references: [id])
+  
+  tier         Int      // 1, 2, 3
+  region      Region   @default(GLOBAL) // регіон турніру
+  kFactor      Float    // 1.0, 0.6, 0.3 для розрахунку Elo
+  settings     Json     // Налаштування (points_win, tie_breakers)
+  status       String   @default("planned") // planned, live, finished
+  format TournamentFormat @default(TEAM)
+  maxParticipants Int     @default(16)
+  
+  participants TournamentParticipant[]
+  matches      Match[]
+  invitations  TournamentInvitation[]
+}
+
+model TournamentParticipant {
+  id           String     @id @default(uuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id])
+  teamId       String
+  team         Team       @relation(fields: [teamId], references: [id])
+  
+  // Статистика для турнірної таблиці (Груповий етап)
+  groupPoints  Int        @default(0) // Ті самі 3 очки за перемогу
+  matchesWon   Int        @default(0)
+  matchesLost  Int        @default(0)
+  mapsWon      Int        @default(0) // Скільки карт виграли загалом (для тайбрейків)
+  mapsLost     Int        @default(0)
+
+  joinedStage  Stage      // На якому етапі команда приєдналася (CQ або GROUP)
+  seed         Int        // Номер посіву (1-16)
+
+  @@unique([tournamentId, teamId]) // Команда не може бути зареєстрована двічі
+  tournamentRosters TournamentRoster[]
+}
+
+model Match {
+  id           String     @id @default(uuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id])
+  
+  stage        Stage
+  bracket      Bracket    @default(NONE) // Додали тип сітки
+  groupName    String?    // Для групового етапу (наприклад, "Група A")
+  round        Int        @default(1)    // Номер раунду (1 - Чвертьфінал, 2 - Півфінал)
+  
+  // Робимо команди НЕОБОВ'ЯЗКОВИМИ, бо вони можуть бути ще невідомі (Tо Be Decided) на момент створення матчу
+  teamAId      String?    
+  teamA        Team?      @relation("TeamAMatches", fields: [teamAId], references: [id])
+  
+  teamBId      String?    
+  teamB        Team?      @relation("TeamBMatches", fields: [teamBId], references: [id])
+  
+  scoreA       Int        @default(0)
+  scoreB       Int        @default(0)
+  bestOf       Int        @default(3) // ФОРМАТ (1 = Bo1, 3 = Bo3, 5 = Bo5)
+  details      Json?      // ТУТ БУДУТЬ МАПИ, ПІКИ АБО ВЕТО
+  
+  isProcessed  Boolean    @default(false) // Чи оновлено Elo після цього матчу
+  playedAt     DateTime?
+
+  //  Логіка просування по сітці у плейофах (для CQ та GROUP не використовується)
+
+  // Куди йде ПЕРЕМОЖЕЦЬ цього матчу?
+  nextMatchWinnerId String?
+  nextMatchWinner   Match?  @relation("WinnerProgression", fields: [nextMatchWinnerId], references: [id])
+  previousMatchesW  Match[] @relation("WinnerProgression") // Зворотній зв'язок (вимагає Prisma)
+
+  // Куди йде ПЕРЕМОЖЕНИЙ цього матчу? (якщо null - виліт з турніру)
+  nextMatchLoserId  String?
+  nextMatchLoser    Match?  @relation("LoserProgression", fields: [nextMatchLoserId], references: [id])
+  previousMatchesL  Match[] @relation("LoserProgression") // Зворотній зв'язок
+
+  @@index([tournamentId]) 
+  @@index([teamAId, teamBId]) // Для швидкого пошуку очних зустрічей (H2H)
+  ratingHistories RatingHistory[]
+}
+
+//  Інвайти від Турніру до Команди
+model TournamentInvitation {
+  id           String       @id @default(uuid())
+  tournamentId String
+  tournament   Tournament   @relation(fields: [tournamentId], references: [id])
+  teamId       String
+  team         Team         @relation(fields: [teamId], references: [id])
+  
+  status       InviteStatus @default(PENDING)
+  token        String       @unique 
+  expiresAt    DateTime
+}
+
+//  Інвайти від Команди до Гравця (Юзера)
+model TeamInvitation {
+  id        String       @id @default(uuid())
+  teamId    String
+  team      Team         @relation(fields: [teamId], references: [id])
+  userId    String
+  user      User         @relation(fields: [userId], references: [id])
+  
+  status    InviteStatus @default(PENDING)
+  token     String       @unique 
+  expiresAt DateTime
+  createdAt DateTime     @default(now())
+
+  @@unique([teamId, userId]) // Захист від спаму інвайтами
+}
+
+model TournamentRoster {
+  id             String                @id @default(uuid())
+  participantId  String
+  participant    TournamentParticipant @relation(fields: [participantId], references: [id])
+  
+  playerId       String
+  player         Player                @relation(fields: [playerId], references: [id])
+  
+  role           RosterRole            @default(PLAYER)
+
+  @@unique([participantId, playerId]) // Один гравець не може бути двічі в одному складі
+}
+
+//  Історія рейтингу (для графіків)
+model RatingHistory {
+  id           String   @id @default(uuid())
+  
+  // Чий це рейтинг змінився? (Може бути команди, може бути соло-гравця)
+  teamId       String?
+  team         Team?    @relation(fields: [teamId], references: [id])
+  
+  playerId     String?
+  player       Player?  @relation(fields: [playerId], references: [id])
+  
+  matchId      String   // Після якого матчу це сталося
+  match        Match    @relation(fields: [matchId], references: [id])
+
+  oldRating    Int
+  newRating    Int
+  ratingChange Int      // Наприклад: +25 або -14 (для зручності виводу на UI)
+  
+  createdAt    DateTime @default(now())
+
+  @@index([teamId])
+  @@index([playerId])
+}
