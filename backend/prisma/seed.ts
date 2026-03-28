@@ -3,11 +3,16 @@ import {
   Region,
   TournamentFormat,
   RosterRole,
+  Stage,
+  Bracket,
+  Team,
+  Prisma,
 } from '@prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as bcrypt from 'bcryptjs';
 import * as dotenv from 'dotenv';
+import { v4 as uuidv4 } from 'uuid';
 
 dotenv.config();
 
@@ -24,49 +29,68 @@ const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool as any);
 const prisma = new PrismaClient({ adapter });
 
-// Допоміжна функція для генерації реалістичного рейтингу
-const getRandomRating = (min: number, max: number) => {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-};
+const getRandomRating = (min: number, max: number) =>
+  Math.floor(Math.random() * (max - min + 1)) + min;
 
 async function main() {
-  console.log('⏳ Починаємо крутий сідінг бази даних...');
+  console.log(' Починаємо РОЗУМНИЙ сідінг бази даних...');
 
   const game = await prisma.game.upsert({
     where: { slug: 'cs2' },
     update: {},
     create: { name: 'Counter-Strike 2', slug: 'cs2' },
   });
-  console.log('✅ Гра CS2 готова.');
 
-  const tournament = await prisma.tournament.create({
+  const existingTeamsCount = await prisma.team.count();
+  const startIdx = existingTeamsCount + 1;
+  const endIdx = existingTeamsCount + 16;
+  console.log(
+    ` Знайдено ${existingTeamsCount} існуючих команд. Генеруємо команди з ${startIdx} по ${endIdx}...`,
+  );
+
+  // Додано обов'язкове поле settings
+  const mainTournament = await prisma.tournament.create({
     data: {
-      title: 'IEM Global Auto-Test 2026',
+      title: `IEM Global Auto-Test ${startIdx}-${endIdx}`,
       gameId: game.id,
       tier: 1,
       region: Region.EU,
       kFactor: 1.0,
       format: TournamentFormat.TEAM,
-      maxParticipants: 8,
+      maxParticipants: 16,
       settings: { pointsForWin: 3, tiebreakers: ['h2h', 'mapDiff'] },
       status: 'planned',
     },
   });
-  console.log('✅ Турнір створено.');
+
+  // Додано обов'язкове поле settings
+  const pastTournament = await prisma.tournament.create({
+    data: {
+      title: `Past Season Cup ${startIdx}-${endIdx}`,
+      gameId: game.id,
+      tier: 1,
+      region: Region.EU,
+      kFactor: 1.0,
+      format: TournamentFormat.TEAM,
+      maxParticipants: 16,
+      settings: { pointsForWin: 3, tiebreakers: ['h2h', 'mapDiff'] },
+      status: 'finished',
+    },
+  });
 
   const passwordHash = await bcrypt.hash('password123', 10);
 
-  for (let i = 1; i <= 8; i++) {
+  // ЯВНО ВКАЗУЄМО ТИП ДЛЯ МАСИВУ КОМАНД
+  const generatedTeams: Team[] = [];
+
+  for (let i = startIdx; i <= endIdx; i++) {
     const teamName = `Team Auto ${i}`;
     const teamTag = `TA${i}`;
-
     let totalTeamRating = 0;
     const rosterData: any[] = [];
 
-    // 1. СТВОРЮЄМО КАПІТАНА
     const captainRating = getRandomRating(2800, 3400);
     totalTeamRating += captainRating;
-
     const captainUser = await prisma.user.create({
       data: {
         username: `captain_${i}`,
@@ -83,29 +107,25 @@ async function main() {
       },
     });
 
-    // 2. СТВОРЮЄМО КОМАНДУ
     const team = await prisma.team.create({
       data: {
         name: teamName,
         tag: teamTag,
         captainId: captainPlayer.id,
-        averageRating: 1000, // базове значення, оновлюватимемо після додавання гравців
+        averageRating: 1000,
         tier: 1,
       },
     });
 
-    // Прив'язуємо капітана до команди та додаємо в Roster
     await prisma.player.update({
       where: { id: captainPlayer.id },
       data: { teamId: team.id },
     });
     rosterData.push({ playerId: captainPlayer.id, role: RosterRole.CAPTAIN });
 
-    // 3. СТВОРЮЄМО 4 ОСНОВНИХ ГРАВЦІВ
     for (let j = 1; j <= 4; j++) {
-      const playerRating = getRandomRating(2500, 3100);
+      const playerRating = getRandomRating(2500, 3200);
       totalTeamRating += playerRating;
-
       const user = await prisma.user.create({
         data: {
           username: `player_${i}_${j}`,
@@ -125,7 +145,6 @@ async function main() {
       rosterData.push({ playerId: player.id, role: RosterRole.PLAYER });
     }
 
-    // 4. СТВОРЮЄМО ТРЕНЕРА (COACH)
     const coachUser = await prisma.user.create({
       data: {
         username: `coach_${i}`,
@@ -134,31 +153,28 @@ async function main() {
       },
     });
     const coachPlayer = await prisma.player.create({
-      // У тренера рейтинг зазвичай нижчий або неважливий
       data: {
         userId: coachUser.id,
         gameId: game.id,
         nickname: `Coach_${i}`,
-        rating: getRandomRating(1500, 2000),
+        rating: 1500,
         teamId: team.id,
       },
     });
     rosterData.push({ playerId: coachPlayer.id, role: RosterRole.COACH });
 
-    //  5. ОНОВЛЮЄМО СЕРЕДНІЙ РЕЙТИНГ КОМАНДИ (без урахування тренера)
     const avgRating = Math.floor(totalTeamRating / 5);
     await prisma.team.update({
       where: { id: team.id },
       data: { averageRating: avgRating, tier: avgRating >= 2500 ? 1 : 2 },
     });
 
-    //  6. РЕЄСТРУЄМО НА ТУРНІР ТА ФІКСУЄМО РОСТЕР
     const participant = await prisma.tournamentParticipant.create({
       data: {
-        tournamentId: tournament.id,
+        tournamentId: mainTournament.id,
         teamId: team.id,
         joinedStage: 'GROUP',
-        seed: i,
+        seed: i - startIdx + 1,
       },
     });
 
@@ -169,17 +185,74 @@ async function main() {
     }));
     await prisma.tournamentRoster.createMany({ data: finalRosterData });
 
+    generatedTeams.push(team);
     console.log(
       ` ${teamName} (Avg Elo: ${avgRating}) зареєстрована: 1 CAPTAIN, 4 PLAYER, 1 COACH.`,
     );
   }
 
-  console.log(' Сідінг завершено! База готова до генерації турнірної сітки.');
+  console.log(' Генеруємо історичні матчі для аналітики ГА...');
+
+  // ЯВНО ВКАЗУЄМО ТИП ДЛЯ МАСИВУ МАТЧІВ
+  const pastMatches: Prisma.MatchCreateManyInput[] = [];
+  const maps = ['Mirage', 'Dust2', 'Inferno', 'Nuke', 'Ancient'];
+
+  for (let i = 0; i < generatedTeams.length; i++) {
+    for (let j = i + 1; j < generatedTeams.length; j += 2) {
+      const teamA = generatedTeams[i];
+      const teamB = generatedTeams[j];
+
+      const isAWinner = Math.random() > 0.5;
+      const scoreA = isAWinner ? 2 : Math.random() > 0.5 ? 1 : 0;
+      const scoreB = isAWinner
+        ? scoreA === 2 && Math.random() > 0.5
+          ? 1
+          : 0
+        : 2;
+
+      // ЯВНО ВКАЗУЄМО ТИП ДЛЯ ДЕТАЛЕЙ КАРТ
+      const matchMaps: { map: string; scoreA: number; scoreB: number }[] = [];
+      const totalMaps =
+        (scoreA === 2 && scoreB === 1) || (scoreB === 2 && scoreA === 1)
+          ? 3
+          : 2;
+
+      for (let m = 0; m < totalMaps; m++) {
+        matchMaps.push({
+          map: maps[Math.floor(Math.random() * maps.length)],
+          scoreA: Math.floor(Math.random() * 13),
+          scoreB: Math.floor(Math.random() * 13),
+        });
+      }
+
+      pastMatches.push({
+        id: uuidv4(),
+        tournamentId: pastTournament.id,
+        stage: Stage.GROUP,
+        bracket: Bracket.NONE,
+        round: 1,
+        teamAId: teamA.id,
+        teamBId: teamB.id,
+        scoreA,
+        scoreB,
+        details: { maps: matchMaps },
+        isProcessed: true,
+        playedAt: new Date(
+          Date.now() - Math.floor(Math.random() * 10000000000),
+        ),
+      });
+    }
+  }
+
+  await prisma.match.createMany({ data: pastMatches });
+  console.log(
+    ` Створено ${pastMatches.length} історичних матчів. База готова до аналізу!`,
+  );
 }
 
 main()
   .catch((e) => {
-    console.error(' Помилка під час сідінгу:', e);
+    console.error(' Помилка:', e);
     process.exit(1);
   })
   .finally(async () => {

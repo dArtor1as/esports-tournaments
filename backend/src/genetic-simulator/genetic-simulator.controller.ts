@@ -17,4 +17,12 @@ export class GeneticSimulatorController {
   run(@Body() dto: SimulateTournamentDto) {
     return this.geneticSimulatorService.runSimulation(dto);
   }
+
+  @Post('run-groups')
+  @ApiOperation({
+    summary: 'Запустити генетичний алгоритм для ГРУПОВОГО етапу (Round Robin)',
+  })
+  runGroups(@Body() dto: SimulateTournamentDto) {
+    return this.geneticSimulatorService.runGroupSimulation(dto);
+  }
 }
