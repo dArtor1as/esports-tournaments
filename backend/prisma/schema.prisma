@@ -152,6 +152,21 @@ model Tournament {
   participants TournamentParticipant[]
   matches      Match[]
   invitations  TournamentInvitation[]
+  simulationRuns SimulationRun[]
+}
+
+model SimulationRun {
+  id              String     @id @default(uuid())
+  tournamentId    String
+  tournament      Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  algorithmType   String
+  populations     Int
+  generations     Int
+  fitnessScore    Float
+  executionTimeMs Int?
+  createdAt       DateTime   @default(now())
+
+  @@index([tournamentId])
 }
 
 model TournamentParticipant {

@@ -224,6 +224,23 @@
   border-bottom: 1px solid rgba(191, 183, 143, 0.22);
 }
 
+.table-wrap {
+  overflow-x: auto;
+}
+
+.runs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.runs-table th,
+.runs-table td {
+  text-align: left;
+  padding: 8px;
+  border-bottom: 1px solid rgba(191, 183, 143, 0.22);
+}
+
 code {
   border: 1px solid var(--border);
   border-radius: 6px;

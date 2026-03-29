@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { tournamentsApi } from '../api/tournaments';
-import type { TournamentMatch, TournamentWorkflow } from '../types/tournament';
+import type {
+  SimulationRun,
+  TournamentMatch,
+  TournamentWorkflow,
+} from '../types/tournament';
 import { GroupTables } from '../components/groups/GroupTables';
 import { PlayoffBracket } from '../components/bracket/PlayoffBracket';
 
@@ -17,6 +21,7 @@ export function SimulationPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [bestFitness, setBestFitness] = useState<number | null>(null);
+  const [runs, setRuns] = useState<SimulationRun[]>([]);
 
   const selectedTournament = useMemo(
     () => items.find((item) => item.id === selectedTournamentId),
@@ -35,6 +40,7 @@ export function SimulationPage() {
         setSelectedTournamentId(fallbackId);
         if (!fallbackId) {
           setMatches([]);
+          setRuns([]);
         }
       }
     } catch (err) {
@@ -53,15 +59,28 @@ export function SimulationPage() {
     }
   }
 
+  async function loadRuns(tournamentId: string) {
+    try {
+      const result = await tournamentsApi.listSimulationRuns(tournamentId);
+      setRuns(result);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
   useEffect(() => {
     void loadTournaments();
   }, []);
 
   useEffect(() => {
     if (selectedTournamentId) {
-      void loadMatches(selectedTournamentId);
+      void Promise.all([
+        loadMatches(selectedTournamentId),
+        loadRuns(selectedTournamentId),
+      ]);
     } else {
       setMatches([]);
+      setRuns([]);
     }
   }, [selectedTournamentId]);
 
@@ -89,6 +108,7 @@ export function SimulationPage() {
       const fitnessValue = result.bestFitnessScore ?? result.bestFitness;
       setBestFitness(typeof fitnessValue === 'number' ? fitnessValue : null);
       await loadMatches(selectedTournamentId);
+      await loadRuns(selectedTournamentId);
       await loadTournaments();
     } catch (err) {
       setError((err as Error).message);
@@ -169,6 +189,38 @@ export function SimulationPage() {
         <PlayoffBracket matches={matches} />
         <GroupTables matches={matches} />
       </div>
+
+      <section className="sub-card">
+        <h3>Історія симуляцій</h3>
+        {runs.length === 0 ? (
+          <p>Ще немає запусків для цього турніру.</p>
+        ) : (
+          <div className="table-wrap">
+            <table className="runs-table">
+              <thead>
+                <tr>
+                  <th>Дата</th>
+                  <th>Тип</th>
+                  <th>Populations</th>
+                  <th>Fitness</th>
+                  <th>Час (ms)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {runs.map((run) => (
+                  <tr key={run.id}>
+                    <td>{new Date(run.createdAt).toLocaleString()}</td>
+                    <td>{run.algorithmType}</td>
+                    <td>{run.populations}</td>
+                    <td>{run.fitnessScore.toFixed(2)}</td>
+                    <td>{run.executionTimeMs ?? '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </section>
   );
 }

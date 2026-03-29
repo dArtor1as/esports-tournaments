@@ -35,3 +35,14 @@ export type TournamentMatch = {
   teamB?: TeamSummary | null;
   nextMatchWinner?: { id: string; round: number } | null;
 };
+
+export type SimulationRun = {
+  id: string;
+  tournamentId: string;
+  algorithmType: string;
+  populations: number;
+  generations: number;
+  fitnessScore: number;
+  executionTimeMs?: number | null;
+  createdAt: string;
+};

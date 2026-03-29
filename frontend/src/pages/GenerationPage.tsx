@@ -15,6 +15,8 @@ export function GenerationPage() {
   const [transitionTournamentId, setTransitionTournamentId] = useState('');
   const [generationType, setGenerationType] =
     useState<GenerationType>('single-elim');
+  const [teamCount, setTeamCount] = useState<number>(16);
+  const [groupCount, setGroupCount] = useState<number>(4);
 
   async function load() {
     setLoading(true);
@@ -66,11 +68,34 @@ export function GenerationPage() {
       setError('Спочатку вибери турнір.');
       return;
     }
+    if (generationType === 'single-elim') {
+      if (![2, 4, 8, 16, 32].includes(teamCount)) {
+        setError('Для Single Elimination кількість команд має бути 2, 4, 8, 16 або 32.');
+        return;
+      }
+    } else if (teamCount < 4 || teamCount > 32) {
+      setError('Для Group Stage кількість команд має бути в діапазоні 4..32.');
+      return;
+    }
+
+    if (generationType === 'group-stage' && groupCount < 2) {
+      setError('Кількість груп має бути щонайменше 2.');
+      return;
+    }
+
+    if (generationType === 'group-stage' && teamCount % groupCount !== 0) {
+      setError('Кількість команд має ділитися на кількість груп без остачі.');
+      return;
+    }
+
     setActionLoading(true);
     setError(null);
     setSuccess(null);
     try {
-      await tournamentsApi.generateBracket(selectedTournamentId, generationType);
+      await tournamentsApi.generateBracket(selectedTournamentId, generationType, {
+        teamCount,
+        groupCount: generationType === 'group-stage' ? groupCount : undefined,
+      });
       setSuccess('Сітку успішно згенеровано.');
       await load();
     } catch (err) {
@@ -133,6 +158,33 @@ export function GenerationPage() {
             <option value="group-stage">Group Stage (Round Robin)</option>
           </select>
         </label>
+
+        <label>
+          Кількість команд (top-N за seed)
+          <select
+            value={teamCount}
+            onChange={(event) => setTeamCount(Number(event.target.value))}
+          >
+            <option value={2}>2</option>
+            <option value={4}>4</option>
+            <option value={8}>8</option>
+            <option value={16}>16</option>
+            <option value={32}>32</option>
+          </select>
+        </label>
+
+        {generationType === 'group-stage' && (
+          <label>
+            Кількість груп
+            <input
+              type="number"
+              min={2}
+              max={16}
+              value={groupCount}
+              onChange={(event) => setGroupCount(Number(event.target.value))}
+            />
+          </label>
+        )}
       </div>
 
       <div className="actions-row">

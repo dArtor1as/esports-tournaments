@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SimulateTournamentDto } from './dto/simulate-tournament.dto';
 import { Cs2SimulatorService } from './cs2-simulator.service';
@@ -242,7 +246,24 @@ export class GeneticSimulatorService {
     return { genes, fitness, bracket, standings };
   }
 
+  async findRunsByTournament(tournamentId: string) {
+    const tournament = await this.prisma.tournament.findUnique({
+      where: { id: tournamentId },
+      select: { id: true },
+    });
+
+    if (!tournament) {
+      throw new NotFoundException('Турнір не знайдено');
+    }
+
+    return this.prisma.simulationRun.findMany({
+      where: { tournamentId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async runSimulation(dto: SimulateTournamentDto) {
+    const startedAt = Date.now();
     const { tournamentId, populations } = dto;
 
     const tournament = await this.prisma.tournament.findUnique({
@@ -296,8 +317,10 @@ export class GeneticSimulatorService {
         this.evaluateIndividual(genes, baseSkeleton, teamRatings, pastMatches),
     );
 
-    await this.prisma.$transaction(
-      bestIndividual.bracket.map((match) =>
+    const executionTimeMs = Date.now() - startedAt;
+
+    await this.prisma.$transaction([
+      ...bestIndividual.bracket.map((match) =>
         this.prisma.match.update({
           where: { id: match.id },
           data: {
@@ -310,12 +333,21 @@ export class GeneticSimulatorService {
           },
         }),
       ),
-    );
-
-    await this.prisma.tournament.update({
-      where: { id: tournamentId },
-      data: { status: 'finished' },
-    });
+      this.prisma.tournament.update({
+        where: { id: tournamentId },
+        data: { status: 'finished' },
+      }),
+      this.prisma.simulationRun.create({
+        data: {
+          tournamentId,
+          algorithmType: 'PLAYOFF',
+          populations,
+          generations: this.generations,
+          fitnessScore: bestIndividual.fitness,
+          executionTimeMs,
+        },
+      }),
+    ]);
 
     return {
       message: `еволюцію завершено. пройдено ${this.generations} поколінь.`,
@@ -324,6 +356,7 @@ export class GeneticSimulatorService {
   }
 
   async runGroupSimulation(dto: SimulateTournamentDto) {
+    const startedAt = Date.now();
     const { tournamentId, populations } = dto;
 
     const tournament = await this.prisma.tournament.findUnique({
@@ -384,6 +417,8 @@ export class GeneticSimulatorService {
         ),
     );
 
+    const executionTimeMs = Date.now() - startedAt;
+
     await this.prisma.$transaction([
       ...bestIndividual.bracket.map((match) =>
         this.prisma.match.update({
@@ -408,6 +443,16 @@ export class GeneticSimulatorService {
             mapsLost: stats?.mapsLost || 0,
           },
         });
+      }),
+      this.prisma.simulationRun.create({
+        data: {
+          tournamentId,
+          algorithmType: 'GROUP_STAGE',
+          populations,
+          generations: this.generations,
+          fitnessScore: bestIndividual.fitness,
+          executionTimeMs,
+        },
       }),
     ]);
 

@@ -18,7 +18,7 @@ export class MatchesController {
   @Post('generate-groups')
   @ApiOperation({ summary: 'Згенерувати матчі групового етапу (Round Robin)' })
   generateGroups(@Body() dto: GenerateBracketDto) {
-    return this.matchesService.generateGroupStage(dto.tournamentId);
+    return this.matchesService.generateGroupStage(dto);
   }
 
   @Post('transition-to-playoffs')

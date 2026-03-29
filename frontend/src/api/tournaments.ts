@@ -1,5 +1,9 @@
 import { apiClient } from './client';
-import type { TournamentMatch, TournamentWorkflow } from '../types/tournament';
+import type {
+  SimulationRun,
+  TournamentMatch,
+  TournamentWorkflow,
+} from '../types/tournament';
 
 type WorkflowMode = 'generation' | 'simulation';
 type AlgorithmType = 'single-elim' | 'group-stage';
@@ -22,10 +26,20 @@ export const tournamentsApi = {
   listWorkflow: (workflow: WorkflowMode) =>
     apiClient.get<TournamentWorkflow[]>(`/tournaments/workflow?workflow=${workflow}`),
 
-  generateBracket: (tournamentId: string, type: GenerationType) =>
+  generateBracket: (
+    tournamentId: string,
+    type: GenerationType,
+    options?: { teamCount?: number; groupCount?: number },
+  ) =>
     type === 'group-stage'
-      ? apiClient.post(`/matches/generate-groups`, { tournamentId })
-      : apiClient.post(`/matches/generate-bracket`, { tournamentId }),
+      ? apiClient.post(`/matches/generate-groups`, {
+          tournamentId,
+          ...options,
+        })
+      : apiClient.post(`/matches/generate-bracket`, {
+          tournamentId,
+          ...options,
+        }),
 
   transitionToPlayoffs: (tournamentId: string) =>
     apiClient.post<TransitionResult>('/matches/transition-to-playoffs', {
@@ -49,4 +63,7 @@ export const tournamentsApi = {
 
   listMatches: (tournamentId: string) =>
     apiClient.get<TournamentMatch[]>(`/matches/tournament/${tournamentId}`),
+
+  listSimulationRuns: (tournamentId: string) =>
+    apiClient.get<SimulationRun[]>(`/genetic-simulator/tournament/${tournamentId}/runs`),
 };

@@ -62,7 +62,19 @@ export class MatchesService {
       orderBy: { seed: 'asc' },
     });
 
-    const teamCount = participants.length;
+    const requestedTeamCount = dto.teamCount;
+    const teamCount = requestedTeamCount ?? participants.length;
+
+    if (requestedTeamCount && requestedTeamCount > participants.length) {
+      throw new BadRequestException(
+        `Недостатньо учасників для teamCount=${requestedTeamCount}. Зареєстровано: ${participants.length}.`,
+      );
+    }
+
+    const selectedParticipants =
+      requestedTeamCount && requestedTeamCount < participants.length
+        ? participants.slice(0, requestedTeamCount)
+        : participants;
 
     if (teamCount < 2 || !Number.isInteger(Math.log2(teamCount))) {
       throw new BadRequestException(
@@ -120,8 +132,8 @@ export class MatchesService {
     const round1Matches = matchesToCreate.filter((m) => m.round === 1);
 
     for (let i = 0; i < teamCount / 2; i++) {
-      round1Matches[i].teamAId = participants[i].teamId;
-      round1Matches[i].teamBId = participants[teamCount - 1 - i].teamId;
+      round1Matches[i].teamAId = selectedParticipants[i].teamId;
+      round1Matches[i].teamBId = selectedParticipants[teamCount - 1 - i].teamId;
     }
 
     return this.prisma.$transaction(async (prisma) => {
@@ -143,7 +155,8 @@ export class MatchesService {
     });
   }
 
-  async generateGroupStage(tournamentId: string) {
+  async generateGroupStage(dto: GenerateBracketDto) {
+    const { tournamentId } = dto;
     const tournament = await this.prisma.tournament.findUnique({
       where: { id: tournamentId },
     });
@@ -157,29 +170,61 @@ export class MatchesService {
     const participants = await this.prisma.tournamentParticipant.findMany({
       where: { tournamentId },
       include: { team: true }, // Нам потрібна інфа про команду для Elo та Регіону
+      orderBy: { seed: 'asc' },
     });
 
-    if (participants.length !== 16) {
+    const requestedTeamCount = dto.teamCount;
+    const teamCount = requestedTeamCount ?? participants.length;
+
+    if (requestedTeamCount && requestedTeamCount > participants.length) {
       throw new BadRequestException(
-        `Для цього формату потрібно рівно 16 команд. Зараз: ${participants.length}`,
+        `Недостатньо учасників для teamCount=${requestedTeamCount}. Зареєстровано: ${participants.length}.`,
+      );
+    }
+
+    const selectedParticipants =
+      requestedTeamCount && requestedTeamCount < participants.length
+        ? participants.slice(0, requestedTeamCount)
+        : participants;
+
+    const groupCount = dto.groupCount ?? 4;
+
+    if (teamCount < 4) {
+      throw new BadRequestException(
+        `Для Group Stage потрібно щонайменше 4 команди. Зараз: ${teamCount}.`,
+      );
+    }
+
+    if (teamCount % groupCount !== 0) {
+      throw new BadRequestException(
+        `Кількість команд (${teamCount}) має ділитися на кількість груп (${groupCount}) без остачі.`,
+      );
+    }
+
+    if (teamCount / groupCount < 2) {
+      throw new BadRequestException(
+        `У кожній групі має бути щонайменше 2 команди. Зараз: ${teamCount / groupCount}.`,
       );
     }
 
     // 1. Готуємо дані для єврестичного балансувальника
-    const teamsForSeeding: TeamForSeeding[] = participants.map((p) => ({
+    const teamsForSeeding: TeamForSeeding[] = selectedParticipants.map((p) => ({
       id: p.teamId,
       name: p.team.name,
       rating: p.team.averageRating,
       region: p.team.region,
     }));
 
-    // 2. Запускаємо алгоритм для оптимального розбиття на 4 групи
+    // 2. Запускаємо алгоритм для оптимального розбиття на вказану кількість груп
     const optimalGroups = this.seedingService.generateOptimalGroups(
       teamsForSeeding,
-      4,
+      groupCount,
     );
 
-    const groupNames = ['Group A', 'Group B', 'Group C', 'Group D'];
+    const groupNames = Array.from({ length: groupCount }, (_, i) => {
+      const charCode = 65 + i;
+      return `Group ${String.fromCharCode(charCode)}`;
+    });
     const matchesToCreate: MatchPayload[] = [];
 
     // 3. Формуємо матчі на основі результатів еволюції
@@ -268,9 +313,11 @@ export class MatchesService {
     }
 
     const groupedParticipants: Record<string, typeof participants> = {};
+    const groupParticipants = participants.filter((p) => teamGroupMap.has(p.teamId));
 
-    for (const p of participants) {
-      const groupName = teamGroupMap.get(p.teamId) || 'Unknown';
+    for (const p of groupParticipants) {
+      const groupName = teamGroupMap.get(p.teamId);
+      if (!groupName) continue;
       if (!groupedParticipants[groupName]) {
         groupedParticipants[groupName] = [];
       }
