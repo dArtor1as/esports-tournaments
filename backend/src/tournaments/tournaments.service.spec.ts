@@ -63,4 +63,32 @@ describe('TournamentsService', () => {
       playoffMatches: 6,
     });
   });
+
+  it('keeps generation workflow available after transition when no playoff matches yet', async () => {
+    prismaMock.tournament.findMany.mockResolvedValue([
+      {
+        id: 't2',
+        title: 'Cup 2',
+        status: 'live',
+        format: 'TEAM',
+        game: { name: 'CS2' },
+        _count: { participants: 16, matches: 24 },
+      },
+    ]);
+
+    prismaMock.match.groupBy.mockResolvedValue([
+      { tournamentId: 't2', stage: Stage.GROUP, _count: { _all: 24 } },
+    ]);
+
+    const result = await service.findWorkflow('generation');
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      id: 't2',
+      canGenerateBracket: true,
+      requiresTransitionToPlayoffs: true,
+      groupMatches: 24,
+      playoffMatches: 0,
+    });
+  });
 });

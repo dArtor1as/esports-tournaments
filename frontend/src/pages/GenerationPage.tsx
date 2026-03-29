@@ -132,7 +132,7 @@ export function GenerationPage() {
 
       <div className="form-grid">
         <label>
-          Турнір (planned)
+          Турнір (готовий до генерації)
           <select
             value={selectedTournamentId}
             onChange={(event) => setSelectedTournamentId(event.target.value)}

@@ -133,7 +133,9 @@ export class TournamentsService {
         totalMatches: tournament._count.matches,
         groupMatches: matches.groupMatches,
         playoffMatches: matches.playoffMatches,
-        canGenerateBracket: tournament.status === 'planned',
+        canGenerateBracket:
+          tournament.status === 'planned' ||
+          (matches.groupMatches > 0 && matches.playoffMatches === 0),
         hasGeneratedGrid,
         requiresTransitionToPlayoffs:
           matches.groupMatches > 0 && matches.playoffMatches === 0,
