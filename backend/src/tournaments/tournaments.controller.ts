@@ -6,11 +6,12 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { TournamentsService } from './tournaments.service';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { UpdateTournamentDto } from './dto/update-tournament.dto';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Tournaments (Турніри)')
 @Controller('tournaments')
@@ -25,8 +26,45 @@ export class TournamentsController {
 
   @Get()
   @ApiOperation({ summary: 'Отримати список усіх турнірів' })
+  @ApiQuery({
+    name: 'workflow',
+    required: false,
+    enum: ['generation', 'simulation'],
+    description:
+      'Фільтр під UI workflow: generation (planned), simulation (є згенерована сітка)',
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['planned', 'live', 'finished'],
+    description: 'Необовʼязковий фільтр за статусом турніру',
+  })
   findAll() {
     return this.tournamentsService.findAll();
+  }
+
+  @Get('workflow')
+  @ApiOperation({
+    summary: 'Отримати турніри для екрану генерації або симуляції',
+  })
+  @ApiQuery({
+    name: 'workflow',
+    required: false,
+    enum: ['generation', 'simulation'],
+    description:
+      'generation -> planned; simulation -> турніри з уже згенерованими матчами',
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['planned', 'live', 'finished'],
+    description: 'Опціональний фільтр за статусом',
+  })
+  findWorkflow(
+    @Query('workflow') workflow?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.tournamentsService.findWorkflow(workflow, status);
   }
 
   @Get(':id')

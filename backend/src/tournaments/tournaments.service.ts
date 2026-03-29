@@ -3,9 +3,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma, Stage } from '@prisma/client';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { UpdateTournamentDto } from './dto/update-tournament.dto';
 import { PrismaService } from '../prisma/prisma.service';
+
+type WorkflowMode = 'generation' | 'simulation';
+type TournamentStatus = 'planned' | 'live' | 'finished';
 
 @Injectable()
 export class TournamentsService {
@@ -44,6 +48,107 @@ export class TournamentsService {
       },
       orderBy: { id: 'desc' }, // Спочатку нові
     });
+  }
+
+  async findWorkflow(workflow?: string, status?: string) {
+    const allowedWorkflows: WorkflowMode[] = ['generation', 'simulation'];
+    const allowedStatuses: TournamentStatus[] = ['planned', 'live', 'finished'];
+
+    if (workflow && !allowedWorkflows.includes(workflow as WorkflowMode)) {
+      throw new BadRequestException(
+        'Невірний параметр workflow. Допустимі значення: generation, simulation',
+      );
+    }
+
+    const normalizedStatus = status?.toLowerCase();
+    if (
+      normalizedStatus &&
+      !allowedStatuses.includes(normalizedStatus as TournamentStatus)
+    ) {
+      throw new BadRequestException(
+        'Невірний параметр status. Допустимі значення: planned, live, finished',
+      );
+    }
+
+    const where: Prisma.TournamentWhereInput = {};
+    if (normalizedStatus) {
+      where.status = normalizedStatus;
+    }
+
+    const tournaments = await this.prisma.tournament.findMany({
+      where,
+      include: {
+        game: { select: { name: true } },
+        _count: { select: { participants: true, matches: true } },
+      },
+      orderBy: { id: 'desc' },
+    });
+
+    const tournamentIds = tournaments.map((tournament) => tournament.id);
+    const stageCounts =
+      tournamentIds.length > 0
+        ? await this.prisma.match.groupBy({
+            by: ['tournamentId', 'stage'],
+            where: { tournamentId: { in: tournamentIds } },
+            _count: { _all: true },
+          })
+        : [];
+
+    const countsMap = new Map<
+      string,
+      { groupMatches: number; playoffMatches: number }
+    >();
+
+    for (const row of stageCounts) {
+      const existing = countsMap.get(row.tournamentId) ?? {
+        groupMatches: 0,
+        playoffMatches: 0,
+      };
+
+      if (row.stage === Stage.GROUP) {
+        existing.groupMatches = row._count._all;
+      }
+      if (row.stage === Stage.PLAYOFF) {
+        existing.playoffMatches = row._count._all;
+      }
+
+      countsMap.set(row.tournamentId, existing);
+    }
+
+    const workflowView = tournaments.map((tournament) => {
+      const matches = countsMap.get(tournament.id) ?? {
+        groupMatches: 0,
+        playoffMatches: 0,
+      };
+      const hasGeneratedGrid =
+        matches.groupMatches + matches.playoffMatches > 0;
+
+      return {
+        id: tournament.id,
+        title: tournament.title,
+        status: tournament.status,
+        format: tournament.format,
+        gameName: tournament.game.name,
+        participantsCount: tournament._count.participants,
+        totalMatches: tournament._count.matches,
+        groupMatches: matches.groupMatches,
+        playoffMatches: matches.playoffMatches,
+        canGenerateBracket: tournament.status === 'planned',
+        hasGeneratedGrid,
+        requiresTransitionToPlayoffs:
+          matches.groupMatches > 0 && matches.playoffMatches === 0,
+      };
+    });
+
+    if (workflow === 'generation') {
+      return workflowView.filter((tournament) => tournament.canGenerateBracket);
+    }
+
+    if (workflow === 'simulation') {
+      return workflowView.filter((tournament) => tournament.hasGeneratedGrid);
+    }
+
+    return workflowView;
   }
 
   findOne(id: string) {

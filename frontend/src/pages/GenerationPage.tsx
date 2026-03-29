@@ -1,0 +1,188 @@
+import { useEffect, useMemo, useState } from 'react';
+import { tournamentsApi } from '../api/tournaments';
+import type { TournamentWorkflow } from '../types/tournament';
+
+type GenerationType = 'single-elim' | 'group-stage';
+
+export function GenerationPage() {
+  const [items, setItems] = useState<TournamentWorkflow[]>([]);
+  const [transitionItems, setTransitionItems] = useState<TournamentWorkflow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [selectedTournamentId, setSelectedTournamentId] = useState('');
+  const [transitionTournamentId, setTransitionTournamentId] = useState('');
+  const [generationType, setGenerationType] =
+    useState<GenerationType>('single-elim');
+
+  async function load() {
+    setLoading(true);
+    setError(null);
+    try {
+      const [result, allWorkflow] = await Promise.all([
+        tournamentsApi.listWorkflow('generation'),
+        tournamentsApi.listAllWorkflow(),
+      ]);
+      setItems(result);
+      const transitionCandidates = allWorkflow.filter(
+        (item) => item.requiresTransitionToPlayoffs,
+      );
+      setTransitionItems(transitionCandidates);
+      const hasCurrent = result.some((item) => item.id === selectedTournamentId);
+      if (!hasCurrent) {
+        setSelectedTournamentId(result[0]?.id ?? '');
+      }
+      const hasTransitionCurrent = transitionCandidates.some(
+        (item) => item.id === transitionTournamentId,
+      );
+      if (!hasTransitionCurrent) {
+        setTransitionTournamentId(transitionCandidates[0]?.id ?? '');
+      }
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  const selectedTournament = useMemo(
+    () => items.find((item) => item.id === selectedTournamentId),
+    [items, selectedTournamentId],
+  );
+  const transitionSelected = useMemo(
+    () =>
+      transitionItems.find((item) => item.id === transitionTournamentId) ??
+      transitionItems[0],
+    [transitionItems, transitionTournamentId],
+  );
+
+  async function onGenerate() {
+    if (!selectedTournamentId) {
+      setError('Спочатку вибери турнір.');
+      return;
+    }
+    setActionLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      await tournamentsApi.generateBracket(selectedTournamentId, generationType);
+      setSuccess('Сітку успішно згенеровано.');
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function onTransitionToPlayoffs() {
+    if (!transitionTournamentId) {
+      setError('Спочатку вибери турнір.');
+      return;
+    }
+    setActionLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const response =
+        await tournamentsApi.transitionToPlayoffs(transitionTournamentId);
+      setSuccess(response.message);
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  return (
+    <section className="card">
+      <h2>Генерація сітки</h2>
+      <p>Список турнірів автоматично фільтрується по workflow generation.</p>
+
+      <div className="form-grid">
+        <label>
+          Турнір (planned)
+          <select
+            value={selectedTournamentId}
+            onChange={(event) => setSelectedTournamentId(event.target.value)}
+            disabled={loading || items.length === 0}
+          >
+            {items.map((tournament) => (
+              <option key={tournament.id} value={tournament.id}>
+                {tournament.title} ({tournament.gameName})
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label>
+          Тип генерації
+          <select
+            value={generationType}
+            onChange={(event) =>
+              setGenerationType(event.target.value as GenerationType)
+            }
+          >
+            <option value="single-elim">Single Elimination</option>
+            <option value="group-stage">Group Stage (Round Robin)</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="actions-row">
+        <button onClick={onGenerate} disabled={actionLoading || loading}>
+          {actionLoading ? 'Обробка...' : 'Згенерувати'}
+        </button>
+      </div>
+
+      <section className="sub-card">
+        <h3>Переведення Group Stage → Playoffs</h3>
+        <p>
+          Тут показані турніри, де вже є GROUP-матчі, але ще немає PLAYOFF-матчів.
+        </p>
+        <div className="form-grid">
+          <label>
+            Турнір для transition
+            <select
+              value={transitionSelected?.id ?? ''}
+              onChange={(event) => setTransitionTournamentId(event.target.value)}
+              disabled={actionLoading || loading || transitionItems.length === 0}
+            >
+              {transitionItems.map((tournament) => (
+                <option key={tournament.id} value={tournament.id}>
+                  {tournament.title} ({tournament.status})
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="actions-row">
+          <button
+            onClick={onTransitionToPlayoffs}
+            disabled={actionLoading || loading || !transitionSelected}
+          >
+            Transition to Playoffs
+          </button>
+        </div>
+      </section>
+
+      {selectedTournament && (
+        <div className="inline-stats">
+          <span>Group matches: {selectedTournament.groupMatches}</span>
+          <span>Playoff matches: {selectedTournament.playoffMatches}</span>
+          <span>Status: {selectedTournament.status}</span>
+        </div>
+      )}
+
+      {loading && <p>Завантаження турнірів...</p>}
+      {error && <p className="message error">{error}</p>}
+      {success && <p className="message success">{success}</p>}
+    </section>
+  );
+}

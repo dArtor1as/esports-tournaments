@@ -7,6 +7,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { GenerateBracketDto } from './dto/generate-bracket.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { Stage, Bracket } from '@prisma/client';
+import {
+  TeamForSeeding,
+  HeuristicSeedingService,
+} from './heuristic-seeding.service';
 
 // Додаємо інтерфейс, щоб TypeScript знав, як виглядає наш об'єкт матчу
 interface MatchPayload {
@@ -19,11 +23,15 @@ interface MatchPayload {
   nextMatchWinnerId: string | null;
   teamAId: string | null;
   teamBId: string | null;
+  bestOf: number;
 }
 
 @Injectable()
 export class MatchesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private seedingService: HeuristicSeedingService,
+  ) {}
 
   async generateSingleElimination(dto: GenerateBracketDto) {
     const { tournamentId } = dto;
@@ -99,6 +107,7 @@ export class MatchesService {
           nextMatchWinnerId: nextMatchId,
           teamAId: null,
           teamBId: null,
+          bestOf: tournament.format === 'TEAM' ? 3 : 1,
         };
 
         currentRoundMatches.push(match);
@@ -139,51 +148,46 @@ export class MatchesService {
       where: { id: tournamentId },
     });
     if (!tournament) throw new NotFoundException('Турнір не знайдено');
-    if (tournament.status !== 'planned')
+    if (tournament.status !== 'planned') {
       throw new BadRequestException(
         'Групи вже згенеровані або турнір завершено',
       );
+    }
 
     const participants = await this.prisma.tournamentParticipant.findMany({
       where: { tournamentId },
-      orderBy: { seed: 'asc' }, // Сортуємо за посівом (або рейтингом) для рівномірного розподілу
+      include: { team: true }, // Нам потрібна інфа про команду для Elo та Регіону
     });
 
     if (participants.length !== 16) {
-      // поки зробимо жорстку перевірку на 16 команд, оскільки це стандарт для групового етапу з 4 групами по 4 команди
       throw new BadRequestException(
         `Для цього формату потрібно рівно 16 команд. Зараз: ${participants.length}`,
       );
     }
 
-    // Створюємо 4 групи
+    // 1. Готуємо дані для єврестичного балансувальника
+    const teamsForSeeding: TeamForSeeding[] = participants.map((p) => ({
+      id: p.teamId,
+      name: p.team.name,
+      rating: p.team.averageRating,
+      region: p.team.region,
+    }));
+
+    // 2. Запускаємо алгоритм для оптимального розбиття на 4 групи
+    const optimalGroups = this.seedingService.generateOptimalGroups(
+      teamsForSeeding,
+      4,
+    );
+
     const groupNames = ['Group A', 'Group B', 'Group C', 'Group D'];
-    const groups: Record<string, string[]> = {
-      'Group A': [],
-      'Group B': [],
-      'Group C': [],
-      'Group D': [],
-    };
-
-    // Розподіляємо команди "змійкою" (щоб збалансувати групи за силою)
-    // 1-й йде в А, 2-й в B, 3-й в C, 4-й в D, 5-й знову в D і т.д.
-    participants.forEach((p, index) => {
-      const groupIndex =
-        Math.floor(index / 4) % 2 === 0
-          ? index % 4 // Зліва направо: 0, 1, 2, 3
-          : 3 - (index % 4); // Справа наліво : 3, 2, 1, 0
-
-      groups[groupNames[groupIndex]].push(p.teamId);
-    });
-
     const matchesToCreate: MatchPayload[] = [];
 
-    // Генеруємо матчі (Кожен з кожним ТІЛЬКИ всередині своєї групи)
-    for (const groupName of groupNames) {
-      const teamIds = groups[groupName];
+    // 3. Формуємо матчі на основі результатів еволюції
+    optimalGroups.forEach((groupTeams, groupIndex) => {
+      const groupName = groupNames[groupIndex];
 
-      for (let i = 0; i < teamIds.length; i++) {
-        for (let j = i + 1; j < teamIds.length; j++) {
+      for (let i = 0; i < groupTeams.length; i++) {
+        for (let j = i + 1; j < groupTeams.length; j++) {
           matchesToCreate.push({
             id: uuidv4(),
             tournamentId,
@@ -191,13 +195,14 @@ export class MatchesService {
             bracket: Bracket.NONE,
             groupName: groupName,
             round: 1,
-            teamAId: teamIds[i],
-            teamBId: teamIds[j],
+            teamAId: groupTeams[i].id,
+            teamBId: groupTeams[j].id,
+            bestOf: tournament.format === 'TEAM' ? 3 : 1, // Приклад використання формату
             nextMatchWinnerId: null,
           });
         }
       }
-    }
+    });
 
     return this.prisma.$transaction(async (prisma) => {
       await prisma.match.createMany({ data: matchesToCreate });
@@ -208,12 +213,28 @@ export class MatchesService {
       });
 
       return {
-        message: `Згенеровано ${matchesToCreate.length} матчів для 4-х груп (по 6 матчів у кожній).`,
-        groupsDistribution: groups, // Виводимо розподіл для перевірки
+        message: `Згенеровано ${matchesToCreate.length} матчів. Групи збалансовано евристичним алгоритмом.`,
+        groupsDistribution: optimalGroups.map((group, idx) => ({
+          group: groupNames[idx],
+          teams: group.map(
+            (t) => `${t.name} (Elo: ${t.rating}, Reg: ${t.region})`,
+          ),
+        })),
       };
     });
   }
-
+  private sortGroupTeams<
+    T extends { groupPoints: number; mapsWon: number; mapsLost: number },
+  >(teams: T[]): T[] {
+    return teams.sort((a, b) => {
+      if (b.groupPoints !== a.groupPoints) {
+        return b.groupPoints - a.groupPoints;
+      }
+      const mapDiffA = a.mapsWon - a.mapsLost;
+      const mapDiffB = b.mapsWon - b.mapsLost;
+      return mapDiffB - mapDiffA;
+    });
+  }
   async transitionToPlayoffs(tournamentId: string) {
     const tournament = await this.prisma.tournament.findUnique({
       where: { id: tournamentId },
@@ -263,30 +284,15 @@ export class MatchesService {
 
     // Сортуємо кожну групу та відбираємо топ-2
     for (const groupName in groupedParticipants) {
-      const sortedGroup = groupedParticipants[groupName].sort((a, b) => {
-        if (b.groupPoints !== a.groupPoints) {
-          return b.groupPoints - a.groupPoints;
-        }
-        const mapDiffA = a.mapsWon - a.mapsLost;
-        const mapDiffB = b.mapsWon - b.mapsLost;
-        return mapDiffB - mapDiffA;
-      });
+      const sortedGroup = this.sortGroupTeams(groupedParticipants[groupName]);
 
       if (sortedGroup[0]) firstPlaces.push(sortedGroup[0]);
       if (sortedGroup[1]) secondPlaces.push(sortedGroup[1]);
     }
 
-    // Сортуємо 1-ші місця між собою для призначення посівів 1-4
-    firstPlaces.sort((a, b) => {
-      if (b.groupPoints !== a.groupPoints) return b.groupPoints - a.groupPoints;
-      return b.mapsWon - b.mapsLost - (a.mapsWon - a.mapsLost);
-    });
-
-    // Сортуємо 2-гі місця між собою для призначення посівів 5-8
-    secondPlaces.sort((a, b) => {
-      if (b.groupPoints !== a.groupPoints) return b.groupPoints - a.groupPoints;
-      return b.mapsWon - b.mapsLost - (a.mapsWon - a.mapsLost);
-    });
+    // Сортуємо переможців груп та другі місця для формування посівів (seeds)
+    this.sortGroupTeams(firstPlaces);
+    this.sortGroupTeams(secondPlaces);
 
     const playoffTeams = [...firstPlaces, ...secondPlaces];
 

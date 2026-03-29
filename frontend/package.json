@@ -10,14 +10,19 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@g-loot/react-tournament-brackets": "^1.0.31-rc",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react-dom": "^19.2.4",
+    "react-router-dom": "^7.13.2",
+    "react-svg-pan-zoom": "^3.13.1",
+    "styled-components": "^6.3.12"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
     "@types/node": "^24.12.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@types/react-router-dom": "^5.3.3",
     "@vitejs/plugin-react": "^6.0.1",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
