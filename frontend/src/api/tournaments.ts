@@ -20,6 +20,12 @@ type TransitionResult = {
   playoffTeams: Array<{ seed: number; teamId: string; tag: string; points: number }>;
 };
 
+type GenerateTestTournamentResult = {
+  message: string;
+  tournamentId: string;
+  participantsCount: number;
+};
+
 export const tournamentsApi = {
   listAllWorkflow: () => apiClient.get<TournamentWorkflow[]>(`/tournaments/workflow`),
 
@@ -66,4 +72,9 @@ export const tournamentsApi = {
 
   listSimulationRuns: (tournamentId: string) =>
     apiClient.get<SimulationRun[]>(`/genetic-simulator/tournament/${tournamentId}/runs`),
+
+  generateTestTournament: (teamCount: number) =>
+    apiClient.post<GenerateTestTournamentResult>('/tournaments/generate-test', {
+      teamCount,
+    }),
 };

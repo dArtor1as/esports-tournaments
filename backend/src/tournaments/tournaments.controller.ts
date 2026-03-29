@@ -11,6 +11,7 @@ import {
 import { TournamentsService } from './tournaments.service';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { UpdateTournamentDto } from './dto/update-tournament.dto';
+import { GenerateTestTournamentDto } from './dto/generate-test-tournament.dto';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Tournaments (Турніри)')
@@ -22,6 +23,14 @@ export class TournamentsController {
   @ApiOperation({ summary: 'Створити новий турнір' })
   create(@Body() createTournamentDto: CreateTournamentDto) {
     return this.tournamentsService.create(createTournamentDto);
+  }
+
+  @Post('generate-test')
+  @ApiOperation({
+    summary: 'Створити тестовий турнір і випадково зареєструвати N існуючих команд',
+  })
+  generateTestTournament(@Body() dto: GenerateTestTournamentDto) {
+    return this.tournamentsService.generateTestTournament(dto.teamCount);
   }
 
   @Get()

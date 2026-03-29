@@ -6,7 +6,10 @@ import { Stage } from '@prisma/client';
 describe('TournamentsService', () => {
   let service: TournamentsService;
   const prismaMock = {
+    $transaction: jest.fn(),
     game: { findUnique: jest.fn() },
+    team: { findMany: jest.fn() },
+    tournamentParticipant: { createMany: jest.fn() },
     tournament: {
       create: jest.fn(),
       findMany: jest.fn(),
@@ -20,6 +23,10 @@ describe('TournamentsService', () => {
   };
 
   beforeEach(async () => {
+    prismaMock.$transaction.mockImplementation(async (callback) =>
+      callback(prismaMock),
+    );
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TournamentsService,
@@ -89,6 +96,24 @@ describe('TournamentsService', () => {
       requiresTransitionToPlayoffs: true,
       groupMatches: 24,
       playoffMatches: 0,
+    });
+  });
+
+  it('creates a test tournament with random existing teams', async () => {
+    prismaMock.game.findUnique.mockResolvedValue({ id: 'g1' });
+    prismaMock.team.findMany.mockResolvedValue(
+      Array.from({ length: 16 }, (_, idx) => ({ id: `team-${idx + 1}` })),
+    );
+    prismaMock.tournament.create.mockResolvedValue({ id: 't-created' });
+    prismaMock.tournamentParticipant.createMany.mockResolvedValue({ count: 16 });
+
+    const result = await service.generateTestTournament(16);
+
+    expect(prismaMock.tournament.create).toHaveBeenCalled();
+    expect(prismaMock.tournamentParticipant.createMany).toHaveBeenCalled();
+    expect(result).toMatchObject({
+      tournamentId: 't-created',
+      participantsCount: 16,
     });
   });
 });

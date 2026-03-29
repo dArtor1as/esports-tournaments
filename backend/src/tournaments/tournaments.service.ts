@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, Stage } from '@prisma/client';
+import { Prisma, Region, Stage, TournamentFormat } from '@prisma/client';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { UpdateTournamentDto } from './dto/update-tournament.dto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -14,6 +14,75 @@ type TournamentStatus = 'planned' | 'live' | 'finished';
 @Injectable()
 export class TournamentsService {
   constructor(private prisma: PrismaService) {}
+
+  async generateTestTournament(teamCount = 16) {
+    const allowedCounts = [8, 16, 32];
+    if (!allowedCounts.includes(teamCount)) {
+      throw new BadRequestException(
+        'teamCount має бути одним із значень: 8, 16, 32',
+      );
+    }
+
+    const game = await this.prisma.game.findUnique({
+      where: { slug: 'cs2' },
+    });
+    if (!game) {
+      throw new BadRequestException(
+        'Гру CS2 не знайдено. Спочатку запустіть seed через консоль.',
+      );
+    }
+
+    const availableTeams = await this.prisma.team.findMany({
+      select: { id: true },
+      orderBy: { id: 'asc' },
+    });
+
+    if (availableTeams.length < teamCount) {
+      throw new BadRequestException(
+        `У базі лише ${availableTeams.length} команд. Для створення тестового турніру на ${teamCount} команд спочатку запустіть seed через консоль.`,
+      );
+    }
+
+    const shuffled = [...availableTeams];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    const selected = shuffled.slice(0, teamCount);
+
+    const tournament = await this.prisma.$transaction(async (tx) => {
+      const createdTournament = await tx.tournament.create({
+        data: {
+          title: `Test Cup #${Date.now()}`,
+          gameId: game.id,
+          tier: 1,
+          region: Region.GLOBAL,
+          kFactor: 1.0,
+          format: TournamentFormat.TEAM,
+          maxParticipants: teamCount,
+          settings: { pointsForWin: 3, tiebreakers: ['h2h', 'mapDiff'] },
+          status: 'planned',
+        },
+      });
+
+      await tx.tournamentParticipant.createMany({
+        data: selected.map((team, idx) => ({
+          tournamentId: createdTournament.id,
+          teamId: team.id,
+          joinedStage: Stage.GROUP,
+          seed: idx + 1,
+        })),
+      });
+
+      return createdTournament;
+    });
+
+    return {
+      message: `Тестовий турнір створено на ${teamCount} команд.`,
+      tournamentId: tournament.id,
+      participantsCount: teamCount,
+    };
+  }
 
   async create(createTournamentDto: CreateTournamentDto) {
     // Перевіряємо, чи існує така гра в базі

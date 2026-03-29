@@ -17,6 +17,8 @@ export function GenerationPage() {
     useState<GenerationType>('single-elim');
   const [teamCount, setTeamCount] = useState<number>(16);
   const [groupCount, setGroupCount] = useState<number>(4);
+  const [testTournamentTeamCount, setTestTournamentTeamCount] =
+    useState<number>(16);
 
   async function load() {
     setLoading(true);
@@ -125,10 +127,52 @@ export function GenerationPage() {
     }
   }
 
+  async function onCreateTestTournament() {
+    setActionLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const response =
+        await tournamentsApi.generateTestTournament(testTournamentTeamCount);
+      setSuccess(`${response.message} ID: ${response.tournamentId}`);
+      await load();
+      setSelectedTournamentId(response.tournamentId);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
   return (
     <section className="card">
       <h2>Генерація сітки</h2>
       <p>Список турнірів автоматично фільтрується по workflow generation.</p>
+
+      <section className="sub-card">
+        <h3>Створення тестового турніру</h3>
+        <div className="form-grid">
+          <label>
+            Кількість команд
+            <select
+              value={testTournamentTeamCount}
+              onChange={(event) =>
+                setTestTournamentTeamCount(Number(event.target.value))
+              }
+              disabled={actionLoading}
+            >
+              <option value={8}>8</option>
+              <option value={16}>16</option>
+              <option value={32}>32</option>
+            </select>
+          </label>
+        </div>
+        <div className="actions-row">
+          <button onClick={onCreateTestTournament} disabled={actionLoading}>
+            {actionLoading ? 'Обробка...' : 'Створити тестовий турнір'}
+          </button>
+        </div>
+      </section>
 
       <div className="form-grid">
         <label>
