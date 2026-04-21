@@ -87,7 +87,7 @@ async function main() {
     const teamName = `Team Auto ${i}`;
     const teamTag = `TA${i}`;
     let totalTeamRating = 0;
-    const rosterData: any[] = [];
+    const rosterData: { playerId: string; role: RosterRole }[] = [];
 
     const captainRating = getRandomRating(2800, 3400);
     totalTeamRating += captainRating;
@@ -107,6 +107,10 @@ async function main() {
       },
     });
 
+    const regions = [Region.EU, Region.NA, Region.CIS, Region.ASIA, Region.SA];
+    // Вибираємо випадковий регіон
+    const randomRegion = regions[Math.floor(Math.random() * regions.length)];
+
     const team = await prisma.team.create({
       data: {
         name: teamName,
@@ -114,6 +118,7 @@ async function main() {
         captainId: captainPlayer.id,
         averageRating: 1000,
         tier: 1,
+        region: randomRegion, // Додано випадковий регіон
       },
     });
 
@@ -187,7 +192,7 @@ async function main() {
 
     generatedTeams.push(team);
     console.log(
-      ` ${teamName} (Avg Elo: ${avgRating}) зареєстрована: 1 CAPTAIN, 4 PLAYER, 1 COACH.`,
+      ` ${teamName} (Avg Elo: ${avgRating}),регіон: ${team.region} зареєстрована: 1 CAPTAIN, 4 PLAYER, 1 COACH.`,
     );
   }
 

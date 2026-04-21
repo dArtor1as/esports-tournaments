@@ -3,13 +3,86 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma, Region, Stage, TournamentFormat } from '@prisma/client';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { UpdateTournamentDto } from './dto/update-tournament.dto';
 import { PrismaService } from '../prisma/prisma.service';
 
+type WorkflowMode = 'generation' | 'simulation';
+type TournamentStatus = 'planned' | 'live' | 'finished';
+
 @Injectable()
 export class TournamentsService {
   constructor(private prisma: PrismaService) {}
+
+  async generateTestTournament(teamCount = 16) {
+    const allowedCounts = [8, 16, 32];
+    if (!allowedCounts.includes(teamCount)) {
+      throw new BadRequestException(
+        'teamCount має бути одним із значень: 8, 16, 32',
+      );
+    }
+
+    const game = await this.prisma.game.findUnique({
+      where: { slug: 'cs2' },
+    });
+    if (!game) {
+      throw new BadRequestException(
+        'Гру CS2 не знайдено. Спочатку запустіть seed через консоль.',
+      );
+    }
+
+    const availableTeams = await this.prisma.team.findMany({
+      select: { id: true },
+      orderBy: { id: 'asc' },
+    });
+
+    if (availableTeams.length < teamCount) {
+      throw new BadRequestException(
+        `У базі лише ${availableTeams.length} команд. Для створення тестового турніру на ${teamCount} команд спочатку запустіть seed через консоль.`,
+      );
+    }
+
+    const shuffled = [...availableTeams];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    const selected = shuffled.slice(0, teamCount);
+
+    const tournament = await this.prisma.$transaction(async (tx) => {
+      const createdTournament = await tx.tournament.create({
+        data: {
+          title: `Test Cup #${Date.now()}`,
+          gameId: game.id,
+          tier: 1,
+          region: Region.GLOBAL,
+          kFactor: 1.0,
+          format: TournamentFormat.TEAM,
+          maxParticipants: teamCount,
+          settings: { pointsForWin: 3, tiebreakers: ['h2h', 'mapDiff'] },
+          status: 'planned',
+        },
+      });
+
+      await tx.tournamentParticipant.createMany({
+        data: selected.map((team, idx) => ({
+          tournamentId: createdTournament.id,
+          teamId: team.id,
+          joinedStage: Stage.GROUP,
+          seed: idx + 1,
+        })),
+      });
+
+      return createdTournament;
+    });
+
+    return {
+      message: `Тестовий турнір створено на ${teamCount} команд.`,
+      tournamentId: tournament.id,
+      participantsCount: teamCount,
+    };
+  }
 
   async create(createTournamentDto: CreateTournamentDto) {
     // Перевіряємо, чи існує така гра в базі
@@ -44,6 +117,109 @@ export class TournamentsService {
       },
       orderBy: { id: 'desc' }, // Спочатку нові
     });
+  }
+
+  async findWorkflow(workflow?: string, status?: string) {
+    const allowedWorkflows: WorkflowMode[] = ['generation', 'simulation'];
+    const allowedStatuses: TournamentStatus[] = ['planned', 'live', 'finished'];
+
+    if (workflow && !allowedWorkflows.includes(workflow as WorkflowMode)) {
+      throw new BadRequestException(
+        'Невірний параметр workflow. Допустимі значення: generation, simulation',
+      );
+    }
+
+    const normalizedStatus = status?.toLowerCase();
+    if (
+      normalizedStatus &&
+      !allowedStatuses.includes(normalizedStatus as TournamentStatus)
+    ) {
+      throw new BadRequestException(
+        'Невірний параметр status. Допустимі значення: planned, live, finished',
+      );
+    }
+
+    const where: Prisma.TournamentWhereInput = {};
+    if (normalizedStatus) {
+      where.status = normalizedStatus;
+    }
+
+    const tournaments = await this.prisma.tournament.findMany({
+      where,
+      include: {
+        game: { select: { name: true } },
+        _count: { select: { participants: true, matches: true } },
+      },
+      orderBy: { id: 'desc' },
+    });
+
+    const tournamentIds = tournaments.map((tournament) => tournament.id);
+    const stageCounts =
+      tournamentIds.length > 0
+        ? await this.prisma.match.groupBy({
+            by: ['tournamentId', 'stage'],
+            where: { tournamentId: { in: tournamentIds } },
+            _count: { _all: true },
+          })
+        : [];
+
+    const countsMap = new Map<
+      string,
+      { groupMatches: number; playoffMatches: number }
+    >();
+
+    for (const row of stageCounts) {
+      const existing = countsMap.get(row.tournamentId) ?? {
+        groupMatches: 0,
+        playoffMatches: 0,
+      };
+
+      if (row.stage === Stage.GROUP) {
+        existing.groupMatches = row._count._all;
+      }
+      if (row.stage === Stage.PLAYOFF) {
+        existing.playoffMatches = row._count._all;
+      }
+
+      countsMap.set(row.tournamentId, existing);
+    }
+
+    const workflowView = tournaments.map((tournament) => {
+      const matches = countsMap.get(tournament.id) ?? {
+        groupMatches: 0,
+        playoffMatches: 0,
+      };
+      const hasGeneratedGrid =
+        matches.groupMatches + matches.playoffMatches > 0;
+
+      return {
+        id: tournament.id,
+        title: tournament.title,
+        status: tournament.status,
+        format: tournament.format,
+        gameName: tournament.game.name,
+        participantsCount: tournament._count.participants,
+        totalMatches: tournament._count.matches,
+        groupMatches: matches.groupMatches,
+        playoffMatches: matches.playoffMatches,
+        canGenerateBracket:
+          tournament.status === 'planned' ||
+          (matches.groupMatches > 0 && matches.playoffMatches === 0),
+        hasGeneratedGrid,
+        requiresTransitionToPlayoffs:
+          matches.groupMatches > 0 && matches.playoffMatches === 0,
+      };
+    });
+
+    if (workflow === 'generation') {
+      return workflowView.filter((tournament) => tournament.canGenerateBracket);
+    }
+
+    if (workflow === 'simulation') {
+      return workflowView.filter((tournament) => tournament.hasGeneratedGrid);
+    }
+
+    return workflowView;
   }
 
   findOne(id: string) {

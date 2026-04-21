@@ -1,117 +1,82 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SimulateTournamentDto } from './dto/simulate-tournament.dto';
-
-interface SimulationMatch {
-  id: string;
-  round: number;
-  teamAId: string | null;
-  teamBId: string | null;
-  scoreA: number;
-  scoreB: number;
-  nextMatchWinnerId: string | null;
-  details?: any;
-}
-
-interface Individual {
-  genes: number[];
-  fitness: number;
-  bracket: SimulationMatch[];
-}
-
-interface MapDetail {
-  map: string;
-  scoreA: number;
-  scoreB: number;
-}
+import { Cs2SimulatorService } from './cs2-simulator.service';
+import { ProbabilityCalculatorService } from './probability-calculator.service';
+import {
+  SimulationMatch,
+  Individual,
+  GroupIndividual,
+  BaseIndividual,
+  GroupStanding,
+} from './genetic-simulator.types';
+import { Match } from '@prisma/client';
 
 @Injectable()
 export class GeneticSimulatorService {
-  constructor(private prisma: PrismaService) {}
+  private readonly generations = 20;
+  private readonly mutationRate = 0.05;
 
-  // 1. Базова ймовірність (Elo)
-  private getExpectedWinProbability(ratingA: number, ratingB: number): number {
-    return 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
-  }
+  constructor(
+    private prisma: PrismaService,
+    private matchSimulator: Cs2SimulatorService,
+    private probabilityCalc: ProbabilityCalculatorService,
+  ) {}
 
-  // 2. Обчислення модифікаторів на основі історії
-  private applyHistoricalModifiers(
-    probA: number,
-    teamAId: string,
-    teamBId: string,
-    pastMatches: any[],
-  ): number {
-    let h2hBonus = 0;
-    let formBonusA = 0;
-    let formBonusB = 0;
+  private evolvePopulation<T extends BaseIndividual>(
+    populations: number,
+    estimatedGenesNeeded: number,
+    evaluatorFunc: (genes: number[]) => T,
+  ): T {
+    let population: T[] = [];
 
-    //  Аналіз H2H (Очні зустрічі)
-    const h2hMatches = pastMatches.filter(
-      (m) =>
-        (m.teamAId === teamAId && m.teamBId === teamBId) ||
-        (m.teamAId === teamBId && m.teamBId === teamAId),
-    );
-
-    if (h2hMatches.length > 0) {
-      let winsA = 0;
-      h2hMatches.forEach((m) => {
-        if (m.teamAId === teamAId && m.scoreA > m.scoreB) winsA++;
-        if (m.teamBId === teamAId && m.scoreB > m.scoreA) winsA++;
-      });
-      const winrateA = winsA / h2hMatches.length;
-      // Відхилення від 50%. Максимальний бонус: 0.05 (5%)
-      h2hBonus = (winrateA - 0.5) * 0.1;
+    for (let i = 0; i < populations; i++) {
+      const randomGenes = Array.from({ length: estimatedGenesNeeded }, () =>
+        Math.random(),
+      );
+      population.push(evaluatorFunc(randomGenes));
     }
 
-    //  Аналіз Загальної Форми (Вінрейт команди)
-    const calcForm = (teamId: string) => {
-      const teamMatches = pastMatches.filter(
-        (m) => m.teamAId === teamId || m.teamBId === teamId,
-      );
-      if (teamMatches.length === 0) return 0;
-      let wins = 0;
-      teamMatches.forEach((m) => {
-        if (m.teamAId === teamId && m.scoreA > m.scoreB) wins++;
-        if (m.teamBId === teamId && m.scoreB > m.scoreA) wins++;
-      });
-      // Максимальний вплив форми: 0.025 (2.5%)
-      return (wins / teamMatches.length - 0.5) * 0.05;
-    };
+    for (let gen = 0; gen < this.generations; gen++) {
+      population.sort((a, b) => b.fitness - a.fitness);
+      const nextGeneration: T[] = [];
+      const eliteCount = Math.floor(populations * 0.1);
 
-    formBonusA = calcForm(teamAId);
-    formBonusB = calcForm(teamBId);
+      for (let i = 0; i < eliteCount; i++) nextGeneration.push(population[i]);
 
-    // Застосовуємо всі модифікатори
-    let finalProb = probA + h2hBonus + formBonusA - formBonusB;
+      while (nextGeneration.length < populations) {
+        const parentA =
+          population[Math.floor(Math.random() * (populations / 2))];
+        const parentB =
+          population[Math.floor(Math.random() * (populations / 2))];
+        const childGenes: number[] = [];
 
-    // Захист від виходу за межі (ймовірність завжди від 1% до 99%)
-    return Math.max(0.01, Math.min(0.99, finalProb));
+        for (let i = 0; i < estimatedGenesNeeded; i++) {
+          let gene = Math.random() < 0.5 ? parentA.genes[i] : parentB.genes[i];
+          if (Math.random() < this.mutationRate) gene = Math.random();
+          childGenes.push(gene);
+        }
+
+        nextGeneration.push(evaluatorFunc(childGenes));
+      }
+      population = nextGeneration;
+    }
+
+    population.sort((a, b) => b.fitness - a.fitness);
+    return population[0];
   }
 
-  // 3. Симуляція рахунку CS2
-  private simulateCS2Map(winnerIsA: boolean): {
-    scoreA: number;
-    scoreB: number;
-  } {
-    const isOvertime = Math.random() < 0.15;
-    let winnerScore = isOvertime ? 16 : 13;
-    let loserScore = isOvertime
-      ? Math.floor(Math.random() * 2) + 14
-      : Math.floor(Math.random() * 12);
-
-    return winnerIsA
-      ? { scoreA: winnerScore, scoreB: loserScore }
-      : { scoreA: loserScore, scoreB: winnerScore };
-  }
-
-  // 4. Оцінка хромосоми для single elimination
   private evaluateIndividual(
     genes: number[],
     baseSkeleton: SimulationMatch[],
     teamRatings: Record<string, number>,
-    pastMatches: any[], // Передаємо історію в оцінку
+    pastMatches: Match[],
   ): Individual {
-    const bracket: SimulationMatch[] = JSON.parse(JSON.stringify(baseSkeleton));
+    const bracket: SimulationMatch[] = baseSkeleton.map((m) => ({ ...m }));
     let fitness = 0;
     let currentGeneIndex = 0;
 
@@ -122,50 +87,27 @@ export class GeneticSimulatorService {
       const ratingA = teamRatings[match.teamAId];
       const ratingB = teamRatings[match.teamBId];
 
-      // БАЗОВА ЙМОВІРНІСТЬ
-      const baseProbA = this.getExpectedWinProbability(ratingA, ratingB);
-
-      // ВРАХУВАННЯ ІСТОРІЇ
-      const expectedProbA = this.applyHistoricalModifiers(
+      const baseProbA = this.probabilityCalc.getBaseProbability(
+        ratingA,
+        ratingB,
+      );
+      const expectedProbA = this.probabilityCalc.getAdjustedProbability(
         baseProbA,
         match.teamAId,
         match.teamBId,
         pastMatches,
       );
 
-      const availableMaps = [
-        'Mirage',
-        'Dust2',
-        'Inferno',
-        'Nuke',
-        'Ancient',
-        'Anubis',
-        'Vertigo',
-      ];
-      const mapDetails: { map: string; scoreA: number; scoreB: number }[] = [];
+      const getGeneRoll = () =>
+        currentGeneIndex < genes.length
+          ? genes[currentGeneIndex++]
+          : Math.random();
 
-      let winsA = 0;
-      let winsB = 0;
-
-      while (winsA < 2 && winsB < 2) {
-        const mapGeneRoll =
-          currentGeneIndex < genes.length
-            ? genes[currentGeneIndex++]
-            : Math.random();
-
-        // Використовуємо ймовірність З УРАХУВАННЯМ ІСТОРІЇ
-        const aWinsThisMap = mapGeneRoll <= expectedProbA;
-        const mapName = availableMaps.splice(
-          Math.floor(Math.random() * availableMaps.length),
-          1,
-        )[0];
-
-        const { scoreA, scoreB } = this.simulateCS2Map(aWinsThisMap);
-        mapDetails.push({ map: mapName, scoreA, scoreB });
-
-        if (aWinsThisMap) winsA++;
-        else winsB++;
-      }
+      const { winsA, winsB, mapDetails } = this.matchSimulator.simulateSeries(
+        expectedProbA,
+        match.bestOf,
+        getGeneRoll,
+      );
 
       match.scoreA = winsA;
       match.scoreB = winsB;
@@ -173,16 +115,10 @@ export class GeneticSimulatorService {
 
       const matchWinnerIsA = winsA > winsB;
       const winnerId = matchWinnerIsA ? match.teamAId : match.teamBId;
-      //  ДИНАМІЧНА ФІТНЕС-ФУНКЦІЯ
       const winnerProb = matchWinnerIsA ? expectedProbA : 1 - expectedProbA;
 
       if (winnerProb >= 0.5) {
-        // Фаворит виграв: даємо бали пропорційно його ймовірності
-        // Якщо шанс був 90% (0.9), дасть +9 балів.
-        // Якщо шанс був 51% (0.51), дасть лише +5.1 бала.
         fitness += winnerProb * 10;
-
-        // Бонус за чисту перемогу (2:0) також пропорційний
         if (
           (matchWinnerIsA && winsB === 0) ||
           (!matchWinnerIsA && winsA === 0)
@@ -190,18 +126,11 @@ export class GeneticSimulatorService {
           fitness += winnerProb * 3;
         }
       } else {
-        // апсет! Аутсайдер виграв
         if (winnerProb > 0.4) {
-          // Дуже рівна гра (наприклад 45% vs 55%).
-          // Даємо невеликий плюс за видовищність турніру.
           fitness += 2;
         } else if (winnerProb > 0.25) {
-          // Середній апсет (наприклад 30% vs 70%).
-          // Легкий штраф, щоб такі матчі траплялися, але не в кожній гілці.
           fitness -= 5;
         } else {
-          // (шанс < 25%).
-          // Жорсткий штраф, алгоритм має уникати подібних сценаріїв.
           fitness -= 30;
         }
       }
@@ -218,29 +147,17 @@ export class GeneticSimulatorService {
     return { genes, fitness, bracket };
   }
 
-  // Оцінка хромосоми для ГРУПОВОГО ЕТАПУ
   private evaluateGroupIndividual(
     genes: number[],
     baseSkeleton: SimulationMatch[],
     teamRatings: Record<string, number>,
-    pastMatches: any[],
-  ) {
-    const bracket: SimulationMatch[] = JSON.parse(JSON.stringify(baseSkeleton));
+    pastMatches: Match[],
+  ): GroupIndividual {
+    const bracket: SimulationMatch[] = baseSkeleton.map((m) => ({ ...m }));
     let fitness = 0;
     let currentGeneIndex = 0;
 
-    // Ініціалізуємо статистику для кожної команди, точно як у вашій БД
-    const standings: Record<
-      string,
-      {
-        points: number;
-        matchesWon: number;
-        matchesLost: number;
-        mapsWon: number;
-        mapsLost: number;
-        h2h: Record<string, number>;
-      }
-    > = {};
+    const standings: Record<string, GroupStanding> = {};
 
     Object.keys(teamRatings).forEach((teamId) => {
       standings[teamId] = {
@@ -260,45 +177,27 @@ export class GeneticSimulatorService {
       const teamA = match.teamAId;
       const teamB = match.teamBId;
 
-      const expectedProbA = this.applyHistoricalModifiers(
-        this.getExpectedWinProbability(teamRatings[teamA], teamRatings[teamB]),
+      const baseProbA = this.probabilityCalc.getBaseProbability(
+        teamRatings[teamA],
+        teamRatings[teamB],
+      );
+      const expectedProbA = this.probabilityCalc.getAdjustedProbability(
+        baseProbA,
         teamA,
         teamB,
         pastMatches,
       );
 
-      const availableMaps = [
-        'Mirage',
-        'Dust2',
-        'Inferno',
-        'Nuke',
-        'Ancient',
-        'Anubis',
-        'Vertigo',
-      ];
-      const mapDetails: { map: string; scoreA: number; scoreB: number }[] = [];
+      const getGeneRoll = () =>
+        currentGeneIndex < genes.length
+          ? genes[currentGeneIndex++]
+          : Math.random();
 
-      let winsA = 0;
-      let winsB = 0;
-
-      // Граємо Bo3
-      while (winsA < 2 && winsB < 2) {
-        const mapGeneRoll =
-          currentGeneIndex < genes.length
-            ? genes[currentGeneIndex++]
-            : Math.random();
-        const aWinsThisMap = mapGeneRoll <= expectedProbA;
-        const mapName = availableMaps.splice(
-          Math.floor(Math.random() * availableMaps.length),
-          1,
-        )[0];
-
-        const { scoreA, scoreB } = this.simulateCS2Map(aWinsThisMap);
-        mapDetails.push({ map: mapName, scoreA, scoreB });
-
-        if (aWinsThisMap) winsA++;
-        else winsB++;
-      }
+      const { winsA, winsB, mapDetails } = this.matchSimulator.simulateSeries(
+        expectedProbA,
+        match.bestOf,
+        getGeneRoll,
+      );
 
       match.scoreA = winsA;
       match.scoreB = winsB;
@@ -306,12 +205,11 @@ export class GeneticSimulatorService {
 
       const matchWinnerIsA = winsA > winsB;
 
-      // 1. ЗАПОВНЮЄМО СТАТИСТИКУ ДЛЯ ТАБЛИЦІ (Тай-брейки)
       if (matchWinnerIsA) {
-        standings[teamA].points += 3; // 3 очки за перемогу
+        standings[teamA].points += 3;
         standings[teamA].matchesWon += 1;
         standings[teamB].matchesLost += 1;
-        standings[teamA].h2h[teamB] = (standings[teamA].h2h[teamB] || 0) + 1; // Записуємо особисту перемогу
+        standings[teamA].h2h[teamB] = (standings[teamA].h2h[teamB] || 0) + 1;
       } else {
         standings[teamB].points += 3;
         standings[teamB].matchesWon += 1;
@@ -319,32 +217,27 @@ export class GeneticSimulatorService {
         standings[teamB].h2h[teamA] = (standings[teamB].h2h[teamA] || 0) + 1;
       }
 
-      // Рахуємо карти для Point Difference (Різниця карт)
       standings[teamA].mapsWon += winsA;
       standings[teamA].mapsLost += winsB;
       standings[teamB].mapsWon += winsB;
       standings[teamB].mapsLost += winsA;
 
-      // 2. ФІТНЕС-ФУНКЦІЯ для групового етапу
       const winnerProb = matchWinnerIsA ? expectedProbA : 1 - expectedProbA;
 
       if (winnerProb >= 0.5) {
-        // винагороду за  перемоги фаворитів
         fitness += winnerProb * 8;
-        if ((matchWinnerIsA && winsB === 0) || (!matchWinnerIsA && winsA === 0))
+        if (
+          (matchWinnerIsA && winsB === 0) ||
+          (!matchWinnerIsA && winsA === 0)
+        ) {
           fitness += winnerProb * 2;
+        }
       } else {
-        // АПСЕТ! В групах вони трапляються набагато частіше.
         if (winnerProb > 0.35) {
-          // Бонус за шоу. Якщо команди були більш-менш рівні (36-49%),
-          // і виграв аутсайдер — даємо алгоритму щедрий плюс +5.
           fitness += 5;
         } else if (winnerProb > 0.2) {
-          // Середній апсет (21-35%).
-          // НЕ ШТРАФУЄМО (0 балів)
           fitness += 0;
         } else {
-          // Штраф тільки при майже неможливих сценаріях (коли команда з шансом <20% виграла).
           fitness -= 15;
         }
       }
@@ -353,21 +246,35 @@ export class GeneticSimulatorService {
     return { genes, fitness, bracket, standings };
   }
 
-  // ЗАПУСК ГА для single elimination
+  async findRunsByTournament(tournamentId: string) {
+    const tournament = await this.prisma.tournament.findUnique({
+      where: { id: tournamentId },
+      select: { id: true },
+    });
+
+    if (!tournament) {
+      throw new NotFoundException('Турнір не знайдено');
+    }
+
+    return this.prisma.simulationRun.findMany({
+      where: { tournamentId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async runSimulation(dto: SimulateTournamentDto) {
+    const startedAt = Date.now();
     const { tournamentId, populations } = dto;
-    const GENERATIONS = 20;
-    const MUTATION_RATE = 0.05;
 
     const tournament = await this.prisma.tournament.findUnique({
       where: { id: tournamentId },
       include: { participants: { include: { team: true } } },
     });
 
-    if (!tournament || tournament.status !== 'live')
-      throw new BadRequestException('Турнір має бути у статусі LIVE');
+    if (!tournament || tournament.status !== 'live') {
+      throw new BadRequestException('турнір має бути у статусі live');
+    }
 
-    // Витягуємо історичні матчі з інших турнірів для цих команд
     const pastMatches = await this.prisma.match.findMany({
       where: {
         tournamentId: { not: tournamentId },
@@ -385,7 +292,9 @@ export class GeneticSimulatorService {
       orderBy: { round: 'asc' },
     });
 
-    if (dbMatches.length === 0) throw new BadRequestException('Сітка порожня');
+    if (dbMatches.length === 0) {
+      throw new BadRequestException('сітка порожня');
+    }
 
     const baseSkeleton = dbMatches.map((m) => ({
       id: m.id,
@@ -394,64 +303,24 @@ export class GeneticSimulatorService {
       teamBId: m.teamBId,
       scoreA: 0,
       scoreB: 0,
+      bestOf: m.bestOf,
       nextMatchWinnerId: m.nextMatchWinnerId,
     }));
 
     const matchCount = baseSkeleton.length;
-    let population: Individual[] = [];
     const estimatedGenesNeeded = matchCount * 3;
 
-    for (let i = 0; i < populations; i++) {
-      const randomGenes = Array.from({ length: estimatedGenesNeeded }, () =>
-        Math.random(),
-      );
-      population.push(
-        this.evaluateIndividual(
-          randomGenes,
-          baseSkeleton,
-          teamRatings,
-          pastMatches,
-        ),
-      );
-    }
+    const bestIndividual = this.evolvePopulation<Individual>(
+      populations,
+      estimatedGenesNeeded,
+      (genes) =>
+        this.evaluateIndividual(genes, baseSkeleton, teamRatings, pastMatches),
+    );
 
-    for (let gen = 0; gen < GENERATIONS; gen++) {
-      population.sort((a, b) => b.fitness - a.fitness);
-      const nextGeneration: Individual[] = [];
-      const eliteCount = Math.floor(populations * 0.1);
+    const executionTimeMs = Date.now() - startedAt;
 
-      for (let i = 0; i < eliteCount; i++) nextGeneration.push(population[i]);
-
-      while (nextGeneration.length < populations) {
-        const parentA =
-          population[Math.floor(Math.random() * (populations / 2))];
-        const parentB =
-          population[Math.floor(Math.random() * (populations / 2))];
-        const childGenes: number[] = [];
-
-        for (let i = 0; i < estimatedGenesNeeded; i++) {
-          let gene = Math.random() < 0.5 ? parentA.genes[i] : parentB.genes[i];
-          if (Math.random() < MUTATION_RATE) gene = Math.random();
-          childGenes.push(gene);
-        }
-
-        nextGeneration.push(
-          this.evaluateIndividual(
-            childGenes,
-            baseSkeleton,
-            teamRatings,
-            pastMatches,
-          ),
-        );
-      }
-      population = nextGeneration;
-    }
-
-    population.sort((a, b) => b.fitness - a.fitness);
-    const bestIndividual = population[0];
-
-    await this.prisma.$transaction(
-      bestIndividual.bracket.map((match) =>
+    await this.prisma.$transaction([
+      ...bestIndividual.bracket.map((match) =>
         this.prisma.match.update({
           where: { id: match.id },
           data: {
@@ -464,35 +333,43 @@ export class GeneticSimulatorService {
           },
         }),
       ),
-    );
-
-    await this.prisma.tournament.update({
-      where: { id: tournamentId },
-      data: { status: 'finished' },
-    });
+      this.prisma.tournament.update({
+        where: { id: tournamentId },
+        data: { status: 'finished' },
+      }),
+      this.prisma.simulationRun.create({
+        data: {
+          tournamentId,
+          algorithmType: 'PLAYOFF',
+          populations,
+          generations: this.generations,
+          fitnessScore: bestIndividual.fitness,
+          executionTimeMs,
+        },
+      }),
+    ]);
 
     return {
-      message: `Еволюцію завершено! Пройдено ${GENERATIONS} поколінь.`,
+      message: `еволюцію завершено. пройдено ${this.generations} поколінь.`,
       bestFitnessScore: bestIndividual.fitness,
     };
   }
-  // Групова симуляція (Round Robin)
+
   async runGroupSimulation(dto: SimulateTournamentDto) {
+    const startedAt = Date.now();
     const { tournamentId, populations } = dto;
-    const GENERATIONS = 20;
-    const MUTATION_RATE = 0.05;
 
     const tournament = await this.prisma.tournament.findUnique({
       where: { id: tournamentId },
       include: { participants: { include: { team: true } } },
     });
 
-    if (!tournament || tournament.status !== 'live')
+    if (!tournament || tournament.status !== 'live') {
       throw new BadRequestException(
-        'Турнір має бути у статусі LIVE (спочатку згенеруйте групи)',
+        'турнір має бути у статусі live. спочатку згенеруйте групи',
       );
+    }
 
-    // Витягуємо історичні матчі
     const pastMatches = await this.prisma.match.findMany({
       where: {
         tournamentId: { not: tournamentId },
@@ -505,14 +382,14 @@ export class GeneticSimulatorService {
       teamRatings[p.teamId] = p.team.averageRating;
     });
 
-    // Беремо матчі групового етапу
     const dbMatches = await this.prisma.match.findMany({
       where: { tournamentId, stage: 'GROUP' },
-      orderBy: { id: 'asc' }, // Порядок матчів у групі не критичний, беремо за ID
+      orderBy: { id: 'asc' },
     });
 
-    if (dbMatches.length === 0)
-      throw new BadRequestException('Матчі групи порожні');
+    if (dbMatches.length === 0) {
+      throw new BadRequestException('матчі групи порожні');
+    }
 
     const baseSkeleton = dbMatches.map((m) => ({
       id: m.id,
@@ -521,63 +398,27 @@ export class GeneticSimulatorService {
       teamBId: m.teamBId,
       scoreA: 0,
       scoreB: 0,
+      bestOf: m.bestOf,
       nextMatchWinnerId: m.nextMatchWinnerId,
     }));
 
     const matchCount = baseSkeleton.length;
-    let population: any[] = [];
     const estimatedGenesNeeded = matchCount * 3;
 
-    for (let i = 0; i < populations; i++) {
-      const randomGenes = Array.from({ length: estimatedGenesNeeded }, () =>
-        Math.random(),
-      );
-      population.push(
+    const bestIndividual = this.evolvePopulation<GroupIndividual>(
+      populations,
+      estimatedGenesNeeded,
+      (genes) =>
         this.evaluateGroupIndividual(
-          randomGenes,
+          genes,
           baseSkeleton,
           teamRatings,
           pastMatches,
         ),
-      );
-    }
+    );
 
-    for (let gen = 0; gen < GENERATIONS; gen++) {
-      population.sort((a, b) => b.fitness - a.fitness);
-      const nextGeneration: any[] = [];
-      const eliteCount = Math.floor(populations * 0.1);
+    const executionTimeMs = Date.now() - startedAt;
 
-      for (let i = 0; i < eliteCount; i++) nextGeneration.push(population[i]);
-
-      while (nextGeneration.length < populations) {
-        const parentA =
-          population[Math.floor(Math.random() * (populations / 2))];
-        const parentB =
-          population[Math.floor(Math.random() * (populations / 2))];
-        const childGenes: number[] = [];
-
-        for (let i = 0; i < estimatedGenesNeeded; i++) {
-          let gene = Math.random() < 0.5 ? parentA.genes[i] : parentB.genes[i];
-          if (Math.random() < MUTATION_RATE) gene = Math.random();
-          childGenes.push(gene);
-        }
-
-        nextGeneration.push(
-          this.evaluateGroupIndividual(
-            childGenes,
-            baseSkeleton,
-            teamRatings,
-            pastMatches,
-          ),
-        );
-      }
-      population = nextGeneration;
-    }
-
-    population.sort((a, b) => b.fitness - a.fitness);
-    const bestIndividual = population[0];
-
-    // Ми зберігаємо не тільки матчі, але й одразу записуємо зароблені очки учасникам турніру!
     await this.prisma.$transaction([
       ...bestIndividual.bracket.map((match) =>
         this.prisma.match.update({
@@ -590,27 +431,35 @@ export class GeneticSimulatorService {
           },
         }),
       ),
-      // ОНОВЛЮЄМО ВСЮ СТАТИСТИКУ УЧАСНИКІВ
       ...tournament.participants.map((participant) => {
         const stats = bestIndividual.standings[participant.teamId];
         return this.prisma.tournamentParticipant.update({
           where: { id: participant.id },
           data: {
-            groupPoints: stats.points,
-            matchesWon: stats.matchesWon,
-            matchesLost: stats.matchesLost,
-            mapsWon: stats.mapsWon,
-            mapsLost: stats.mapsLost,
+            groupPoints: stats?.points || 0,
+            matchesWon: stats?.matchesWon || 0,
+            matchesLost: stats?.matchesLost || 0,
+            mapsWon: stats?.mapsWon || 0,
+            mapsLost: stats?.mapsLost || 0,
           },
         });
       }),
+      this.prisma.simulationRun.create({
+        data: {
+          tournamentId,
+          algorithmType: 'GROUP_STAGE',
+          populations,
+          generations: this.generations,
+          fitnessScore: bestIndividual.fitness,
+          executionTimeMs,
+        },
+      }),
     ]);
 
-    // Після груп турнір зазвичай не закінчується, тому статус лишається live
     return {
-      message: `Групову еволюцію завершено! Проаналізовано ${matchCount} матчів.`,
+      message: `групову еволюцію завершено. проаналізовано ${matchCount} матчів.`,
       bestFitnessScore: bestIndividual.fitness,
-      standings: bestIndividual.standings, // Виводимо таблицю у відповідь для наочності
+      standings: bestIndividual.standings,
     };
   }
 }
