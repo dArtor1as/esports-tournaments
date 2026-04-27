@@ -17,6 +17,47 @@ export class TeamsService {
     return 3;
   }
 
+  // метод для перерахунку прапора
+  async recalculateTeamCountry(teamId: string) {
+    const team = await this.prisma.team.findUnique({
+      where: { id: teamId },
+      include: { players: { include: { user: true } } }, // Витягуємо гравців та їхніх юзерів
+    });
+
+    if (!team || team.isManualCountry) return; // Якщо ручне налаштування, ігноруємо
+
+    const activePlayers = team.players;
+    if (activePlayers.length === 0) return;
+
+    // Рахуємо кількість кожного countryCode
+    const countryCounts: Record<string, number> = {};
+    for (const player of activePlayers) {
+      const code = player.user?.countryCode;
+      if (code) {
+        countryCounts[code] = (countryCounts[code] || 0) + 1;
+      }
+    }
+
+    let majorityCountry = 'INT';
+    // строго більше половини
+    const threshold = Math.floor(activePlayers.length / 2) + 1;
+
+    for (const [code, count] of Object.entries(countryCounts)) {
+      if (count >= threshold) {
+        majorityCountry = code;
+        break;
+      }
+    }
+
+    // Оновлюємо БД в разі зміни прапора
+    if (team.countryCode !== majorityCountry) {
+      await this.prisma.team.update({
+        where: { id: teamId },
+        data: { countryCode: majorityCountry },
+      });
+    }
+  }
+
   async create(createTeamDto: CreateTeamDto) {
     const captain = await this.prisma.player.findUnique({
       where: { id: createTeamDto.captainPlayerId },
@@ -46,7 +87,7 @@ export class TeamsService {
         },
       });
 
-      // Прив'язуємо цього гравця до команди як звичайного учасника (щоб він був у списку гравців)
+      // Прив'язуємо цього гравця до команди як звичайного учасника
       await prisma.player.update({
         where: { id: captain.id },
         data: { teamId: newTeam.id },
@@ -93,7 +134,6 @@ export class TeamsService {
       data: {
         name: updateTeamDto.name,
         tag: updateTeamDto.tag,
-        // captainPlayerId тут не оновлюємо, передача капітанства - це окрема складна логіка
       },
     });
   }

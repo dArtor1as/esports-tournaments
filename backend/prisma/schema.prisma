@@ -65,23 +65,26 @@ enum TournamentFormat {
 
 model User {
   id           String   @id @default(uuid())
-  username     String   @unique // Додав базовий логін
+  username     String   @unique 
   email        String   @unique
   passwordHash String
   role         Role     @default(USER)
   createdAt    DateTime @default(now())
 
-  players      Player[] // Замінено на масив! Один юзер може мати кілька ігрових профілів
+  birthDate    DateTime? 
+  countryCode  String?   // Наприклад: "UA", "PL", "US"
+
+  players      Player[] 
   teamInvitations TeamInvitation[]
 }
 
 model Player {
   id        String   @id @default(uuid())
   
-  userId    String   // Зроблено обов'язковим (прибрав '?')
+  userId    String   
   user      User     @relation(fields: [userId], references: [id])
   
-  gameId    String   // Додано прив'язку до гри
+  gameId    String   // прив'язка до гри
   game      Game     @relation(fields: [gameId], references: [id])
 
   teamId    String?
@@ -108,7 +111,10 @@ model Team {
   averageRating Int      @default(1000)
   tier          Int      @default(3) // 1, 2 або 3 на основі рейтингу
   status        TeamStatus @default(ACTIVE)
-  region        Region     @default(GLOBAL) // ДОДАНО РЕГІОН
+  region        Region     @default(GLOBAL) 
+
+  countryCode   String   @default("INT") // "INT" для International
+  isManualCountry Boolean @default(false) // Для ручної зміни прапору команди
   
   players       Player[]   @relation("TeamPlayers")
 
@@ -177,7 +183,7 @@ model TournamentParticipant {
   team         Team       @relation(fields: [teamId], references: [id])
   
   // Статистика для турнірної таблиці (Груповий етап)
-  groupPoints  Int        @default(0) // Ті самі 3 очки за перемогу
+  groupPoints  Int        @default(0) // 3 очки за перемогу
   matchesWon   Int        @default(0)
   matchesLost  Int        @default(0)
   mapsWon      Int        @default(0) // Скільки карт виграли загалом (для тайбрейків)
@@ -220,7 +226,7 @@ model Match {
   // Куди йде ПЕРЕМОЖЕЦЬ цього матчу?
   nextMatchWinnerId String?
   nextMatchWinner   Match?  @relation("WinnerProgression", fields: [nextMatchWinnerId], references: [id])
-  previousMatchesW  Match[] @relation("WinnerProgression") // Зворотній зв'язок (вимагає Prisma)
+  previousMatchesW  Match[] @relation("WinnerProgression") // Зворотній зв'язок
 
   // Куди йде ПЕРЕМОЖЕНИЙ цього матчу? (якщо null - виліт з турніру)
   nextMatchLoserId  String?

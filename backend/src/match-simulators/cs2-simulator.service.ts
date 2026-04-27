@@ -3,7 +3,7 @@ import {
   IMatchSimulator,
   MatchSimulationResult,
   MapResult,
-} from './genetic-simulator.types';
+} from './match-simulator.interface';
 
 @Injectable()
 export class Cs2SimulatorService implements IMatchSimulator {
