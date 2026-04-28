@@ -12,15 +12,16 @@ import {
   HeuristicSeedingService,
 } from './heuristic-seeding.service';
 
-// Додаємо інтерфейс, щоб TypeScript знав, як виглядає наш об'єкт матчу
+// інтерфейс, щоб TypeScript знав, як виглядає наш об'єкт матчу
 interface MatchPayload {
   id: string;
   tournamentId: string;
   stage: Stage;
   bracket: Bracket;
-  groupName?: string | null; // Додано для групового етапу
+  groupName?: string | null;
   round: number;
   nextMatchWinnerId: string | null;
+  nextMatchLoserId?: string | null;
   teamAId: string | null;
   teamBId: string | null;
   bestOf: number;
@@ -33,19 +34,18 @@ export class MatchesService {
     private seedingService: HeuristicSeedingService,
   ) {}
 
-  async generateSingleElimination(dto: GenerateBracketDto) {
+  async generateBracket(dto: GenerateBracketDto) {
     const { tournamentId } = dto;
 
     const tournament = await this.prisma.tournament.findUnique({
       where: { id: tournamentId },
     });
-    if (!tournament) throw new NotFoundException('Турнір не знайдено');
 
+    if (!tournament) throw new NotFoundException('Турнір не знайдено');
     if (tournament.status === 'finished') {
       throw new BadRequestException('Турнір вже завершено');
     }
 
-    // Перевіряємо, чи ще не згенеровано плей-оф
     const existingPlayoffMatches = await this.prisma.match.count({
       where: { tournamentId, stage: Stage.PLAYOFF },
     });
@@ -53,12 +53,8 @@ export class MatchesService {
       throw new BadRequestException('Сітка плей-оф вже згенерована');
     }
 
-    // Відбираємо тільки тих, хто пройшов (Топ-8 мають seed від 1 до 8)
     const participants = await this.prisma.tournamentParticipant.findMany({
-      where: {
-        tournamentId,
-        seed: { lte: 32 },
-      },
+      where: { tournamentId, seed: { lte: 32 } },
       orderBy: { seed: 'asc' },
     });
 
@@ -71,34 +67,180 @@ export class MatchesService {
       );
     }
 
+    if (teamCount < 4 || !Number.isInteger(Math.log2(teamCount))) {
+      throw new BadRequestException(
+        `Кількість команд має бути 4, 8, 16, 32 тощо. Зараз: ${teamCount}`,
+      );
+    }
+
     const selectedParticipants =
       requestedTeamCount && requestedTeamCount < participants.length
         ? participants.slice(0, requestedTeamCount)
         : participants;
 
-    if (teamCount < 2 || !Number.isInteger(Math.log2(teamCount))) {
-      throw new BadRequestException(
-        `Для Single Elimination кількість команд має бути 2, 4, 8, 16 тощо. Зараз: ${teamCount}`,
+    const bracketType = (tournament.settings as any)?.bracketType;
+
+    if (bracketType === 'DOUBLE_ELIMINATION') {
+      return this.generateDoubleElimination(
+        tournamentId,
+        teamCount,
+        selectedParticipants,
+        tournament.format,
       );
     }
 
-    const totalRounds = Math.log2(teamCount);
+    return this.generateSingleElimination(
+      tournamentId,
+      teamCount,
+      selectedParticipants,
+      tournament.format,
+    );
+  }
 
-    // вказуємо типи для масивів
+  private async generateDoubleElimination(
+    tournamentId: string,
+    teamCount: number,
+    selectedParticipants: any[],
+    format: string,
+  ) {
+    const k = Math.log2(teamCount);
+    const bestOf = format === 'TEAM' ? 3 : 1;
+
+    const ubMatches: MatchPayload[][] = [];
+    for (let r = 1; r <= k; r++) {
+      const count = Math.pow(2, k - r);
+      const roundMatches: MatchPayload[] = Array.from(
+        { length: count },
+        () => ({
+          id: uuidv4(),
+          tournamentId,
+          stage: Stage.PLAYOFF,
+          bracket: Bracket.UPPER,
+          round: r,
+          nextMatchWinnerId: null,
+          nextMatchLoserId: null,
+          teamAId: null,
+          teamBId: null,
+          bestOf,
+        }),
+      );
+      ubMatches.push(roundMatches);
+    }
+
+    for (let r = 0; r < k - 1; r++) {
+      for (let i = 0; i < ubMatches[r].length; i++) {
+        ubMatches[r][i].nextMatchWinnerId =
+          ubMatches[r + 1][Math.floor(i / 2)].id;
+      }
+    }
+
+    const lbMatches: MatchPayload[][] = [];
+    let lbMatchCount = teamCount / 4;
+    for (let m = 1; m <= 2 * k - 2; m++) {
+      const roundMatches: MatchPayload[] = Array.from(
+        { length: lbMatchCount },
+        () => ({
+          id: uuidv4(),
+          tournamentId,
+          stage: Stage.PLAYOFF,
+          bracket: Bracket.LOWER,
+          round: m,
+          nextMatchWinnerId: null,
+          nextMatchLoserId: null,
+          teamAId: null,
+          teamBId: null,
+          bestOf,
+        }),
+      );
+      lbMatches.push(roundMatches);
+      if (m % 2 === 0) lbMatchCount /= 2;
+    }
+
+    for (let m = 0; m < 2 * k - 3; m++) {
+      const currentRound = lbMatches[m];
+      const nextRound = lbMatches[m + 1];
+      const isOddRound = (m + 1) % 2 !== 0;
+
+      for (let i = 0; i < currentRound.length; i++) {
+        if (isOddRound) {
+          currentRound[i].nextMatchWinnerId = nextRound[i].id;
+        } else {
+          currentRound[i].nextMatchWinnerId = nextRound[Math.floor(i / 2)].id;
+        }
+      }
+    }
+
+    for (let i = 0; i < ubMatches[0].length; i++) {
+      ubMatches[0][i].nextMatchLoserId = lbMatches[0][Math.floor(i / 2)].id;
+    }
+
+    for (let r = 1; r < k; r++) {
+      const targetLBRoundIndex = 2 * r - 1;
+      const targetLbRound = lbMatches[targetLBRoundIndex];
+      for (let i = 0; i < ubMatches[r].length; i++) {
+        const targetIndex = ubMatches[r].length - 1 - i;
+        ubMatches[r][i].nextMatchLoserId = targetLbRound[targetIndex].id;
+      }
+    }
+
+    const grandFinal: MatchPayload = {
+      id: uuidv4(),
+      tournamentId,
+      stage: Stage.PLAYOFF,
+      bracket: Bracket.GRAND_FINAL,
+      round: 1,
+      nextMatchWinnerId: null,
+      nextMatchLoserId: null,
+      teamAId: null,
+      teamBId: null,
+      bestOf: format === 'TEAM' ? 5 : 3,
+    };
+
+    ubMatches[k - 1][0].nextMatchWinnerId = grandFinal.id;
+    lbMatches[lbMatches.length - 1][0].nextMatchWinnerId = grandFinal.id;
+
+    for (let i = 0; i < teamCount / 2; i++) {
+      ubMatches[0][i].teamAId = selectedParticipants[i].teamId;
+      ubMatches[0][i].teamBId = selectedParticipants[teamCount - 1 - i].teamId;
+    }
+
+    const allMatches = [...ubMatches.flat(), ...lbMatches.flat(), grandFinal];
+
+    return this.prisma.$transaction(async (prisma) => {
+      await prisma.match.createMany({ data: allMatches });
+      await prisma.tournament.update({
+        where: { id: tournamentId },
+        data: { status: 'live' },
+      });
+
+      return prisma.match.findMany({
+        where: { tournamentId },
+        orderBy: [{ bracket: 'asc' }, { round: 'asc' }],
+        include: {
+          teamA: { select: { tag: true } },
+          teamB: { select: { tag: true } },
+        },
+      });
+    });
+  }
+
+  private async generateSingleElimination(
+    tournamentId: string,
+    teamCount: number,
+    selectedParticipants: any[],
+    format: string,
+  ) {
+    const totalRounds = Math.log2(teamCount);
     const matchesToCreate: MatchPayload[] = [];
     let previousRoundMatches: MatchPayload[] = [];
 
     for (let round = totalRounds; round >= 1; round--) {
       const matchCountInRound = Math.pow(2, totalRounds - round);
-
-      // Явно вказуємо тип
       const currentRoundMatches: MatchPayload[] = [];
 
       for (let i = 0; i < matchCountInRound; i++) {
         const matchId = uuidv4();
         let nextMatchId: string | null = null;
-
-        // Явно вказуємо, що тип - це весь Enum, а не тільки UPPER
         let bracketType: Bracket = Bracket.UPPER;
 
         if (round === totalRounds) {
@@ -119,7 +261,7 @@ export class MatchesService {
           nextMatchWinnerId: nextMatchId,
           teamAId: null,
           teamBId: null,
-          bestOf: tournament.format === 'TEAM' ? 3 : 1,
+          bestOf: format === 'TEAM' ? 3 : 1,
         };
 
         currentRoundMatches.push(match);
@@ -138,7 +280,6 @@ export class MatchesService {
 
     return this.prisma.$transaction(async (prisma) => {
       await prisma.match.createMany({ data: matchesToCreate });
-
       await prisma.tournament.update({
         where: { id: tournamentId },
         data: { status: 'live' },
@@ -313,7 +454,9 @@ export class MatchesService {
     }
 
     const groupedParticipants: Record<string, typeof participants> = {};
-    const groupParticipants = participants.filter((p) => teamGroupMap.has(p.teamId));
+    const groupParticipants = participants.filter((p) =>
+      teamGroupMap.has(p.teamId),
+    );
 
     for (const p of groupParticipants) {
       const groupName = teamGroupMap.get(p.teamId);

@@ -58,7 +58,11 @@ async function main() {
       kFactor: 1.0,
       format: TournamentFormat.TEAM,
       maxParticipants: 16,
-      settings: { pointsForWin: 3, tiebreakers: ['h2h', 'mapDiff'] },
+      settings: {
+        pointsForWin: 3,
+        tiebreakers: ['h2h', 'mapDiff'],
+        bracketType: 'DOUBLE_ELIMINATION',
+      },
       status: 'planned',
     },
   });
@@ -73,7 +77,11 @@ async function main() {
       kFactor: 1.0,
       format: TournamentFormat.TEAM,
       maxParticipants: 16,
-      settings: { pointsForWin: 3, tiebreakers: ['h2h', 'mapDiff'] },
+      settings: {
+        pointsForWin: 3,
+        tiebreakers: ['h2h', 'mapDiff'],
+        bracketType: 'DOUBLE_ELIMINATION',
+      },
       status: 'finished',
     },
   });

@@ -10,9 +10,11 @@ export class MatchesController {
   constructor(private readonly matchesService: MatchesService) {}
 
   @Post('generate-bracket')
-  @ApiOperation({ summary: 'Згенерувати сітку Single Elimination для турніру' })
+  @ApiOperation({
+    summary: 'Згенерувати сітку для турніру (Single або Double Elimination)',
+  })
   generateBracket(@Body() dto: GenerateBracketDto) {
-    return this.matchesService.generateSingleElimination(dto);
+    return this.matchesService.generateBracket(dto);
   }
 
   @Post('generate-groups')
@@ -41,9 +43,7 @@ export class MatchesController {
     @Param('id') tournamentId: string,
     @Query('stage') stage?: string,
   ) {
-    // Якщо параметр передано, приводимо його до верхнього регістру
     const formattedStage = stage ? (stage.toUpperCase() as Stage) : undefined;
-
     return this.matchesService.findAllByTournament(
       tournamentId,
       formattedStage,

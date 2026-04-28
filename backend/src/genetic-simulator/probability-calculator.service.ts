@@ -3,7 +3,7 @@ import { Match } from '@prisma/client';
 
 @Injectable()
 export class ProbabilityCalculatorService {
-  // Виносимо магічне число в константу
+  // Виносимо число в константу
   private readonly ELO_DIVISOR = 400;
   private readonly MIN_PROBABILITY = 0.01;
   private readonly MAX_PROBABILITY = 0.99;

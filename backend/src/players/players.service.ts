@@ -49,7 +49,7 @@ export class PlayersService {
   }
 
   findAll() {
-    // Завдяки зв'язкам, ми можемо одразу витягнути дані гри та юзера!
+    // Завдяки зв'язкам, ми можемо одразу витягнути дані гри та юзера
     return this.prisma.player.findMany({
       include: {
         game: { select: { name: true } },

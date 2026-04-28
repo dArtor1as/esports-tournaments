@@ -64,7 +64,7 @@ export class TournamentParticipantsService {
           tournamentId: dto.tournamentId,
           teamId: dto.teamId,
           joinedStage: 'CQ', // За замовчуванням всі стартують з CQ. Можна розширити логіку для різних посівів
-          seed: tournament._count.participants + 1, // Тимчасовий посів (потім можна перемішати)
+          seed: tournament._count.participants + 1, // Тимчасовий посів
         },
       });
 

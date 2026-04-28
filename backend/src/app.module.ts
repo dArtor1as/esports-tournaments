@@ -12,9 +12,10 @@ import { TeamInvitationsModule } from './team-invitations/team-invitations.modul
 import { TournamentParticipantsModule } from './tournament-participants/tournament-participants.module';
 import { TournamentInvitationsModule } from './tournament-invitations/tournament-invitations.module';
 import { GeneticSimulatorModule } from './genetic-simulator/genetic-simulator.module';
+import { MatchSimulatorsModule } from './match-simulators/match-simulators.module';
 
 @Module({
-  imports: [PrismaModule, UsersModule, PlayersModule, TeamsModule, TournamentsModule, MatchesModule, GamesModule, TeamInvitationsModule, TournamentParticipantsModule, TournamentInvitationsModule, GeneticSimulatorModule],
+  imports: [PrismaModule, UsersModule, PlayersModule, TeamsModule, TournamentsModule, MatchesModule, GamesModule, TeamInvitationsModule, TournamentParticipantsModule, TournamentInvitationsModule, GeneticSimulatorModule, MatchSimulatorsModule],
   controllers: [AppController],
   providers: [AppService],
 })

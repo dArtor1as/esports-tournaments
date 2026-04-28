@@ -1,15 +1,22 @@
 import { Module } from '@nestjs/common';
 import { GeneticSimulatorService } from './genetic-simulator.service';
 import { GeneticSimulatorController } from './genetic-simulator.controller';
-import { Cs2SimulatorService } from './cs2-simulator.service';
+import { MatchSimulatorsModule } from 'src/match-simulators/match-simulators.module';
 import { ProbabilityCalculatorService } from './probability-calculator.service';
+import { SingleEliminationStrategy } from './strategies/single-elimination.strategy';
+import { GroupStageStrategy } from './strategies/group-stage.strategy';
+import { DoubleEliminationStrategy } from './strategies/double-elimination.strategy';
 
 @Module({
+  imports: [MatchSimulatorsModule],
   controllers: [GeneticSimulatorController],
   providers: [
     GeneticSimulatorService,
-    Cs2SimulatorService,
+    MatchSimulatorsModule,
     ProbabilityCalculatorService,
+    SingleEliminationStrategy,
+    GroupStageStrategy,
+    DoubleEliminationStrategy,
   ],
 })
 export class GeneticSimulatorModule {}

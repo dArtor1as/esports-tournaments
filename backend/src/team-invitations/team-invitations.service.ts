@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { CreateTeamInvitationDto } from './dto/create-team-invitation.dto';
 import { PrismaService } from '../prisma/prisma.service';
-import * as crypto from 'crypto'; // Вбудований модуль Node.js
+import * as crypto from 'crypto';
 
 @Injectable()
 export class TeamInvitationsService {
