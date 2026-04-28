@@ -60,9 +60,14 @@ export class CreateTournamentDto {
   maxParticipants?: number;
 
   @ApiProperty({
-    example: { pointsForWin: 3, tiebreaker: 'h2h' },
-    description: 'Гнучкі налаштування турніру у форматі JSON',
+    example: {
+      pointsForWin: 3,
+      tiebreaker: 'h2h',
+      bracketType: 'DOUBLE_ELIMINATION',
+    },
+    description:
+      'Гнучкі налаштування турніру (bracketType: SINGLE_ELIMINATION або DOUBLE_ELIMINATION)',
   })
   @IsObject()
-  settings: Record<string, any>; // Використовуємо Record для гнучкого JSON
+  settings: Record<string, any>;
 }

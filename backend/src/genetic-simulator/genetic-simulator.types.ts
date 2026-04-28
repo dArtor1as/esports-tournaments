@@ -32,6 +32,7 @@ export interface SimulationMatch {
   scoreB: number;
   bestOf: number;
   nextMatchWinnerId: string | null;
+  nextMatchLoserId: string | null;
   details?: MatchDetails; // Використовуємо наш новий type
 }
 
