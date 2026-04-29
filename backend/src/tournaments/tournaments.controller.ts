@@ -27,10 +27,10 @@ export class TournamentsController {
 
   @Post('generate-test')
   @ApiOperation({
-    summary: 'Створити тестовий турнір і випадково зареєструвати N існуючих команд',
+    summary: 'Створити турнір із кастомними налаштуваннями',
   })
   generateTestTournament(@Body() dto: GenerateTestTournamentDto) {
-    return this.tournamentsService.generateTestTournament(dto.teamCount);
+    return this.tournamentsService.generateTestTournament(dto);
   }
 
   @Get()
