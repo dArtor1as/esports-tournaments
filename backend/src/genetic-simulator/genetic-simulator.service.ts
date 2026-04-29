@@ -59,11 +59,27 @@ export class GeneticSimulatorService {
 
     const dbMatches = await this.prisma.match.findMany({
       where: { tournamentId, stage },
-      orderBy: stage === Stage.PLAYOFF ? { round: 'asc' } : { id: 'asc' },
     });
 
     if (dbMatches.length === 0) {
       throw new BadRequestException(`Матчі для стадії ${stage} порожні`);
+    }
+
+    if (stage === Stage.PLAYOFF) {
+      dbMatches.sort((a, b) => {
+        // 0. Гранд-фінал ЗАВЖДИ розраховується останнім
+        if (a.bracket === 'GRAND_FINAL') return 1;
+        if (b.bracket === 'GRAND_FINAL') return -1;
+
+        // 1. Спочатку сортуємо за раундами
+        if (a.round !== b.round) return a.round - b.round;
+
+        // 2. В межах одного раунду UPPER має йти ПЕРЕД LOWER
+        const bracketOrder = { UPPER: 1, LOWER: 2, NONE: 3 };
+        return bracketOrder[a.bracket] - bracketOrder[b.bracket];
+      });
+    } else {
+      dbMatches.sort((a, b) => a.id.localeCompare(b.id));
     }
 
     const baseSkeleton: SimulationMatch[] = dbMatches.map((m) => ({

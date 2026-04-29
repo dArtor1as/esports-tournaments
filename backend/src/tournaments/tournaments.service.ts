@@ -6,6 +6,7 @@ import {
 import { Prisma, Region, Stage, TournamentFormat } from '@prisma/client';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { UpdateTournamentDto } from './dto/update-tournament.dto';
+import { GenerateTestTournamentDto } from './dto/generate-test-tournament.dto';
 import { PrismaService } from '../prisma/prisma.service';
 
 type WorkflowMode = 'generation' | 'simulation';
@@ -15,61 +16,64 @@ type TournamentStatus = 'planned' | 'live' | 'finished';
 export class TournamentsService {
   constructor(private prisma: PrismaService) {}
 
-  async generateTestTournament(teamCount = 16) {
-    const allowedCounts = [8, 16, 32];
+  async generateTestTournament(dto: GenerateTestTournamentDto) {
+    const teamCount = dto.teamCount || 16;
+    const bracketType = dto.bracketType || 'SINGLE_ELIMINATION';
+    const title =
+      dto.title || `Custom Cup #${Math.floor(Math.random() * 1000)}`;
+
+    const allowedCounts = [4, 8, 16, 32];
     if (!allowedCounts.includes(teamCount)) {
-      throw new BadRequestException(
-        'teamCount має бути одним із значень: 8, 16, 32',
-      );
+      throw new BadRequestException('teamCount має бути 4, 8, 16 або 32');
     }
 
     const game = await this.prisma.game.findUnique({
       where: { slug: 'cs2' },
     });
     if (!game) {
-      throw new BadRequestException(
-        'Гру CS2 не знайдено. Спочатку запустіть seed через консоль.',
-      );
+      throw new BadRequestException('Гру CS2 не знайдено. Запустіть seed.');
     }
 
     const availableTeams = await this.prisma.team.findMany({
       select: { id: true },
-      orderBy: { id: 'asc' },
     });
 
     if (availableTeams.length < teamCount) {
       throw new BadRequestException(
-        `У базі лише ${availableTeams.length} команд. Для створення тестового турніру на ${teamCount} команд спочатку запустіть seed через консоль.`,
+        `У базі лише ${availableTeams.length} команд.`,
       );
     }
 
-    const shuffled = [...availableTeams];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
+    // Перемішуємо команди, щоб турніри завжди були різними
+    const shuffled = [...availableTeams].sort(() => 0.5 - Math.random());
     const selected = shuffled.slice(0, teamCount);
 
     const tournament = await this.prisma.$transaction(async (tx) => {
       const createdTournament = await tx.tournament.create({
         data: {
-          title: `Test Cup #${Date.now()}`,
+          title: title,
           gameId: game.id,
           tier: 1,
           region: Region.GLOBAL,
           kFactor: 1.0,
           format: TournamentFormat.TEAM,
           maxParticipants: teamCount,
-          settings: { pointsForWin: 3, tiebreakers: ['h2h', 'mapDiff'] },
+          // Передаємо налаштування з фронтенду!
+          settings: {
+            pointsForWin: 3,
+            tiebreakers: ['h2h', 'mapDiff'],
+            bracketType: bracketType,
+          },
           status: 'planned',
         },
       });
 
+      // Реєструємо вибрані команди
       await tx.tournamentParticipant.createMany({
         data: selected.map((team, idx) => ({
           tournamentId: createdTournament.id,
           teamId: team.id,
-          joinedStage: Stage.GROUP,
+          joinedStage: Stage.PLAYOFF, // Якщо одразу генеруємо сітку, можна ставити PLAYOFF
           seed: idx + 1,
         })),
       });
@@ -78,8 +82,9 @@ export class TournamentsService {
     });
 
     return {
-      message: `Тестовий турнір створено на ${teamCount} команд.`,
+      message: `Турнір '${title}' на '${teamCount}' команд успішно створено.`,
       tournamentId: tournament.id,
+      format: bracketType,
       participantsCount: teamCount,
     };
   }
@@ -104,7 +109,7 @@ export class TournamentsService {
         kFactor: createTournamentDto.kFactor,
         format: createTournamentDto.format || 'TEAM',
         maxParticipants: createTournamentDto.maxParticipants || 16,
-        settings: createTournamentDto.settings, // Prisma чудово "їсть" JS-об'єкти для JSON-полів
+        settings: createTournamentDto.settings, // JSON-поля
       },
     });
   }
@@ -113,9 +118,9 @@ export class TournamentsService {
     return this.prisma.tournament.findMany({
       include: {
         game: { select: { name: true } },
-        _count: { select: { participants: true } }, // Крута фіча Prisma: одразу рахуємо кількість учасників
+        _count: { select: { participants: true } }, // одразу рахуємо кількість учасників
       },
-      orderBy: { id: 'desc' }, // Спочатку нові
+      orderBy: { id: 'desc' },
     });
   }
 
