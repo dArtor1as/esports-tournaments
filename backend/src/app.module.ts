@@ -13,9 +13,27 @@ import { TournamentParticipantsModule } from './tournament-participants/tourname
 import { TournamentInvitationsModule } from './tournament-invitations/tournament-invitations.module';
 import { GeneticSimulatorModule } from './genetic-simulator/genetic-simulator.module';
 import { MatchSimulatorsModule } from './match-simulators/match-simulators.module';
+import { AuthModule } from './auth/auth.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [PrismaModule, UsersModule, PlayersModule, TeamsModule, TournamentsModule, MatchesModule, GamesModule, TeamInvitationsModule, TournamentParticipantsModule, TournamentInvitationsModule, GeneticSimulatorModule, MatchSimulatorsModule],
+  imports: [
+    // Реєструємо глобально першим, щоб всі інші модулі могли використовувати змінні середовища
+    ConfigModule.forRoot({ isGlobal: true }),
+    PrismaModule,
+    UsersModule,
+    PlayersModule,
+    TeamsModule,
+    TournamentsModule,
+    MatchesModule,
+    GamesModule,
+    TeamInvitationsModule,
+    TournamentParticipantsModule,
+    TournamentInvitationsModule,
+    GeneticSimulatorModule,
+    MatchSimulatorsModule,
+    AuthModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

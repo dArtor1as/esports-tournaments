@@ -16,7 +16,7 @@ type TournamentStatus = 'planned' | 'live' | 'finished';
 export class TournamentsService {
   constructor(private prisma: PrismaService) {}
 
-  async generateTestTournament(dto: GenerateTestTournamentDto) {
+  async generateTestTournament(dto: GenerateTestTournamentDto, userId: string) {
     const teamCount = dto.teamCount || 16;
     const bracketType = dto.bracketType || 'SINGLE_ELIMINATION';
     const title =
@@ -65,6 +65,8 @@ export class TournamentsService {
             bracketType: bracketType,
           },
           status: 'planned',
+          creatorId: userId,
+          isPublic: true,
         },
       });
 
@@ -110,6 +112,8 @@ export class TournamentsService {
         format: createTournamentDto.format || 'TEAM',
         maxParticipants: createTournamentDto.maxParticipants || 16,
         settings: createTournamentDto.settings, // JSON-поля
+        creatorId: createTournamentDto.creatorId,
+        isPublic: createTournamentDto.isPublic,
       },
     });
   }

@@ -7,12 +7,20 @@ import {
   Param,
   Delete,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { TournamentsService } from './tournaments.service';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { UpdateTournamentDto } from './dto/update-tournament.dto';
 import { GenerateTestTournamentDto } from './dto/generate-test-tournament.dto';
-import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('Tournaments (Турніри)')
 @Controller('tournaments')
@@ -20,16 +28,26 @@ export class TournamentsController {
   constructor(private readonly tournamentsService: TournamentsService) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Створити новий турнір' })
-  create(@Body() createTournamentDto: CreateTournamentDto) {
+  create(
+    @Body() createTournamentDto: CreateTournamentDto,
+    @CurrentUser() user: any,
+  ) {
     return this.tournamentsService.create(createTournamentDto);
   }
 
   @Post('generate-test')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Створити турнір із кастомними налаштуваннями',
   })
-  generateTestTournament(@Body() dto: GenerateTestTournamentDto) {
+  generateTestTournament(
+    @Body() dto: GenerateTestTournamentDto,
+    @CurrentUser() user: any,
+  ) {
     return this.tournamentsService.generateTestTournament(dto);
   }
 
