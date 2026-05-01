@@ -7,12 +7,21 @@ import {
   Param,
   Delete,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { TournamentsService } from './tournaments.service';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { UpdateTournamentDto } from './dto/update-tournament.dto';
 import { GenerateTestTournamentDto } from './dto/generate-test-tournament.dto';
-import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 
 @ApiTags('Tournaments (Турніри)')
 @Controller('tournaments')
@@ -20,17 +29,27 @@ export class TournamentsController {
   constructor(private readonly tournamentsService: TournamentsService) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Створити новий турнір' })
-  create(@Body() createTournamentDto: CreateTournamentDto) {
-    return this.tournamentsService.create(createTournamentDto);
+  create(
+    @Body() createTournamentDto: CreateTournamentDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.tournamentsService.create(createTournamentDto, user.userId);
   }
 
   @Post('generate-test')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Створити турнір із кастомними налаштуваннями',
   })
-  generateTestTournament(@Body() dto: GenerateTestTournamentDto) {
-    return this.tournamentsService.generateTestTournament(dto);
+  generateTestTournament(
+    @Body() dto: GenerateTestTournamentDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.tournamentsService.generateTestTournament(dto, user.userId);
   }
 
   @Get()
@@ -83,6 +102,8 @@ export class TournamentsController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Оновити налаштування турніру (до старту)' })
   update(
     @Param('id') id: string,
@@ -92,6 +113,8 @@ export class TournamentsController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Видалити турнір (тільки якщо він ще не розпочався)',
   })

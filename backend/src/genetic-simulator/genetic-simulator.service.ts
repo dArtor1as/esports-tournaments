@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SimulateTournamentDto } from './dto/simulate-tournament.dto';
@@ -12,6 +13,7 @@ import { SingleEliminationStrategy } from './strategies/single-elimination.strat
 import { GroupStageStrategy } from './strategies/group-stage.strategy';
 import { DoubleEliminationStrategy } from './strategies/double-elimination.strategy';
 import { SimulationContext } from './strategies/base-genetic.strategy';
+import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 
 @Injectable()
 export class GeneticSimulatorService {
@@ -28,6 +30,7 @@ export class GeneticSimulatorService {
   private async prepareSimulationContext(
     tournamentId: string,
     stage: Stage,
+    user: JwtPayload,
   ): Promise<SimulationContext> {
     const tournament = await this.prisma.tournament.findUnique({
       where: { id: tournamentId },
@@ -40,6 +43,12 @@ export class GeneticSimulatorService {
     if (!tournament || tournament.status !== 'live') {
       throw new BadRequestException(
         `Турнір має бути у статусі live. Спочатку згенеруйте сітку/групи.`,
+      );
+    }
+
+    if (tournament.creatorId !== user.userId && user.role !== 'ADMIN') {
+      throw new ForbiddenException(
+        'Ви не маєте права запускати симуляцію для чужого турніру',
       );
     }
 
@@ -106,10 +115,11 @@ export class GeneticSimulatorService {
   }
 
   // Головні методи запуску
-  async runSimulation(dto: SimulateTournamentDto) {
+  async runSimulation(dto: SimulateTournamentDto, user: JwtPayload) {
     const context = await this.prepareSimulationContext(
       dto.tournamentId,
       Stage.PLAYOFF,
+      user,
     );
 
     // Логіка вибору стратегії на основі налаштувань турніру
@@ -122,22 +132,29 @@ export class GeneticSimulatorService {
     return this.singleEliminationStrategy.execute(context, dto.populations);
   }
 
-  async runGroupSimulation(dto: SimulateTournamentDto) {
+  async runGroupSimulation(dto: SimulateTournamentDto, user: JwtPayload) {
     const context = await this.prepareSimulationContext(
       dto.tournamentId,
       Stage.GROUP,
+      user,
     );
     return this.groupStageStrategy.execute(context, dto.populations);
   }
 
-  async findRunsByTournament(tournamentId: string) {
+  async findRunsByTournament(tournamentId: string, user: JwtPayload) {
     const tournament = await this.prisma.tournament.findUnique({
       where: { id: tournamentId },
-      select: { id: true },
+      select: { id: true, creatorId: true },
     });
 
     if (!tournament) {
       throw new NotFoundException('Турнір не знайдено');
+    }
+
+    if (tournament.creatorId !== user.userId && user.role !== 'ADMIN') {
+      throw new ForbiddenException(
+        'Ви не маєте права запускати симуляцію для чужого турніру',
+      );
     }
 
     return this.prisma.simulationRun.findMany({

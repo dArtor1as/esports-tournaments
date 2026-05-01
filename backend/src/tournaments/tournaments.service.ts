@@ -16,7 +16,7 @@ type TournamentStatus = 'planned' | 'live' | 'finished';
 export class TournamentsService {
   constructor(private prisma: PrismaService) {}
 
-  async generateTestTournament(dto: GenerateTestTournamentDto) {
+  async generateTestTournament(dto: GenerateTestTournamentDto, userId: string) {
     const teamCount = dto.teamCount || 16;
     const bracketType = dto.bracketType || 'SINGLE_ELIMINATION';
     const title =
@@ -65,6 +65,8 @@ export class TournamentsService {
             bracketType: bracketType,
           },
           status: 'planned',
+          creatorId: userId,
+          isPublic: true,
         },
       });
 
@@ -89,7 +91,7 @@ export class TournamentsService {
     };
   }
 
-  async create(createTournamentDto: CreateTournamentDto) {
+  async create(createTournamentDto: CreateTournamentDto, userId: string) {
     // Перевіряємо, чи існує така гра в базі
     const game = await this.prisma.game.findUnique({
       where: { id: createTournamentDto.gameId },
@@ -110,6 +112,8 @@ export class TournamentsService {
         format: createTournamentDto.format || 'TEAM',
         maxParticipants: createTournamentDto.maxParticipants || 16,
         settings: createTournamentDto.settings, // JSON-поля
+        creatorId: userId,
+        isPublic: createTournamentDto.isPublic,
       },
     });
   }

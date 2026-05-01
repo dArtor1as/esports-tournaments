@@ -64,6 +64,15 @@ async function main() {
   console.log('🌍 Генерація Екосистеми: Старт...');
   const passwordHash = await bcrypt.hash('password123', 10);
 
+  const admin = await prisma.user.create({
+    data: {
+      username: 'supre_admin',
+      email: 'admin@esports.com',
+      passwordHash,
+      role: 'ADMIN',
+    },
+  });
+
   const game = await prisma.game.upsert({
     where: { slug: 'cs2' },
     update: {},
@@ -203,6 +212,7 @@ async function main() {
           bracketType: 'SINGLE_ELIMINATION',
         },
         status: 'finished',
+        creatorId: admin.id,
       },
     });
 

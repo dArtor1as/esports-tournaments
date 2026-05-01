@@ -1,8 +1,22 @@
-import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { MatchesService } from './matches.service';
 import { GenerateBracketDto } from './dto/generate-bracket.dto';
-import { ApiOperation, ApiTags, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiTags,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { Stage } from '@prisma/client';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('Matches (Турнірна сітка та матчі)')
 @Controller('matches')
@@ -10,6 +24,8 @@ export class MatchesController {
   constructor(private readonly matchesService: MatchesService) {}
 
   @Post('generate-bracket')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Згенерувати сітку для турніру (Single або Double Elimination)',
   })
@@ -18,12 +34,16 @@ export class MatchesController {
   }
 
   @Post('generate-groups')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Згенерувати матчі групового етапу (Round Robin)' })
   generateGroups(@Body() dto: GenerateBracketDto) {
     return this.matchesService.generateGroupStage(dto);
   }
 
   @Post('transition-to-playoffs')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Відібрати Топ-8 з груп та призначити їм посіви для Плей-оф',
   })

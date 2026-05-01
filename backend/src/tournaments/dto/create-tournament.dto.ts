@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsBoolean,
   IsEnum,
   IsInt,
   IsNotEmpty,
@@ -70,4 +71,12 @@ export class CreateTournamentDto {
   })
   @IsObject()
   settings: Record<string, any>;
+
+  @ApiProperty({
+    example: true,
+    description: 'Чи турнір публічний',
+  })
+  @IsBoolean()
+  @IsNotEmpty()
+  isPublic: boolean;
 }

@@ -19,7 +19,17 @@ async function bootstrap() {
       'API для дипломної роботи: Система управління кіберспортивними турнірами',
     )
     .setVersion('1.0')
-    .addBearerAuth() // Додаємо кнопку для авторизації по токену
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Введіть JWT токен',
+        in: 'header',
+      },
+      'JWT-auth', // Це ім'я ми будемо використовувати в контролерах
+    ) // Додаємо кнопку для авторизації по токену
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

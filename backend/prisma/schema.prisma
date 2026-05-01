@@ -76,6 +76,7 @@ model User {
 
   players      Player[] 
   teamInvitations TeamInvitation[]
+  createdTournaments Tournament[] @relation("TournamentCreator")
 }
 
 model Player {
@@ -143,6 +144,10 @@ model Game {
 
 model Tournament {
   id           String   @id @default(uuid())
+
+  creatorId    String
+  creator      User    @relation("TournamentCreator", fields: [creatorId], references: [id])
+
   title        String
   gameId       String
   game         Game     @relation(fields: [gameId], references: [id])
@@ -154,6 +159,8 @@ model Tournament {
   status       String   @default("planned") // planned, live, finished
   format TournamentFormat @default(TEAM)
   maxParticipants Int     @default(16)
+
+  isPublic     Boolean  @default(true) // тип реєстрації: true = відкрита, false = за інвайтами
   
   participants TournamentParticipant[]
   matches      Match[]

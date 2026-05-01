@@ -43,32 +43,42 @@ export class TeamInvitationsService {
   }
 
   // Метод прийняття запрошення
-  async accept(token: string, playerId: string) {
+  async accept(token: string, playerId: string, userId: string) {
     return this.prisma.$transaction(async (prisma) => {
-      // 1. Перевірки інвайту та гравця
       const invite = await prisma.teamInvitation.findUnique({
         where: { token },
       });
+
       if (!invite) throw new NotFoundException('Запрошення не знайдено');
       if (invite.status !== 'PENDING')
         throw new BadRequestException('Запрошення вже оброблено');
       if (invite.expiresAt < new Date())
         throw new BadRequestException('Термін дії запрошення минув');
 
+      // Перевірка: чи це запрошення взагалі для цього юзера?
+      if (invite.userId !== userId) {
+        throw new BadRequestException(
+          'Це запрошення адресоване іншому користувачу',
+        );
+      }
+
+      // Шукаємо конкретнйи профіль, який передав фронтенд
       const player = await prisma.player.findUnique({
         where: { id: playerId },
       });
+
       if (!player) throw new NotFoundException('Ігровий профіль не знайдено');
-      if (player.userId !== invite.userId)
-        throw new BadRequestException(
-          'Цей профіль належить іншому користувачу',
-        );
+
+      // Перевірка: чи намагається юзер зайти чужим профілем?
+      if (player.userId !== userId) {
+        throw new BadRequestException('Цей ігровий профіль вам не належить');
+      }
       if (player.teamId)
-        throw new BadRequestException('Ви вже перебуваєте в команді');
+        throw new BadRequestException('Цей ігровий профіль вже в команді');
 
       // 2. Додаємо гравця в команду
       await prisma.player.update({
-        where: { id: playerId },
+        where: { id: player.id },
         data: { teamId: invite.teamId },
       });
 
@@ -105,13 +115,18 @@ export class TeamInvitationsService {
   }
 
   // Метод відхилення запрошення
-  async decline(token: string) {
+  async decline(token: string, userId: string) {
     const invite = await this.prisma.teamInvitation.findUnique({
       where: { token },
     });
 
     if (!invite || invite.status !== 'PENDING') {
       throw new BadRequestException('Запрошення недійсне або вже оброблено');
+    }
+    if (invite.userId !== userId) {
+      throw new BadRequestException(
+        'Це запрошення адресоване іншому користувачу',
+      );
     }
 
     return this.prisma.teamInvitation.update({
