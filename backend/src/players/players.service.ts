@@ -7,11 +7,11 @@ import { PrismaService } from '../prisma/prisma.service';
 export class PlayersService {
   constructor(private prisma: PrismaService) {}
 
-  async create(createPlayerDto: CreatePlayerDto) {
+  async create(createPlayerDto: CreatePlayerDto, userId: string) {
     const existingProfile = await this.prisma.player.findUnique({
       where: {
         userId_gameId: {
-          userId: createPlayerDto.userId,
+          userId,
           gameId: createPlayerDto.gameId,
         },
       },
@@ -40,7 +40,7 @@ export class PlayersService {
 
     return this.prisma.player.create({
       data: {
-        userId: createPlayerDto.userId,
+        userId,
         gameId: createPlayerDto.gameId,
         nickname: createPlayerDto.nickname,
         rating: initialRating, // Використовуємо згенерований рейтинг

@@ -58,14 +58,25 @@ export class TeamsService {
     }
   }
 
-  async create(createTeamDto: CreateTeamDto) {
+  async create(createTeamDto: CreateTeamDto, userId: string) {
+    // Шукаємо за конкретним ID, який передали в DTO
     const captain = await this.prisma.player.findUnique({
       where: { id: createTeamDto.captainPlayerId },
     });
 
-    if (!captain) throw new BadRequestException('Гравець не знайдений');
-    if (captain.teamId)
-      throw new BadRequestException('Ви вже перебуваєте в команді');
+    if (!captain) throw new BadRequestException('Ігровий профіль не знайдено');
+
+    // БЕЗПЕКА: Перевіряємо, чи юзер не намагається зробити капітаном когось іншого
+    if (captain.userId !== userId) {
+      throw new BadRequestException(
+        'Ви не можете створити команду від імені іншого профілю',
+      );
+    }
+    if (captain.teamId) {
+      throw new BadRequestException(
+        'Цей ігровий профіль вже перебуває в іншій команді',
+      );
+    }
 
     const existingTeam = await this.prisma.team.findFirst({
       where: { OR: [{ name: createTeamDto.name }, { tag: createTeamDto.tag }] },

@@ -21,6 +21,7 @@ import {
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 
 @ApiTags('Tournaments (Турніри)')
 @Controller('tournaments')
@@ -33,9 +34,9 @@ export class TournamentsController {
   @ApiOperation({ summary: 'Створити новий турнір' })
   create(
     @Body() createTournamentDto: CreateTournamentDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: JwtPayload,
   ) {
-    return this.tournamentsService.create(createTournamentDto);
+    return this.tournamentsService.create(createTournamentDto, user.userId);
   }
 
   @Post('generate-test')
@@ -46,9 +47,9 @@ export class TournamentsController {
   })
   generateTestTournament(
     @Body() dto: GenerateTestTournamentDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: JwtPayload,
   ) {
-    return this.tournamentsService.generateTestTournament(dto);
+    return this.tournamentsService.generateTestTournament(dto, user.userId);
   }
 
   @Get()
@@ -101,6 +102,8 @@ export class TournamentsController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Оновити налаштування турніру (до старту)' })
   update(
     @Param('id') id: string,
@@ -110,6 +113,8 @@ export class TournamentsController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Видалити турнір (тільки якщо він ще не розпочався)',
   })

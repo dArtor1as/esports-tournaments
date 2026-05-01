@@ -12,8 +12,9 @@ import { TeamsService } from './teams.service';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 import { ApiOperation, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
-import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 
 @ApiTags('Teams (Команди)')
 @Controller('teams')
@@ -24,9 +25,8 @@ export class TeamsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Створити нову команду' })
-  create(@Body() createTeamDto: CreateTeamDto, @CurrentUser() user: any) {
-    createTeamDto.captainPlayerId = user.userId; // Призначаємо капітаном гравця, який створює команду
-    return this.teamsService.create(createTeamDto);
+  create(@Body() createTeamDto: CreateTeamDto, @CurrentUser() user: JwtPayload) {
+    return this.teamsService.create(createTeamDto, user.userId);
   }
 
   @Get()

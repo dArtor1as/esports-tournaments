@@ -7,7 +7,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 
 @ApiTags('Genetic Simulator (Алгоритм)')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard)
 @Controller('genetic-simulator')
 export class GeneticSimulatorController {
@@ -16,6 +16,8 @@ export class GeneticSimulatorController {
   ) {}
 
   @Post('run')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Запустити генетичний алгоритм для заповнення сітки турніру',
   })
@@ -24,6 +26,8 @@ export class GeneticSimulatorController {
   }
 
   @Post('run-groups')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Запустити генетичний алгоритм для ГРУПОВОГО етапу (Round Robin)',
   })

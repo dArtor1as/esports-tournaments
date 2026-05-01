@@ -73,14 +73,6 @@ export class CreateTournamentDto {
   settings: Record<string, any>;
 
   @ApiProperty({
-    example: 'user-1234',
-    description: 'ID користувача, який створює турнір',
-  })
-  @IsUUID()
-  @IsNotEmpty()
-  creatorId: string;
-
-  @ApiProperty({
     example: true,
     description: 'Чи турнір публічний',
   })

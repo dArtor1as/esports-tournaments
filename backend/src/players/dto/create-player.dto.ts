@@ -11,14 +11,6 @@ import {
 
 export class CreatePlayerDto {
   @ApiProperty({
-    example: '123e4567-e89b-12d3-a456-426614174000', //  приклад UUID
-    description: 'ID користувача, якому належатиме профіль',
-  })
-  @IsUUID()
-  @IsNotEmpty()
-  userId: string;
-
-  @ApiProperty({
     example: '987fcdeb-51a2-43d7-9012-3456789abcde', // приклад UUID
     description: 'ID дисципліни (гри), наприклад CS2',
   })

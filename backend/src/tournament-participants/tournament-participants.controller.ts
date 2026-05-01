@@ -1,7 +1,16 @@
-import { Controller, Get, Post, Body, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  UseGuards,
+} from '@nestjs/common';
 import { TournamentParticipantsService } from './tournament-participants.service';
 import { CreateTournamentParticipantDto } from './dto/create-tournament-participant.dto';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('Tournament Participants (Реєстрація команд)')
 @Controller('tournament-participants')
@@ -11,6 +20,8 @@ export class TournamentParticipantsController {
   ) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Зареєструвати команду на турнір та зафіксувати склад',
   })
@@ -27,6 +38,8 @@ export class TournamentParticipantsController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Скасувати реєстрацію команди (тільки до старту)' })
   remove(@Param('id') id: string) {
     return this.participantsService.remove(id);
