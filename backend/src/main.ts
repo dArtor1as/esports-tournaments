@@ -24,11 +24,9 @@ async function bootstrap() {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        name: 'JWT',
         description: 'Введіть JWT токен',
-        in: 'header',
       },
-      'JWT-auth', // Це ім'я ми будемо використовувати в контролерах
+      'JWT-auth',
     ) // Додаємо кнопку для авторизації по токену
     .build();
 

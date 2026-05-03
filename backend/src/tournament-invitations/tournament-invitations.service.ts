@@ -1,15 +1,21 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateTournamentInvitationDto } from './dto/create-tournament-invitation.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import * as crypto from 'crypto';
+import { MailService } from 'src/mail/mail.service';
+import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 
 @Injectable()
 export class TournamentInvitationsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private mailService: MailService,
+  ) {}
 
   async create(dto: CreateTournamentInvitationDto) {
     // 1. Отримуємо дані турніру та команди для аналізу логіки
@@ -76,28 +82,65 @@ export class TournamentInvitationsService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
-    return this.prisma.tournamentInvitation.create({
+    const invite = await this.prisma.tournamentInvitation.create({
       data: {
         tournamentId: dto.tournamentId,
         teamId: dto.teamId,
         token,
         expiresAt,
       },
+      include: {
+        tournament: true,
+        team: {
+          include: {
+            captain: {
+              include: {
+                user: true,
+              },
+            },
+          },
+        },
+      },
     });
+
+    // 4. Відправляємо листа з посиланням для прийняття запрошення
+    await this.mailService.sendTournamentInvite(
+      invite.team.captain.user.email,
+      invite.tournament.title,
+      invite.team.name,
+      token,
+    );
+
+    return {
+      message: 'Запрошення успішно надіслано на пошту капітана',
+      inviteId: invite.id,
+    };
   }
 
-  async accept(token: string, rosterPlayerIds: string[]) {
+  async accept(token: string, rosterPlayerIds: string[], user: JwtPayload) {
     return this.prisma.$transaction(async (prisma) => {
       // 1. Валідація інвайту
       const invite = await prisma.tournamentInvitation.findUnique({
         where: { token },
-        include: { tournament: true, team: true },
+        include: {
+          tournament: true,
+          team: {
+            include: {
+              captain: true,
+            },
+          },
+        },
       });
       if (!invite) throw new NotFoundException('Запрошення не знайдено');
+
       if (invite.status !== 'PENDING')
         throw new BadRequestException('Запрошення вже оброблено');
+
       if (invite.expiresAt < new Date())
         throw new BadRequestException('Термін дії запрошення минув');
+
+      if (invite.team.captain.userId !== user.userId)
+        throw new ForbiddenException('Ви не є капітаном цієї команди');
 
       // 2. Валідація гравців
       const players = await prisma.player.findMany({
@@ -150,12 +193,21 @@ export class TournamentInvitationsService {
   }
 
   // ... методи decline та findAllByTournament залишаються без змін
-  async decline(token: string) {
+  async decline(token: string, user: JwtPayload) {
     const invite = await this.prisma.tournamentInvitation.findUnique({
       where: { token },
+      include: {
+        team: {
+          include: { captain: true },
+        },
+      },
     });
+
     if (!invite || invite.status !== 'PENDING')
       throw new BadRequestException('Запрошення недійсне');
+
+    if (invite.team.captain.userId !== user.userId)
+      throw new ForbiddenException('Ви не є капітаном цієї команди');
 
     return this.prisma.tournamentInvitation.update({
       where: { id: invite.id },
