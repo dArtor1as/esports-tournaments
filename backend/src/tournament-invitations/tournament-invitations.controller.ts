@@ -12,6 +12,8 @@ import { CreateTournamentInvitationDto } from './dto/create-tournament-invitatio
 import { AcceptTournamentInvitationDto } from './dto/accept-tournament-invitation.dto';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 
 @ApiTags('Tournament Invitations (Запрошення на турнір)')
 @Controller('tournament-invitations')
@@ -35,16 +37,21 @@ export class TournamentInvitationsController {
   accept(
     @Param('token') token: string,
     @Body() acceptDto: AcceptTournamentInvitationDto,
+    @CurrentUser() user: JwtPayload,
   ) {
-    return this.invitationsService.accept(token, acceptDto.rosterPlayerIds);
+    return this.invitationsService.accept(
+      token,
+      acceptDto.rosterPlayerIds,
+      user,
+    );
   }
 
   @Patch(':token/decline')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Відхилити запрошення на турнір' })
-  decline(@Param('token') token: string) {
-    return this.invitationsService.decline(token);
+  decline(@Param('token') token: string, @CurrentUser() user: JwtPayload) {
+    return this.invitationsService.decline(token, user);
   }
 
   @Get('tournament/:tournamentId')

@@ -15,6 +15,7 @@ import { GeneticSimulatorModule } from './genetic-simulator/genetic-simulator.mo
 import { MatchSimulatorsModule } from './match-simulators/match-simulators.module';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { ConfigModule } from '@nestjs/config';
     GeneticSimulatorModule,
     MatchSimulatorsModule,
     AuthModule,
+    MailModule,
   ],
   controllers: [AppController],
   providers: [AppService],

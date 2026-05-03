@@ -5,11 +5,15 @@ import {
 } from '@nestjs/common';
 import { CreateTeamInvitationDto } from './dto/create-team-invitation.dto';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailService } from 'src/mail/mail.service';
 import * as crypto from 'crypto';
 
 @Injectable()
 export class TeamInvitationsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private mailService: MailService,
+  ) {}
 
   async create(createDto: CreateTeamInvitationDto) {
     // 1. Перевіряємо, чи немає вже активного інвайту для цього юзера в цю команду
@@ -32,14 +36,26 @@ export class TeamInvitationsService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
-    return this.prisma.teamInvitation.create({
+    const invite = await this.prisma.teamInvitation.create({
       data: {
         teamId: createDto.teamId,
         userId: createDto.userId,
         token,
         expiresAt,
       },
+      include: { team: true, user: true },
     });
+    // 4. Відправляємо листа з посиланням для прийняття запрошення
+    await this.mailService.sendTeamInvite(
+      invite.user.email,
+      invite.team.name,
+      token,
+    );
+
+    return {
+      message: 'Запрошення успішно надіслано на пошту',
+      inviteId: invite.id,
+    };
   }
 
   // Метод прийняття запрошення
