@@ -9,7 +9,9 @@ describe('TournamentInvitationsService', () => {
       providers: [TournamentInvitationsService],
     }).compile();
 
-    service = module.get<TournamentInvitationsService>(TournamentInvitationsService);
+    service = module.get<TournamentInvitationsService>(
+      TournamentInvitationsService,
+    );
   });
 
   it('should be defined', () => {

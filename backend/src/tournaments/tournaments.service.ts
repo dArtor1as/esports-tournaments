@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -8,13 +9,18 @@ import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { UpdateTournamentDto } from './dto/update-tournament.dto';
 import { GenerateTestTournamentDto } from './dto/generate-test-tournament.dto';
 import { PrismaService } from '../prisma/prisma.service';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 
 type WorkflowMode = 'generation' | 'simulation';
 type TournamentStatus = 'planned' | 'live' | 'finished';
 
 @Injectable()
 export class TournamentsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+  ) {}
 
   async generateTestTournament(dto: GenerateTestTournamentDto, userId: string) {
     const teamCount = dto.teamCount || 16;
@@ -102,7 +108,7 @@ export class TournamentsService {
     }
 
     // Створюємо турнір. Статус 'planned' ставиться автоматично завдяки @default в схемі
-    return this.prisma.tournament.create({
+    const createdTournament = await this.prisma.tournament.create({
       data: {
         title: createTournamentDto.title,
         gameId: createTournamentDto.gameId,
@@ -116,6 +122,10 @@ export class TournamentsService {
         isPublic: createTournamentDto.isPublic,
       },
     });
+    await this.cacheManager.del('all_tournaments'); // Очищаємо кеш при створенні нового турніру
+    await this.cacheManager.del('tournaments_workflow');
+
+    return createdTournament;
   }
 
   findAll() {
@@ -260,10 +270,15 @@ export class TournamentsService {
       );
     }
 
-    return this.prisma.tournament.update({
+    const updatedTournament = await this.prisma.tournament.update({
       where: { id },
       data: updateTournamentDto,
     });
+
+    await this.cacheManager.del('all_tournaments'); // Очищаємо кеш при оновленні турніру
+    await this.cacheManager.del('tournaments_workflow');
+
+    return updatedTournament;
   }
 
   async remove(id: string) {
@@ -281,9 +296,13 @@ export class TournamentsService {
       );
     }
 
-    // Якщо матчів немає, можемо фізично видалити
-    return this.prisma.tournament.delete({
+    const deletedTournament = await this.prisma.tournament.delete({
       where: { id },
     });
+
+    await this.cacheManager.del('all_tournaments'); // Очищаємо кеш при видаленні турніру
+    await this.cacheManager.del('tournaments_workflow');
+
+    return deletedTournament;
   }
 }

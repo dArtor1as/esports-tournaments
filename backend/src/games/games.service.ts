@@ -1,16 +1,22 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateGameDto } from './dto/create-game.dto';
 import { UpdateGameDto } from './dto/update-game.dto';
 import { PrismaService } from '../prisma/prisma.service';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 
 @Injectable()
 export class GamesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+  ) {}
 
   async create(createGameDto: CreateGameDto) {
     const existingGame = await this.prisma.game.findUnique({
@@ -20,6 +26,8 @@ export class GamesService {
     if (existingGame) {
       throw new ConflictException('Гра з таким slug вже існує');
     }
+
+    await this.cacheManager.del('all_games'); // Очищаємо кеш при створенні нової гри
 
     return this.prisma.game.create({
       data: createGameDto,
@@ -51,6 +59,8 @@ export class GamesService {
         throw new ConflictException('Гра з таким slug вже існує');
     }
 
+    await this.cacheManager.del('all_games'); // Очищаємо кеш при оновленні гри
+
     return this.prisma.game.update({
       where: { id },
       data: updateGameDto,
@@ -71,7 +81,10 @@ export class GamesService {
         `Неможливо видалити гру. До неї прив'язано гравців: ${game._count.players}, турнірів: ${game._count.tournaments}`,
       );
     }
+    const deletedGame = await this.prisma.game.delete({ where: { id } });
 
-    return this.prisma.game.delete({ where: { id } });
+    await this.cacheManager.del('all_games'); // Очищаємо кеш при видаленні гри
+
+    return deletedGame;
   }
 }

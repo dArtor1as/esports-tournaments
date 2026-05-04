@@ -8,6 +8,7 @@ import {
   Delete,
   Query,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { TournamentsService } from './tournaments.service';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
@@ -22,6 +23,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
 
 @ApiTags('Tournaments (Турніри)')
 @Controller('tournaments')
@@ -53,6 +55,9 @@ export class TournamentsController {
   }
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheKey('all_tournaments')
+  @CacheTTL(30000) // Кешуємо на 30 секунд
   @ApiOperation({ summary: 'Отримати список усіх турнірів' })
   @ApiQuery({
     name: 'workflow',
@@ -72,6 +77,9 @@ export class TournamentsController {
   }
 
   @Get('workflow')
+  @UseInterceptors(CacheInterceptor)
+  @CacheKey('tournaments_workflow')
+  @CacheTTL(30000) // Кешуємо на 30 секунд
   @ApiOperation({
     summary: 'Отримати турніри для екрану генерації або симуляції',
   })

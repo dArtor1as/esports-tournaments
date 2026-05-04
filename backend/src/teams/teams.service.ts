@@ -1,15 +1,21 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
 } from '@nestjs/common';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 import { PrismaService } from '../prisma/prisma.service';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 
 @Injectable()
 export class TeamsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+  ) {}
 
   private calculateTier(rating: number): number {
     if (rating >= 2500) return 1;
@@ -104,6 +110,8 @@ export class TeamsService {
         data: { teamId: newTeam.id },
       });
 
+      await this.cacheManager.del('all_teams'); // Очищаємо кеш при створенні нової команди
+
       return newTeam;
     });
   }
@@ -140,20 +148,24 @@ export class TeamsService {
       }
     }
 
-    return this.prisma.team.update({
+    const updatedTeam = await this.prisma.team.update({
       where: { id },
       data: {
         name: updateTeamDto.name,
         tag: updateTeamDto.tag,
       },
     });
+
+    await this.cacheManager.del('all_teams'); // Очищаємо кеш при оновленні команди
+
+    return updatedTeam;
   }
 
   async remove(id: string) {
     // Використовуємо транзакцію для безпечного дісбанду
-    return this.prisma.$transaction(async (prisma) => {
+    const disbandedTeam = await this.prisma.$transaction(async (prisma) => {
       // 1. Змінюємо статус команди на DISBANDED
-      const disbandedTeam = await prisma.team.update({
+      const team = await prisma.team.update({
         where: { id },
         data: { status: 'DISBANDED' },
       });
@@ -164,7 +176,11 @@ export class TeamsService {
         data: { teamId: null },
       });
 
-      return disbandedTeam;
+      return team;
     });
+
+    await this.cacheManager.del('all_teams'); // Очищаємо кеш при видаленні команди
+
+    return disbandedTeam;
   }
 }

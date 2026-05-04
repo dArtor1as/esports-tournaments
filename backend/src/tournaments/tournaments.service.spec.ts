@@ -105,7 +105,9 @@ describe('TournamentsService', () => {
       Array.from({ length: 16 }, (_, idx) => ({ id: `team-${idx + 1}` })),
     );
     prismaMock.tournament.create.mockResolvedValue({ id: 't-created' });
-    prismaMock.tournamentParticipant.createMany.mockResolvedValue({ count: 16 });
+    prismaMock.tournamentParticipant.createMany.mockResolvedValue({
+      count: 16,
+    });
 
     const result = await service.generateTestTournament(
       { teamCount: 16 },
