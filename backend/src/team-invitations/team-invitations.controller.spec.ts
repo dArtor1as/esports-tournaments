@@ -11,7 +11,9 @@ describe('TeamInvitationsController', () => {
       providers: [TeamInvitationsService],
     }).compile();
 
-    controller = module.get<TeamInvitationsController>(TeamInvitationsController);
+    controller = module.get<TeamInvitationsController>(
+      TeamInvitationsController,
+    );
   });
 
   it('should be defined', () => {

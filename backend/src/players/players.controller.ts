@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { PlayersService } from './players.service';
 import { CreatePlayerDto } from './dto/create-player.dto';
@@ -15,6 +16,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
 
 @ApiTags('Players (Ігрові профілі)') // Назва розділу в Swagger
 @Controller('players')
@@ -25,11 +27,17 @@ export class PlayersController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Створити ігровий профіль для користувача' })
-  create(@Body() createPlayerDto: CreatePlayerDto, @CurrentUser() user: JwtPayload) {
+  create(
+    @Body() createPlayerDto: CreatePlayerDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
     return this.playersService.create(createPlayerDto, user.userId);
   }
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheKey('all_players')
+  @CacheTTL(30000) // Кешуємо на 30 секунд
   @ApiOperation({
     summary: 'Отримати список всіх гравців (з їхніми іграми та юзерами)',
   })
@@ -47,15 +55,19 @@ export class PlayersController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Оновити дані гравця (наприклад, змінити нікнейм)' })
-  update(@Param('id') id: string, @Body() updatePlayerDto: UpdatePlayerDto) {
-    return this.playersService.update(id, updatePlayerDto);
+  update(
+    @Param('id') id: string,
+    @Body() updatePlayerDto: UpdatePlayerDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.playersService.update(id, updatePlayerDto, user.userId);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Видалити ігровий профіль' })
-  remove(@Param('id') id: string) {
-    return this.playersService.remove(id);
+  remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.playersService.remove(id, user.userId);
   }
 }

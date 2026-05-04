@@ -7,6 +7,7 @@ import {
   Patch,
   Delete,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { TeamsService } from './teams.service';
 import { CreateTeamDto } from './dto/create-team.dto';
@@ -15,6 +16,7 @@ import { ApiOperation, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
 
 @ApiTags('Teams (Команди)')
 @Controller('teams')
@@ -25,11 +27,17 @@ export class TeamsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Створити нову команду' })
-  create(@Body() createTeamDto: CreateTeamDto, @CurrentUser() user: JwtPayload) {
+  create(
+    @Body() createTeamDto: CreateTeamDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
     return this.teamsService.create(createTeamDto, user.userId);
   }
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
+  @CacheKey('all_teams')
+  @CacheTTL(30000) // Кешуємо на 30 секунд
   @ApiOperation({ summary: 'Отримати список всіх команд' })
   findAll() {
     return this.teamsService.findAll();

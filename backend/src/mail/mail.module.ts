@@ -24,6 +24,6 @@ import { MailService } from './mail.service';
     }),
   ],
   providers: [MailService],
-  exports: [MailService], // Експортуємо, щоб інші модулі могли юзати
+  exports: [MailService],
 })
 export class MailModule {}

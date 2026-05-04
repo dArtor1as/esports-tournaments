@@ -11,7 +11,9 @@ describe('GeneticSimulatorController', () => {
       providers: [GeneticSimulatorService],
     }).compile();
 
-    controller = module.get<GeneticSimulatorController>(GeneticSimulatorController);
+    controller = module.get<GeneticSimulatorController>(
+      GeneticSimulatorController,
+    );
   });
 
   it('should be defined', () => {
