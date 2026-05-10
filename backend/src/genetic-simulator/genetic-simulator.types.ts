@@ -1,28 +1,10 @@
-export type MapResult = {
-  map: string;
-  scoreA: number;
-  scoreB: number;
-};
+import { Match } from '@prisma/client';
+import {
+  IMatchSimulator,
+  TeamInput,
+} from '../match-simulators/match-simulator.interface';
 
-// Створимо окремий type для деталей матчу
-export type MatchDetails = {
-  maps: MapResult[];
-};
-
-export interface MatchSimulationResult {
-  winsA: number;
-  winsB: number;
-  mapDetails: MapResult[];
-}
-
-export interface IMatchSimulator {
-  simulateSeries(
-    expectedProbA: number,
-    bestOf: number,
-    getGeneRoll: () => number,
-  ): MatchSimulationResult;
-}
-
+// Використовуємо універсальний Record для деталей і статів
 export interface SimulationMatch {
   id: string;
   round: number;
@@ -33,7 +15,20 @@ export interface SimulationMatch {
   bestOf: number;
   nextMatchWinnerId: string | null;
   nextMatchLoserId: string | null;
-  details?: MatchDetails; // Використовуємо наш новий type
+  details?: Record<string, any>;
+  stats?: Record<string, any>;
+}
+
+// Спільний інтерфейс для контексту, який ми будемо передавати в стратегії
+export interface SimulationContext {
+  tournament: any;
+  simulator: IMatchSimulator;
+  pastMatches: Match[];
+  teamRatings: Record<string, number>;
+  teamsData: Record<string, TeamInput>;
+  baseSkeleton: SimulationMatch[];
+  estimatedGenesNeeded: number;
+  matchCount: number;
 }
 
 // Базовий інтерфейс для особини (хромосоми)
@@ -44,10 +39,10 @@ export interface BaseIndividual {
 }
 
 // Особина для Playoff (Single Elimination)
+
 export interface Individual extends BaseIndividual {}
 
 // типи для групового етапу (Group Stage)
-
 export interface GroupStanding {
   points: number;
   matchesWon: number;

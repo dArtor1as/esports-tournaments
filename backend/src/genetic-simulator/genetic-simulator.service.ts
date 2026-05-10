@@ -12,7 +12,7 @@ import { SimulationMatch } from './genetic-simulator.types';
 import { SingleEliminationStrategy } from './strategies/single-elimination.strategy';
 import { GroupStageStrategy } from './strategies/group-stage.strategy';
 import { DoubleEliminationStrategy } from './strategies/double-elimination.strategy';
-import { SimulationContext } from './strategies/base-genetic.strategy';
+import { SimulationContext } from './genetic-simulator.types';
 import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 
 @Injectable()
@@ -35,7 +35,17 @@ export class GeneticSimulatorService {
     const tournament = await this.prisma.tournament.findUnique({
       where: { id: tournamentId },
       include: {
-        participants: { include: { team: true } },
+        participants: {
+          include: {
+            team: {
+              include: { players: true }, // Додаємо завантаження всіх гравців команди як фолбек
+            },
+            // Тягнемо заявлений ростер, щоб отримати дані про гравців
+            tournamentRosters: {
+              include: { player: true },
+            },
+          },
+        },
         game: true,
       },
     });
@@ -62,8 +72,35 @@ export class GeneticSimulatorService {
     });
 
     const teamRatings: Record<string, number> = {};
+    const teamsData: Record<string, any> = {}; //  словник для симулятора
+
     tournament.participants.forEach((p) => {
       teamRatings[p.teamId] = p.team.averageRating;
+
+      let activePlayers;
+
+      // перевіряємо чи є спеціально поданий ростер на цей турнір?
+      if (p.tournamentRosters && p.tournamentRosters.length > 0) {
+        activePlayers = p.tournamentRosters
+          .filter((roster) => roster.role !== 'COACH')
+          .map((roster) => roster.player);
+      } else {
+        // якщо ростер не подано, беремо основний склад команди
+        // Фільтруємо за роллю в профілі гравця, якщо вона вказана
+        activePlayers = p.team.players.filter(
+          (player) => player.inGameRole !== 'COACH',
+        );
+      }
+
+      teamsData[p.teamId] = {
+        id: p.teamId,
+        rating: p.team.averageRating,
+        players: activePlayers.map((player) => ({
+          id: player.id,
+          rating: player.rating,
+          inGameRole: player.inGameRole,
+        })),
+      };
     });
 
     const dbMatches = await this.prisma.match.findMany({
@@ -108,6 +145,7 @@ export class GeneticSimulatorService {
       simulator,
       pastMatches,
       teamRatings,
+      teamsData,
       baseSkeleton,
       estimatedGenesNeeded: baseSkeleton.length * 3,
       matchCount: baseSkeleton.length,

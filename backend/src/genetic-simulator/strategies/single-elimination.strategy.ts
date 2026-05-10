@@ -1,9 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import {
-  BaseGeneticStrategy,
-  SimulationContext,
-} from './base-genetic.strategy';
+import { BaseGeneticStrategy } from './base-genetic.strategy';
+import { SimulationContext } from '../genetic-simulator.types';
 import { ProbabilityCalculatorService } from '../probability-calculator.service';
 import { Individual, SimulationMatch } from '../genetic-simulator.types';
 
@@ -37,7 +35,8 @@ export class SingleEliminationStrategy extends BaseGeneticStrategy {
             teamBId: match.teamBId,
             scoreA: match.scoreA,
             scoreB: match.scoreB,
-            details: match.details,
+            details: match.details as any,
+            stats: match.stats as any,
             isProcessed: true,
           },
         }),

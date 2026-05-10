@@ -95,6 +95,10 @@ model Player {
 
   nickname  String   // Ігровий нік (може відрізнятися від username)
   rating    Int      @default(1000)
+  
+  inGameRole String? // Наприклад: "SNIPER", "IGL", "POS_1", "POS_5"
+  stats Json? // Додаткові статистичні дані (кількість ігор, K/D, улюблені герої тощо)
+  
 
   @@unique([userId, gameId]) // Юзер не може мати два профілі для однієї ігри!
   @@index([rating])
@@ -223,7 +227,8 @@ model Match {
   scoreA       Int        @default(0)
   scoreB       Int        @default(0)
   bestOf       Int        @default(3) // ФОРМАТ (1 = Bo1, 3 = Bo3, 5 = Bo5)
-  details      Json?      // ТУТ БУДУТЬ МАПИ, ПІКИ АБО ВЕТО
+  details      Json?      // Мапи, піки, бани
+  stats        Json?      //  Статистика гравців (Kills, Deaths, GPM, XPM)
   
   isProcessed  Boolean    @default(false) // Чи оновлено Elo після цього матчу
   playedAt     DateTime?
