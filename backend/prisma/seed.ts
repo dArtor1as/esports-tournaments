@@ -13,6 +13,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import * as bcrypt from 'bcryptjs';
 import * as dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
+import { Cs2SimulatorService } from '../src/match-simulators/simulators/cs2-simulator.service';
 
 dotenv.config();
 
@@ -64,6 +65,8 @@ async function main() {
   console.log('🌍 Генерація Екосистеми: Старт...');
   const passwordHash = await bcrypt.hash('password123', 10);
 
+  const cs2Simulator = new Cs2SimulatorService();
+
   const admin = await prisma.user.create({
     data: {
       username: 'super_admin',
@@ -83,15 +86,25 @@ async function main() {
   const generatedTeams: Team[] = [];
   const teamsRostersMap: Record<
     string,
-    { playerId: string; role: RosterRole }[]
+    {
+      playerId: string;
+      role: RosterRole;
+      rating: number;
+      inGameRole?: string;
+    }[]
   > = {};
 
-  console.log(`👤 Створення ${realTeams.length} команд (192 користувачі)...`);
+  console.log(`Створення ${realTeams.length} команд (192 користувачі)...`);
 
   for (let i = 0; i < realTeams.length; i++) {
     const tData = realTeams[i];
     let totalElo = 0;
-    const rosterData: { playerId: string; role: RosterRole }[] = [];
+    const rosterData: {
+      playerId: string;
+      role: RosterRole;
+      rating: number;
+      inGameRole?: string;
+    }[] = [];
 
     // Капітан
     const capRating = getRandomRating(2800, 3400);
@@ -109,6 +122,13 @@ async function main() {
         gameId: game.id,
         nickname: `${tData.tag}_Cap`,
         rating: capRating,
+        inGameRole: 'IGL',
+        stats: {
+          matchesPlayed: Math.floor(Math.random() * 150) + 50,
+          winRate: (45 + Math.random() * 15).toFixed(2), // 45% - 60%
+          avgKills: (14 + Math.random() * 8).toFixed(1), // 14 - 22 кіла
+          avgRating: (0.9 + Math.random() * 0.4).toFixed(2),
+        },
       },
     });
 
@@ -128,11 +148,19 @@ async function main() {
       where: { id: captainPlayer.id },
       data: { teamId: team.id },
     });
-    rosterData.push({ playerId: captainPlayer.id, role: RosterRole.CAPTAIN });
+    rosterData.push({
+      playerId: captainPlayer.id,
+      role: RosterRole.CAPTAIN,
+      rating: capRating,
+      inGameRole: 'IGL',
+    });
+
+    const cs2Roles = ['SNIPER', 'ENTRY', 'RIFLER', 'SUPPORT'];
 
     // 4 Гравці
     for (let j = 1; j <= 4; j++) {
       const pRating = getRandomRating(2500, 3200);
+      const playerRole = cs2Roles[j - 1];
       totalElo += pRating;
       const user = await prisma.user.create({
         data: {
@@ -148,9 +176,21 @@ async function main() {
           nickname: `${tData.tag}_Player${j}`,
           rating: pRating,
           teamId: team.id,
+          inGameRole: playerRole,
+          stats: {
+            matchesPlayed: Math.floor(Math.random() * 150) + 50,
+            winRate: (45 + Math.random() * 15).toFixed(2),
+            avgKills: (14 + Math.random() * 8).toFixed(1),
+            avgRating: (0.9 + Math.random() * 0.4).toFixed(2),
+          },
         },
       });
-      rosterData.push({ playerId: player.id, role: RosterRole.PLAYER });
+      rosterData.push({
+        playerId: player.id,
+        role: RosterRole.PLAYER,
+        rating: pRating,
+        inGameRole: playerRole,
+      });
     }
 
     // Тренер
@@ -168,9 +208,15 @@ async function main() {
         nickname: `${tData.tag}_Coach`,
         rating: 1500,
         teamId: team.id,
+        inGameRole: 'COACH',
       },
     });
-    rosterData.push({ playerId: coachPlayer.id, role: RosterRole.COACH });
+    rosterData.push({
+      playerId: coachPlayer.id,
+      role: RosterRole.COACH,
+      rating: 1500,
+      inGameRole: 'COACH',
+    });
 
     const avgRating = Math.floor(totalElo / 5);
     const updatedTeam = await prisma.team.update({
@@ -241,28 +287,48 @@ async function main() {
         const teamA = generatedTeams[i];
         const teamB = generatedTeams[j];
 
-        const aIsFav = teamA.averageRating > teamB.averageRating;
-        const isAWinner = Math.random() < (aIsFav ? 0.65 : 0.35);
-        const scoreA = isAWinner ? 2 : Math.random() > 0.5 ? 1 : 0;
-        const scoreB = isAWinner
-          ? scoreA === 2 && Math.random() > 0.5
-            ? 1
-            : 0
-          : 2;
+        // 1. Відфільтровуємо тренерів (вони не грають) і формуємо TeamInput для симулятора
+        const activePlayersA = teamsRostersMap[teamA.id].filter(
+          (p) => p.role !== 'COACH',
+        );
+        const activePlayersB = teamsRostersMap[teamB.id].filter(
+          (p) => p.role !== 'COACH',
+        );
 
-        const totalMaps = scoreA + scoreB;
+        const teamAInput = {
+          id: teamA.id,
+          rating: teamA.averageRating,
+          players: activePlayersA.map((p) => ({
+            id: p.playerId,
+            rating: p.rating,
+            inGameRole: p.inGameRole,
+          })),
+        };
 
-        // Явна типізація масиву карт
-        const matchMaps: { map: string; scoreA: number; scoreB: number }[] = [];
+        const teamBInput = {
+          id: teamB.id,
+          rating: teamB.averageRating,
+          players: activePlayersB.map((p) => ({
+            id: p.playerId,
+            rating: p.rating,
+            inGameRole: p.inGameRole,
+          })),
+        };
 
-        for (let m = 0; m < totalMaps; m++) {
-          matchMaps.push({
-            map: maps[Math.floor(Math.random() * maps.length)],
-            scoreA: Math.floor(Math.random() * 13),
-            scoreB: Math.floor(Math.random() * 13),
-          });
-        }
+        // 2. Рахуємо ймовірність
+        const expectedProbA =
+          teamA.averageRating / (teamA.averageRating + teamB.averageRating);
 
+        // 3. запускаємо симулятор кс2 для отримання результату серії
+        const matchResult = cs2Simulator.simulateSeries(
+          teamAInput,
+          teamBInput,
+          expectedProbA,
+          3, // BO3
+          () => Math.random(), // Простий рандом замість генів
+        );
+
+        // 4. Додаємо матч у масив для Prisma
         pastMatches.push({
           id: uuidv4(),
           tournamentId: pastTournament.id,
@@ -271,9 +337,12 @@ async function main() {
           round: 1,
           teamAId: teamA.id,
           teamBId: teamB.id,
-          scoreA,
-          scoreB,
-          details: { maps: matchMaps },
+
+          scoreA: matchResult.winsA, // Рахунок по картах
+          scoreB: matchResult.winsB,
+          details: { maps: matchResult.mapDetails } as Prisma.InputJsonValue,
+          stats: matchResult.stats as Prisma.InputJsonValue, // загальна статистика серії
+
           isProcessed: true,
           playedAt: new Date(
             Date.now() - Math.floor(Math.random() * 10000000000),

@@ -1,9 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import {
-  BaseGeneticStrategy,
-  SimulationContext,
-} from './base-genetic.strategy';
+import { BaseGeneticStrategy } from './base-genetic.strategy';
+import { SimulationContext } from '../genetic-simulator.types';
 import { ProbabilityCalculatorService } from '../probability-calculator.service';
 import {
   GroupIndividual,
@@ -40,6 +38,7 @@ export class GroupStageStrategy extends BaseGeneticStrategy {
             scoreA: match.scoreA,
             scoreB: match.scoreB,
             details: match.details,
+            stats: match.stats as any,
             isProcessed: true,
           },
         }),

@@ -7,7 +7,24 @@ import {
   Max,
   IsInt,
   IsOptional,
+  IsEnum,
 } from 'class-validator';
+
+export enum Cs2Role {
+  SNIPER = 'SNIPER',
+  RIFLER = 'RIFLER',
+  ENTRY = 'ENTRY',
+  SUPPORT = 'SUPPORT',
+  IGL = 'IGL',
+}
+
+export enum Dota2Role {
+  POS_1 = 'POS_1',
+  POS_2 = 'POS_2',
+  POS_3 = 'POS_3',
+  POS_4 = 'POS_4',
+  POS_5 = 'POS_5',
+}
 
 export class CreatePlayerDto {
   @ApiProperty({
@@ -36,4 +53,8 @@ export class CreatePlayerDto {
   @Min(1)
   @Max(3)
   expectedTier?: number;
+
+  @IsOptional()
+  @IsString()
+  inGameRole?: string;
 }

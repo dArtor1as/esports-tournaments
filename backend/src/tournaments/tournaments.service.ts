@@ -4,7 +4,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, Region, Stage, TournamentFormat } from '@prisma/client';
+import {
+  Prisma,
+  Region,
+  Stage,
+  TournamentFormat,
+  RosterRole,
+} from '@prisma/client';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { UpdateTournamentDto } from './dto/update-tournament.dto';
 import { GenerateTestTournamentDto } from './dto/generate-test-tournament.dto';
@@ -39,9 +45,9 @@ export class TournamentsService {
     if (!game) {
       throw new BadRequestException('Гру CS2 не знайдено. Запустіть seed.');
     }
-
+    //  Витягуємо команди одразу з гравцями, щоб сформувати ростер
     const availableTeams = await this.prisma.team.findMany({
-      select: { id: true },
+      include: { players: true },
     });
 
     if (availableTeams.length < teamCount) {
@@ -75,16 +81,33 @@ export class TournamentsService {
           isPublic: true,
         },
       });
+      // Cтворюємо і учасника, і його ростер
+      for (let i = 0; i < selected.length; i++) {
+        const team = selected[i];
+        // 1. Реєструємо команду на турнір
+        const participant = await tx.tournamentParticipant.create({
+          data: {
+            tournamentId: createdTournament.id,
+            teamId: team.id,
+            joinedStage: Stage.PLAYOFF,
+            seed: i + 1,
+          },
+        });
 
-      // Реєструємо вибрані команди
-      await tx.tournamentParticipant.createMany({
-        data: selected.map((team, idx) => ({
-          tournamentId: createdTournament.id,
-          teamId: team.id,
-          joinedStage: Stage.PLAYOFF, // Якщо одразу генеруємо сітку, можна ставити PLAYOFF
-          seed: idx + 1,
-        })),
-      });
+        // 2. Автоматично заявляємо всіх гравців цієї команди в TournamentRoster (тільки для тестів!)
+        const rosterData = team.players.map((player) => ({
+          participantId: participant.id,
+          playerId: player.id,
+          role:
+            player.inGameRole === 'COACH'
+              ? RosterRole.COACH
+              : RosterRole.PLAYER,
+        }));
+
+        await tx.tournamentRoster.createMany({
+          data: rosterData,
+        });
+      }
 
       return createdTournament;
     });

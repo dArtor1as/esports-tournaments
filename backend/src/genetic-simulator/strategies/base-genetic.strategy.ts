@@ -1,18 +1,9 @@
-import { Match } from '@prisma/client';
-import { IMatchSimulator } from 'src/match-simulators/match-simulator.interface';
 import { ProbabilityCalculatorService } from '../probability-calculator.service';
-import { BaseIndividual, SimulationMatch } from '../genetic-simulator.types';
-
-// Спільний інтерфейс для контексту, який ми будемо передавати в стратегії
-export interface SimulationContext {
-  tournament: any;
-  simulator: IMatchSimulator;
-  pastMatches: Match[];
-  teamRatings: Record<string, number>;
-  baseSkeleton: SimulationMatch[];
-  estimatedGenesNeeded: number;
-  matchCount: number;
-}
+import {
+  BaseIndividual,
+  SimulationMatch,
+  SimulationContext,
+} from '../genetic-simulator.types';
 
 export abstract class BaseGeneticStrategy {
   protected readonly generations = 20;
@@ -74,34 +65,48 @@ export abstract class BaseGeneticStrategy {
     ctx: SimulationContext,
     getGeneRoll: () => number,
   ) {
-    const teamA = match.teamAId!;
-    const teamB = match.teamBId!;
+    const teamAId = match.teamAId!;
+    const teamBId = match.teamBId!;
 
     const baseProbA = this.probabilityCalc.getBaseProbability(
-      ctx.teamRatings[teamA],
-      ctx.teamRatings[teamB],
+      ctx.teamRatings[teamAId],
+      ctx.teamRatings[teamBId],
     );
     const expectedProbA = this.probabilityCalc.getAdjustedProbability(
       baseProbA,
-      teamA,
-      teamB,
+      teamAId,
+      teamBId,
       ctx.pastMatches,
     );
 
-    const { winsA, winsB, mapDetails } = ctx.simulator.simulateSeries(
+    const teamA = ctx.teamsData[teamAId];
+    const teamB = ctx.teamsData[teamBId];
+
+    const result = ctx.simulator.simulateSeries(
+      teamA,
+      teamB,
       expectedProbA,
       match.bestOf,
       getGeneRoll,
     );
 
-    match.scoreA = winsA;
-    match.scoreB = winsB;
-    match.details = { maps: mapDetails };
+    match.scoreA = result.winsA;
+    match.scoreB = result.winsB;
+    match.details = { maps: result.mapDetails };
+    match.stats = result.stats;
 
-    const matchWinnerIsA = winsA > winsB;
-    const winnerId = matchWinnerIsA ? teamA : teamB;
+    const matchWinnerIsA = result.winsA > result.winsB;
+    const winnerId = matchWinnerIsA ? teamAId : teamBId;
+    const loserId = matchWinnerIsA ? teamBId : teamAId;
     const winnerProb = matchWinnerIsA ? expectedProbA : 1 - expectedProbA;
 
-    return { matchWinnerIsA, winnerId, winnerProb, winsA, winsB };
+    return {
+      matchWinnerIsA,
+      winnerId,
+      loserId,
+      winnerProb,
+      winsA: result.winsA,
+      winsB: result.winsB,
+    };
   }
 }

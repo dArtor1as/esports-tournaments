@@ -1,9 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import {
-  BaseGeneticStrategy,
-  SimulationContext,
-} from './base-genetic.strategy';
+import { BaseGeneticStrategy } from './base-genetic.strategy';
+import { SimulationContext } from '../genetic-simulator.types';
 import { ProbabilityCalculatorService } from '../probability-calculator.service';
 import { Individual, SimulationMatch } from '../genetic-simulator.types';
 
@@ -37,6 +35,7 @@ export class DoubleEliminationStrategy extends BaseGeneticStrategy {
             scoreA: match.scoreA,
             scoreB: match.scoreB,
             details: match.details,
+            stats: match.stats as any,
             isProcessed: true,
           },
         }),
@@ -81,10 +80,8 @@ export class DoubleEliminationStrategy extends BaseGeneticStrategy {
       // Якщо матч ще не сформований (очікує переможця/переможеного з попередніх раундів)
       if (!match.teamAId || !match.teamBId) continue;
 
-      const { matchWinnerIsA, winnerId, winnerProb, winsA, winsB } =
+      const { matchWinnerIsA, winnerId, loserId, winnerProb, winsA, winsB } =
         this.processMatchSimulation(match, ctx, getGeneRoll);
-
-      const loserId = matchWinnerIsA ? match.teamBId : match.teamAId;
 
       // Розрахунок Fitness
       if (winnerProb >= 0.5) {
