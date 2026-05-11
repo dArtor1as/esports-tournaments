@@ -6,24 +6,7 @@ import {
   TeamInput,
   PlayerInput,
 } from '../match-simulator.interface';
-//локальні інтерфейси для dota2
-export interface Dota2PlayerStat {
-  playerId: string;
-  rating: number;
-  kills: number;
-  deaths: number;
-  assists: number;
-  gpm: number;
-  xpm: number;
-  netWorth: number;
-}
-
-export interface Dota2MapStat {
-  mapName: string;
-  durationMinutes: number;
-  teamA: { score: number; players: Dota2PlayerStat[] };
-  teamB: { score: number; players: Dota2PlayerStat[] };
-}
+import { Dota2PlayerStat, BaseMapStat } from '../../stats/stats.types';
 
 @Injectable()
 export class Dota2SimulatorService implements IMatchSimulator {
@@ -47,7 +30,7 @@ export class Dota2SimulatorService implements IMatchSimulator {
     let winsB = 0;
     const mapDetails: MapResult[] = [];
 
-    const statsMaps: Dota2MapStat[] = []; // Масив ігор (карт)
+    const statsMaps: BaseMapStat<Dota2PlayerStat>[] = []; // Масив ігор (карт)
 
     let totalDurationMinutes = 0;
 

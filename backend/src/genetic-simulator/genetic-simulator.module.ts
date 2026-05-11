@@ -6,9 +6,10 @@ import { ProbabilityCalculatorService } from './probability-calculator.service';
 import { SingleEliminationStrategy } from './strategies/single-elimination.strategy';
 import { GroupStageStrategy } from './strategies/group-stage.strategy';
 import { DoubleEliminationStrategy } from './strategies/double-elimination.strategy';
+import { StatsModule } from 'src/stats/stats.module';
 
 @Module({
-  imports: [MatchSimulatorsModule],
+  imports: [MatchSimulatorsModule, StatsModule],
   controllers: [GeneticSimulatorController],
   providers: [
     GeneticSimulatorService,

@@ -6,24 +6,7 @@ import {
   TeamInput,
   PlayerInput,
 } from '../match-simulator.interface';
-
-//локальні інтерфейси для CS2
-export interface Cs2PlayerStat {
-  playerId: string;
-  rating: number;
-  kills: number;
-  deaths: number;
-  assists: number;
-  headshots: number;
-  adr: number;
-}
-
-export interface Cs2MapStat {
-  mapName: string;
-  durationMinutes: number;
-  teamA: { score: number; players: Cs2PlayerStat[] };
-  teamB: { score: number; players: Cs2PlayerStat[] };
-}
+import { Cs2PlayerStat, BaseMapStat } from '../../stats/stats.types';
 
 @Injectable()
 export class Cs2SimulatorService implements IMatchSimulator {
@@ -60,7 +43,7 @@ export class Cs2SimulatorService implements IMatchSimulator {
     const mapDetails: MapResult[] = [];
     const mapPool = [...this.AVAILABLE_MAPS];
 
-    const statsMaps: Cs2MapStat[] = []; // Масив для зберігання статистики кожної карти
+    const statsMaps: BaseMapStat<Cs2PlayerStat>[] = []; // Масив для зберігання статистики кожної карти
     let totalDurationMinutes = 0;
 
     while (winsA < mapsToWin && winsB < mapsToWin) {
@@ -131,6 +114,7 @@ export class Cs2SimulatorService implements IMatchSimulator {
       assists: 0,
       headshots: 0,
       adr: 0,
+      roundsPlayed: 0,
     }));
   }
 
@@ -201,6 +185,7 @@ export class Cs2SimulatorService implements IMatchSimulator {
       teamStats[statIndex].assists = assists;
       teamStats[statIndex].headshots = headshots;
       teamStats[statIndex].adr = adr;
+      teamStats[statIndex].roundsPlayed = totalRounds;
     });
   }
 }

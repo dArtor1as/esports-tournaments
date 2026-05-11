@@ -1,4 +1,3 @@
-//import { MatchDetails } from 'src/genetic-simulator/genetic-simulator.types';
 export type MapResult = {
   map: string;
   scoreA: number;

@@ -14,6 +14,9 @@ import * as bcrypt from 'bcryptjs';
 import * as dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
 import { Cs2SimulatorService } from '../src/match-simulators/simulators/cs2-simulator.service';
+import { TeamsService } from '../src/teams/teams.service';
+import { PlayersService } from '../src/players/players.service';
+import { StatsService } from '../src/stats/stats.service';
 
 dotenv.config();
 
@@ -66,6 +69,19 @@ async function main() {
   const passwordHash = await bcrypt.hash('password123', 10);
 
   const cs2Simulator = new Cs2SimulatorService();
+  // Створюємо заглушку для кешу, щоб сервіси не падали без нього
+  const dummyCache = {
+    get: async () => null,
+    set: async () => {},
+    del: async () => {},
+  } as any;
+  const teamsService = new TeamsService(prisma as any, dummyCache);
+  const playersService = new PlayersService(prisma as any, dummyCache);
+  const statsService = new StatsService(
+    prisma as any,
+    teamsService,
+    playersService,
+  );
 
   const admin = await prisma.user.create({
     data: {
@@ -123,12 +139,12 @@ async function main() {
         nickname: `${tData.tag}_Cap`,
         rating: capRating,
         inGameRole: 'IGL',
-        stats: {
-          matchesPlayed: Math.floor(Math.random() * 150) + 50,
-          winRate: (45 + Math.random() * 15).toFixed(2), // 45% - 60%
-          avgKills: (14 + Math.random() * 8).toFixed(1), // 14 - 22 кіла
-          avgRating: (0.9 + Math.random() * 0.4).toFixed(2),
-        },
+        // stats: {
+        //   matchesPlayed: Math.floor(Math.random() * 150) + 50,
+        //   winRate: (45 + Math.random() * 15).toFixed(2), // 45% - 60%
+        //   avgKills: (14 + Math.random() * 8).toFixed(1), // 14 - 22 кіла
+        //   avgRating: (0.9 + Math.random() * 0.4).toFixed(2),
+        // },
       },
     });
 
@@ -177,12 +193,12 @@ async function main() {
           rating: pRating,
           teamId: team.id,
           inGameRole: playerRole,
-          stats: {
-            matchesPlayed: Math.floor(Math.random() * 150) + 50,
-            winRate: (45 + Math.random() * 15).toFixed(2),
-            avgKills: (14 + Math.random() * 8).toFixed(1),
-            avgRating: (0.9 + Math.random() * 0.4).toFixed(2),
-          },
+          // stats: {
+          //   matchesPlayed: Math.floor(Math.random() * 150) + 50,
+          //   winRate: (45 + Math.random() * 15).toFixed(2),
+          //   avgKills: (14 + Math.random() * 8).toFixed(1),
+          //   avgRating: (0.9 + Math.random() * 0.4).toFixed(2),
+          // },
         },
       });
       rosterData.push({
@@ -223,7 +239,7 @@ async function main() {
       where: { id: team.id },
       data: {
         averageRating: avgRating,
-        tier: avgRating >= 2900 ? 1 : avgRating >= 2600 ? 2 : 3,
+        tier: avgRating >= 2700 ? 1 : avgRating >= 1800 ? 2 : 3,
       },
     });
 
@@ -232,7 +248,6 @@ async function main() {
   }
 
   console.log('Генерація 3 минулих турнірів (для H2H)...');
-  const pastMatches: Prisma.MatchCreateManyInput[] = [];
   const maps = [
     'Mirage',
     'Dust2',
@@ -244,6 +259,9 @@ async function main() {
   ];
 
   for (let season = 1; season <= 3; season++) {
+    // 1. очищаємо масив для кожного турніру
+    const pastMatches: Prisma.MatchCreateManyInput[] = [];
+
     const pastTournament = await prisma.tournament.create({
       data: {
         title: `IEM Global Season ${2023 + season}`,
@@ -262,18 +280,32 @@ async function main() {
       },
     });
 
-    // Реєструємо перші 16 команд на турнір + ЗБЕРІГАЄМО ЇХНІЙ РОСТЕР
+    // 2. відбираємо 16 перших команд із 32
+    let selectedTeams;
+    if (season === 1) {
+      // Перший сезон грають перші 16 команд (індекси 0-15)
+      selectedTeams = generatedTeams.slice(0, 16);
+    } else if (season === 2) {
+      // Другий сезон грають інші 16 команд (індекси 16-31)
+      selectedTeams = generatedTeams.slice(16, 32);
+    } else {
+      // Третій сезон грають рандомні
+      const shuffledTeams = [...generatedTeams].sort(() => 0.5 - Math.random());
+      selectedTeams = shuffledTeams.slice(0, 16);
+    }
+
+    // Реєструємо вибрані 16 команд
     for (let i = 0; i < 16; i++) {
       const participant = await prisma.tournamentParticipant.create({
         data: {
           tournamentId: pastTournament.id,
-          teamId: generatedTeams[i].id,
+          teamId: selectedTeams[i].id, // Використовуємо вибрану команду
           joinedStage: 'GROUP',
           seed: i + 1,
         },
       });
 
-      const rosterToInsert = teamsRostersMap[generatedTeams[i].id].map((r) => ({
+      const rosterToInsert = teamsRostersMap[selectedTeams[i].id].map((r) => ({
         participantId: participant.id,
         playerId: r.playerId,
         role: r.role,
@@ -281,13 +313,19 @@ async function main() {
       await prisma.tournamentRoster.createMany({ data: rosterToInsert });
     }
 
-    // Генеруємо випадкові матчі
-    for (let i = 0; i < 16; i++) {
-      for (let j = i + 1; j < 16; j += 3) {
-        const teamA = generatedTeams[i];
-        const teamB = generatedTeams[j];
+    // Генеруємо випадкові матчі між вибраними командами
+    let currentRoundTeams = [...selectedTeams]; // Починаємо з 16 команд
+    let currentRound = 1;
 
-        // 1. Відфільтровуємо тренерів (вони не грають) і формуємо TeamInput для симулятора
+    // Поки в турнірі більше 1 команди, генеруємо раунд
+    while (currentRoundTeams.length > 1) {
+      const nextRoundTeams: Team[] = []; // Сюди запишемо переможців
+
+      for (let i = 0; i < currentRoundTeams.length; i += 2) {
+        const teamA = currentRoundTeams[i];
+        const teamB = currentRoundTeams[i + 1];
+
+        // 1. Формуємо TeamInput для симулятора
         const activePlayersA = teamsRostersMap[teamA.id].filter(
           (p) => p.role !== 'COACH',
         );
@@ -319,42 +357,57 @@ async function main() {
         const expectedProbA =
           teamA.averageRating / (teamA.averageRating + teamB.averageRating);
 
-        // 3. запускаємо симулятор кс2 для отримання результату серії
+        // 3. Запускаємо симулятор
         const matchResult = cs2Simulator.simulateSeries(
           teamAInput,
           teamBInput,
           expectedProbA,
           3, // BO3
-          () => Math.random(), // Простий рандом замість генів
+          () => Math.random(),
         );
 
-        // 4. Додаємо матч у масив для Prisma
+        // 4. Визначаємо переможця і пушимо його в наступний раунд!
+        const isAWinner = matchResult.winsA > matchResult.winsB;
+        nextRoundTeams.push(isAWinner ? teamA : teamB);
+
+        // 5. Визначаємо тип брекету (якщо залишилось 2 команди - це фінал)
+        const isFinal = currentRoundTeams.length === 2;
+
+        // 6. Зберігаємо матч
         pastMatches.push({
           id: uuidv4(),
           tournamentId: pastTournament.id,
-          stage: Stage.GROUP,
-          bracket: Bracket.NONE,
-          round: 1,
+          stage: Stage.PLAYOFF,
+          bracket: isFinal ? Bracket.GRAND_FINAL : Bracket.UPPER, // Важливо для +30 Elo бонусу!
+          round: currentRound,
           teamAId: teamA.id,
           teamBId: teamB.id,
-
-          scoreA: matchResult.winsA, // Рахунок по картах
+          scoreA: matchResult.winsA,
           scoreB: matchResult.winsB,
           details: { maps: matchResult.mapDetails } as Prisma.InputJsonValue,
-          stats: matchResult.stats as Prisma.InputJsonValue, // загальна статистика серії
-
+          stats: matchResult.stats as Prisma.InputJsonValue,
           isProcessed: true,
           playedAt: new Date(
             Date.now() - Math.floor(Math.random() * 10000000000),
           ),
         });
       }
+
+      // Переходимо до наступного раунду (з переможцями)
+      currentRoundTeams = nextRoundTeams;
+      currentRound++;
     }
+
+    // 3. зберігаємо матчі саме цього турніру
+    await prisma.match.createMany({ data: pastMatches });
+
+    // 4. рахуємо статистику та Elo для цього турніру
+    console.log(`Обробка статистики та Elo для сезону ${season}...`);
+    await statsService.processTournamentStats(pastTournament.id);
   }
 
-  await prisma.match.createMany({ data: pastMatches });
   console.log(
-    `База успішно заповнена! Згенеровано 32 команди та ${pastMatches.length} історичних матчів.`,
+    "База успішно заповнена! Кар'єра гравців та історія рейтингів розрахована.",
   );
 }
 
