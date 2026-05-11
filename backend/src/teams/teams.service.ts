@@ -17,9 +17,9 @@ export class TeamsService {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
-  private calculateTier(rating: number): number {
-    if (rating >= 2500) return 1;
-    if (rating >= 1500) return 2;
+  public calculateTier(rating: number): number {
+    if (rating >= 2700) return 1;
+    if (rating >= 1800) return 2;
     return 3;
   }
 

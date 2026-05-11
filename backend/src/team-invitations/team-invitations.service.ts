@@ -7,12 +7,14 @@ import { CreateTeamInvitationDto } from './dto/create-team-invitation.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from 'src/mail/mail.service';
 import * as crypto from 'crypto';
+import { TeamsService } from 'src/teams/teams.service';
 
 @Injectable()
 export class TeamInvitationsService {
   constructor(
     private prisma: PrismaService,
     private mailService: MailService,
+    private teamsService: TeamsService,
   ) {}
 
   async create(createDto: CreateTeamInvitationDto) {
@@ -109,9 +111,7 @@ export class TeamInvitationsService {
       const newAverageRating = Math.floor(totalRating / teamPlayers.length);
 
       // Визначаємо новий тір
-      let newTier = 3;
-      if (newAverageRating >= 2500) newTier = 1;
-      else if (newAverageRating >= 1800) newTier = 2;
+      const newTier = this.teamsService.calculateTier(newAverageRating);
 
       // Оновлюємо команду
       await prisma.team.update({

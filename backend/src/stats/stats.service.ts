@@ -7,16 +7,47 @@ import { PlayersService } from '../players/players.service';
 
 @Injectable()
 export class StatsService {
-  private readonly STAT_RULES: Record<string, 'sum' | 'average'> = {
-    kills: 'sum',
-    deaths: 'sum',
-    assists: 'sum',
-    headshots: 'sum',
-    netWorth: 'sum',
-    adr: 'average',
-    gpm: 'average',
-    xpm: 'average',
+  private readonly STAT_RULES: Record<
+    string,
+    { total?: boolean; avg?: boolean }
+  > = {
+    kills: { total: true, avg: true },
+    deaths: { total: true, avg: true },
+    assists: { total: true, avg: true },
+    headshots: { total: true, avg: true },
+    netWorth: { total: true, avg: true },
+    roundsPlayed: { total: true },
+    adr: { avg: true },
+    gpm: { avg: true },
+    xpm: { avg: true },
   };
+  // НОВЕ: Правила для похідних метрик (OCP-compliant)
+  private readonly DERIVED_STATS: Array<{
+    name: string;
+    formula: (stats: Record<string, string | number>) => string | null;
+  }> = [
+    {
+      name: 'kpr',
+      formula: (s) =>
+        Number(s.total_roundsPlayed)
+          ? (Number(s.total_kills) / Number(s.total_roundsPlayed)).toFixed(2)
+          : null,
+    },
+    {
+      name: 'dpr',
+      formula: (s) =>
+        Number(s.total_roundsPlayed)
+          ? (Number(s.total_deaths) / Number(s.total_roundsPlayed)).toFixed(2)
+          : null,
+    },
+    {
+      name: 'apr',
+      formula: (s) =>
+        Number(s.total_roundsPlayed)
+          ? (Number(s.total_assists) / Number(s.total_roundsPlayed)).toFixed(2)
+          : null,
+    },
+  ];
   constructor(
     private prisma: PrismaService,
     private teamsService: TeamsService,
@@ -54,6 +85,10 @@ export class StatsService {
 
     const currentTeamRatings = new Map<string, number>();
     const currentPlayerRatings = new Map<string, number>();
+    const currentPlayerStats = new Map<
+      string,
+      Record<string, string | number>
+    >();
 
     const matches = tournament.matches; // Зберігаємо в змінну для TS
 
@@ -114,6 +149,9 @@ export class StatsService {
 
       const newRatingA = ratingA + changeA;
       const newRatingB = ratingB + changeB;
+      // Визначаємо новий тір для обох команд
+      const newTierA = this.teamsService.calculateTier(newRatingA);
+      const newTierB = this.teamsService.calculateTier(newRatingB);
 
       currentTeamRatings.set(match.teamAId, newRatingA);
       currentTeamRatings.set(match.teamBId, newRatingB);
@@ -122,11 +160,11 @@ export class StatsService {
       transactionQueries.push(
         this.prisma.team.update({
           where: { id: match.teamAId },
-          data: { averageRating: newRatingA },
+          data: { averageRating: newRatingA, tier: newTierA },
         }),
         this.prisma.team.update({
           where: { id: match.teamBId },
-          data: { averageRating: newRatingB },
+          data: { averageRating: newRatingB, tier: newTierB },
         }),
       );
 
@@ -168,6 +206,7 @@ export class StatsService {
           match.id,
           changeA,
           currentPlayerRatings,
+          currentPlayerStats,
           transactionQueries,
           isAWinner,
         );
@@ -176,6 +215,7 @@ export class StatsService {
           match.id,
           changeB,
           currentPlayerRatings,
+          currentPlayerStats,
           transactionQueries,
           !isAWinner,
         );
@@ -256,6 +296,7 @@ export class StatsService {
     matchId: string,
     eloChange: number,
     ratingCache: Map<string, number>,
+    statsCache: Map<string, Record<string, string | number>>,
     transactionQueries: Prisma.PrismaPromise<unknown>[],
     isWinner: boolean,
   ) {
@@ -272,13 +313,16 @@ export class StatsService {
 
       ratingCache.set(pStat.playerId, newRating);
 
-      // Витягуємо стару стату гравця
-      const player = await this.prisma.player.findUnique({
-        where: { id: pStat.playerId },
-        select: { stats: true },
-      });
+      // беремо стару стату гравця з кешу. Якщо немає - дістаємо з бази.
+      let oldStats = statsCache.get(pStat.playerId);
+      if (!oldStats) {
+        const player = await this.prisma.player.findUnique({
+          where: { id: pStat.playerId },
+          select: { stats: true },
+        });
+        oldStats = (player?.stats as Record<string, string | number>) || {};
+      }
 
-      const oldStats = (player?.stats as Record<string, string | number>) || {};
       const oldMatches = Number(oldStats.matchesPlayed) || 0;
       const newMatches = oldMatches + 1;
 
@@ -297,7 +341,6 @@ export class StatsService {
         matchesPlayed: newMatches,
         totalMapsPlayed: newTotalMaps,
         winRate: newWinRate.toFixed(2),
-        avgRating: '1.05',
       };
 
       // динамічний парсинг ключів
@@ -312,7 +355,7 @@ export class StatsService {
 
         const avgKey = `avg_${key}`;
 
-        if (rule === 'sum') {
+        if (rule.total) {
           const totalKey = `total_${key}`;
           const fallbackTotal =
             parseFloat(String(oldStats[avgKey] || '0')) * oldMaps;
@@ -326,13 +369,23 @@ export class StatsService {
             : Number(newTotalValue.toFixed(1));
 
           newStatsJson[avgKey] = newAvgValue.toFixed(2);
-        } else if (rule === 'average') {
+        } else if (rule.avg) {
           const oldAvgValue = parseFloat(String(oldStats[avgKey] || '0'));
           const newAvgValue = (oldAvgValue * oldMaps + value) / newTotalMaps;
 
           newStatsJson[avgKey] = newAvgValue.toFixed(1);
         }
       }
+
+      // розрахунок похідних метрик (KPR, DPR, APR)
+      for (const rule of this.DERIVED_STATS) {
+        const value = rule.formula(newStatsJson);
+        if (value !== null) {
+          newStatsJson[rule.name] = value;
+        }
+      }
+
+      statsCache.set(pStat.playerId, newStatsJson);
 
       transactionQueries.push(
         this.prisma.player.update({
