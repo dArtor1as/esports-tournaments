@@ -18,6 +18,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailModule } from './mail/mail.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-yet';
+import { StatsModule } from './stats/stats.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { redisStore } from 'cache-manager-redis-yet';
     MatchSimulatorsModule,
     AuthModule,
     MailModule,
+    StatsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
