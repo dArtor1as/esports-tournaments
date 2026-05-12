@@ -291,6 +291,26 @@ export class StatsService {
     return player.rating;
   }
 
+  async getTeamRatingHistory(teamId: string) {
+    return this.prisma.ratingHistory.findMany({
+      where: { teamId },
+      orderBy: { createdAt: 'asc' }, // Від найстарішого до найновішого
+      include: {
+        match: { select: { tournament: { select: { title: true } } } },
+      },
+    });
+  }
+
+  async getPlayerRatingHistory(playerId: string) {
+    return this.prisma.ratingHistory.findMany({
+      where: { playerId },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        match: { select: { tournament: { select: { title: true } } } },
+      },
+    });
+  }
+
   private async queuePlayerUpdates(
     mapPlayers: GamePlayerStat[],
     matchId: string,
