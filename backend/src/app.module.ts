@@ -19,6 +19,7 @@ import { MailModule } from './mail/mail.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-yet';
 import { StatsModule } from './stats/stats.module';
+import { LeaderboardsModule } from './leaderboards/leaderboards.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { StatsModule } from './stats/stats.module';
     AuthModule,
     MailModule,
     StatsModule,
+    LeaderboardsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
