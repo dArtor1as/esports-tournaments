@@ -146,7 +146,6 @@ export class TournamentsService {
       },
     });
     await this.cacheManager.del('all_tournaments'); // Очищаємо кеш при створенні нового турніру
-    await this.cacheManager.del('tournaments_workflow');
 
     return createdTournament;
   }
@@ -299,7 +298,6 @@ export class TournamentsService {
     });
 
     await this.cacheManager.del('all_tournaments'); // Очищаємо кеш при оновленні турніру
-    await this.cacheManager.del('tournaments_workflow');
 
     return updatedTournament;
   }
@@ -324,7 +322,6 @@ export class TournamentsService {
     });
 
     await this.cacheManager.del('all_tournaments'); // Очищаємо кеш при видаленні турніру
-    await this.cacheManager.del('tournaments_workflow');
 
     return deletedTournament;
   }

@@ -5,6 +5,7 @@ import { ApiOperation, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { Throttle } from 'node_modules/@nestjs/throttler/dist/throttler.decorator';
 
 @ApiTags('Genetic Simulator (Алгоритм)')
 @ApiBearerAuth('JWT-auth')
@@ -18,6 +19,7 @@ export class GeneticSimulatorController {
   @Post('run')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
+  @Throttle({ heavy: { limit: 3, ttl: 60000 } })
   @ApiOperation({
     summary: 'Запустити генетичний алгоритм для заповнення сітки турніру',
   })
@@ -28,6 +30,7 @@ export class GeneticSimulatorController {
   @Post('run-groups')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
+  @Throttle({ heavy: { limit: 3, ttl: 60000 } })
   @ApiOperation({
     summary: 'Запустити генетичний алгоритм для ГРУПОВОГО етапу (Round Robin)',
   })

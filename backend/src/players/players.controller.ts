@@ -51,6 +51,14 @@ export class PlayersController {
     return this.playersService.findOne(id);
   }
 
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Отримати всі ігрові профілі поточного юзера' })
+  findMyProfiles(@CurrentUser() user: JwtPayload) {
+    return this.playersService.findMyProfiles(user.userId);
+  }
+
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')

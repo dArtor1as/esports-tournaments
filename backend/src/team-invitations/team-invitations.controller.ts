@@ -55,4 +55,12 @@ export class TeamInvitationsController {
   findAll() {
     return this.teamInvitationsService.findAll();
   }
+
+  @Get('my-invites')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Отримати мої вхідні запрошення в команди' })
+  findMyInvites(@CurrentUser() user: JwtPayload) {
+    return this.teamInvitationsService.findMyInvites(user.userId);
+  }
 }

@@ -6,11 +6,14 @@ import {
   Param,
   Delete,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { TournamentParticipantsService } from './tournament-participants.service';
 import { CreateTournamentParticipantDto } from './dto/create-tournament-participant.dto';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CacheTTL } from 'node_modules/@nestjs/cache-manager/dist/decorators/cache-ttl.decorator';
+import { CacheInterceptor } from 'node_modules/@nestjs/cache-manager/dist/interceptors/cache.interceptor';
 
 @ApiTags('Tournament Participants (Реєстрація команд)')
 @Controller('tournament-participants')
@@ -30,6 +33,8 @@ export class TournamentParticipantsController {
   }
 
   @Get('tournament/:tournamentId')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(30000)
   @ApiOperation({
     summary: 'Отримати список усіх зареєстрованих команд конкретного турніру',
   })

@@ -18,6 +18,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailModule } from './mail/mail.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-yet';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { StatsModule } from './stats/stats.module';
 import { LeaderboardsModule } from './leaderboards/leaderboards.module';
 
@@ -36,6 +38,28 @@ import { LeaderboardsModule } from './leaderboards/leaderboards.module';
       }),
       inject: [ConfigService],
     }),
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: 60000,
+        limit: 100, // 100 запитів на хвилину
+      },
+      {
+        name: 'auth',
+        ttl: 60000,
+        limit: 10, // 10 запитів на хвилину для авторизації
+      },
+      {
+        name: 'invitations',
+        ttl: 60000,
+        limit: 5, // 5 запитів на хвилину для запрошень (щоб уникнути спаму)
+      },
+      {
+        name: 'heavy',
+        ttl: 60000,
+        limit: 3, // 3 запити на хвилину для симуляцій/генерацій
+      },
+    ]),
     PrismaModule,
     UsersModule,
     PlayersModule,
@@ -54,6 +78,12 @@ import { LeaderboardsModule } from './leaderboards/leaderboards.module';
     LeaderboardsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

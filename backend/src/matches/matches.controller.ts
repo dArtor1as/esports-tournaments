@@ -6,6 +6,7 @@ import {
   Param,
   Query,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { MatchesService } from './matches.service';
 import { GenerateBracketDto } from './dto/generate-bracket.dto';
@@ -17,6 +18,9 @@ import {
 } from '@nestjs/swagger';
 import { Stage } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Throttle } from '@nestjs/throttler';
+import { CacheTTL } from 'node_modules/@nestjs/cache-manager/dist/decorators/cache-ttl.decorator';
+import { CacheInterceptor } from 'node_modules/@nestjs/cache-manager/dist/interceptors/cache.interceptor';
 
 @ApiTags('Matches (Турнірна сітка та матчі)')
 @Controller('matches')
@@ -25,6 +29,7 @@ export class MatchesController {
 
   @Post('generate-bracket')
   @UseGuards(JwtAuthGuard)
+  @Throttle({ heavy: { limit: 3, ttl: 60000 } })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Згенерувати сітку для турніру (Single або Double Elimination)',
@@ -35,6 +40,7 @@ export class MatchesController {
 
   @Post('generate-groups')
   @UseGuards(JwtAuthGuard)
+  @Throttle({ heavy: { limit: 3, ttl: 60000 } })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Згенерувати матчі групового етапу (Round Robin)' })
   generateGroups(@Body() dto: GenerateBracketDto) {
@@ -42,6 +48,7 @@ export class MatchesController {
   }
 
   @Post('transition-to-playoffs')
+  @Throttle({ heavy: { limit: 3, ttl: 60000 } })
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
@@ -52,6 +59,8 @@ export class MatchesController {
   }
 
   @Get('tournament/:id')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(30000)
   @ApiOperation({ summary: 'Отримати всі матчі турніру' })
   @ApiQuery({
     name: 'stage',

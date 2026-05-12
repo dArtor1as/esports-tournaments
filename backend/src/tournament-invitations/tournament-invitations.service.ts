@@ -214,6 +214,21 @@ export class TournamentInvitationsService {
       data: { status: 'DECLINED' },
     });
   }
+  async findMyTeamInvites(userId: string) {
+    return this.prisma.tournamentInvitation.findMany({
+      where: {
+        status: 'PENDING',
+        team: {
+          captain: { userId }, // Тільки ті команди, де юзер — капітан
+        },
+        expiresAt: { gt: new Date() },
+      },
+      include: {
+        tournament: { select: { title: true, region: true, tier: true } },
+        team: { select: { name: true, tag: true } },
+      },
+    });
+  }
 
   findAllByTournament(tournamentId: string) {
     return this.prisma.tournamentInvitation.findMany({

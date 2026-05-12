@@ -154,4 +154,17 @@ export class TeamInvitationsService {
   findAll() {
     return this.prisma.teamInvitation.findMany();
   }
+
+  async findMyInvites(userId: string) {
+    return this.prisma.teamInvitation.findMany({
+      where: {
+        userId,
+        status: 'PENDING',
+        expiresAt: { gt: new Date() }, // Тільки актуальні
+      },
+      include: {
+        team: { select: { name: true, tag: true, logoUrl: true } },
+      },
+    });
+  }
 }

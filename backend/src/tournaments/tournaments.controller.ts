@@ -78,7 +78,6 @@ export class TournamentsController {
 
   @Get('workflow')
   @UseInterceptors(CacheInterceptor)
-  @CacheKey('tournaments_workflow')
   @CacheTTL(30000) // Кешуємо на 30 секунд
   @ApiOperation({
     summary: 'Отримати турніри для екрану генерації або симуляції',

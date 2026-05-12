@@ -5,11 +5,6 @@ import {
   IsNotEmpty,
   MinLength,
   IsString,
-  Min,
-  Max,
-  IsUUID,
-  IsOptional,
-  IsInt,
 } from 'class-validator';
 import { Role } from '@prisma/client';
 
