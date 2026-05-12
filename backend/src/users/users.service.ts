@@ -1,8 +1,14 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
+import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 
 @Injectable()
 export class UsersService {
@@ -42,7 +48,24 @@ export class UsersService {
 
     return newUser;
   }
-
+  async getMe(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        countryCode: true,
+        // Можна додати короткий список профілів
+        players: {
+          select: { id: true, gameId: true, nickname: true },
+        },
+      },
+    });
+    if (!user) throw new NotFoundException('Користувача не знайдено');
+    return user;
+  }
   async findAll() {
     return this.prisma.user.findMany({
       select: { id: true, email: true, role: true },
@@ -60,16 +83,31 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { email } });
   }
 
-  update(id: string, updateUserDto: UpdateUserDto) {
+  async update(id: string, updateUserDto: UpdateUserDto, user: JwtPayload) {
+    // 1. Шукаємо користувача
+    const targetUser = await this.prisma.user.findUnique({ where: { id } });
+    if (!targetUser) throw new NotFoundException('Користувача не знайдено');
+
+    // 2. перевіряємо, чи це сам користувач або він Адмін?
+    if (targetUser.id !== user.userId && user.role !== 'ADMIN') {
+      throw new ForbiddenException('Ви можете редагувати лише власний профіль');
+    }
+
+    // 3. Якщо перевірка пройдена - оновлюємо
     return this.prisma.user.update({
       where: { id },
       data: updateUserDto,
     });
   }
 
-  remove(id: string) {
-    return this.prisma.user.delete({
-      where: { id },
-    });
+  async remove(id: string, user: JwtPayload) {
+    const targetUser = await this.prisma.user.findUnique({ where: { id } });
+    if (!targetUser) throw new NotFoundException('Користувача не знайдено');
+
+    if (targetUser.id !== user.userId && user.role !== 'ADMIN') {
+      throw new ForbiddenException('Ви можете видалити лише власний профіль');
+    }
+
+    return this.prisma.user.delete({ where: { id } });
   }
 }

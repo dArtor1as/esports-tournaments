@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -17,6 +18,7 @@ import { GenerateTestTournamentDto } from './dto/generate-test-tournament.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
+import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 
 type WorkflowMode = 'generation' | 'simulation';
 type TournamentStatus = 'planned' | 'live' | 'finished';
@@ -146,7 +148,6 @@ export class TournamentsService {
       },
     });
     await this.cacheManager.del('all_tournaments'); // Очищаємо кеш при створенні нового турніру
-    await this.cacheManager.del('tournaments_workflow');
 
     return createdTournament;
   }
@@ -264,6 +265,17 @@ export class TournamentsService {
     return workflowView;
   }
 
+  async findMyTournaments(userId: string) {
+    return this.prisma.tournament.findMany({
+      where: { creatorId: userId },
+      include: {
+        game: { select: { name: true } },
+        _count: { select: { participants: true, matches: true } },
+      },
+      orderBy: { id: 'desc' },
+    });
+  }
+
   findOne(id: string) {
     return this.prisma.tournament.findUnique({
       where: { id },
@@ -276,12 +288,22 @@ export class TournamentsService {
     });
   }
 
-  async update(id: string, updateTournamentDto: UpdateTournamentDto) {
+  async update(
+    id: string,
+    updateTournamentDto: UpdateTournamentDto,
+    user: JwtPayload,
+  ) {
     const tournament = await this.prisma.tournament.findUnique({
       where: { id },
     });
 
     if (!tournament) throw new NotFoundException('Турнір не знайдено');
+
+    if (tournament.creatorId !== user.userId && user.role !== 'ADMIN') {
+      throw new ForbiddenException(
+        'Ви не маєте прав на редагування цього турніру',
+      );
+    }
 
     // Захист: якщо турнір вже йде або завершився, забороняємо міняти ключові формати
     if (
@@ -299,18 +321,23 @@ export class TournamentsService {
     });
 
     await this.cacheManager.del('all_tournaments'); // Очищаємо кеш при оновленні турніру
-    await this.cacheManager.del('tournaments_workflow');
 
     return updatedTournament;
   }
 
-  async remove(id: string) {
+  async remove(id: string, user: JwtPayload) {
     const tournament = await this.prisma.tournament.findUnique({
       where: { id },
       include: { matches: true },
     });
 
     if (!tournament) throw new NotFoundException('Турнір не знайдено');
+
+    if (tournament.creatorId !== user.userId && user.role !== 'ADMIN') {
+      throw new ForbiddenException(
+        'Ви не маєте прав на видалення цього турніру',
+      );
+    }
 
     // Безпечне видалення: дозволяємо видаляти тільки якщо немає згенерованих матчів
     if (tournament.matches.length > 0) {
@@ -324,7 +351,6 @@ export class TournamentsService {
     });
 
     await this.cacheManager.del('all_tournaments'); // Очищаємо кеш при видаленні турніру
-    await this.cacheManager.del('tournaments_workflow');
 
     return deletedTournament;
   }

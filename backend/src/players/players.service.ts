@@ -73,6 +73,16 @@ export class PlayersService {
     });
   }
 
+  async findMyProfiles(userId: string) {
+    return this.prisma.player.findMany({
+      where: { userId },
+      include: {
+        game: { select: { name: true, slug: true } },
+        team: { select: { id: true, name: true, tag: true } },
+      },
+    });
+  }
+
   findOne(id: string) {
     return this.prisma.player.findUnique({
       where: { id },

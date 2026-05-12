@@ -13,6 +13,11 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import type { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
+import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
+import { Roles } from 'src/auth/decorators/roles.decorator';
+import { RolesGuard } from 'src/auth/roles.guard';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('Users (Користувачі)') // Групування у Swagger
 @Controller('users')
@@ -20,15 +25,26 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
+  @Throttle({ auth: { limit: 3, ttl: 60000 } })
   @ApiOperation({ summary: 'Створити нового користувача' })
   create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
   }
 
   @Get()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
   @ApiOperation({ summary: 'Отримати список всіх користувачів' })
   findAll() {
     return this.usersService.findAll();
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Отримати профіль поточного користувача' })
+  getMe(@CurrentUser() user: JwtPayload) {
+    return this.usersService.getMe(user.userId);
   }
 
   @Get(':id')
@@ -38,18 +54,27 @@ export class UsersController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard) // Тут RolesGuard не потрібен, пускаємо всіх залогінених
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Оновити інформацію про користувача' })
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(id, updateUserDto);
+  @ApiOperation({
+    summary:
+      'Оновити інформацію про користувача (тільки свій профіль або Адмін)',
+  })
+  update(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.usersService.update(id, updateUserDto, user);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Видалити користувача' })
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
+  @ApiOperation({
+    summary: 'Видалити користувача (тільки свій профіль або Адмін)',
+  })
+  remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.usersService.remove(id, user);
   }
 }

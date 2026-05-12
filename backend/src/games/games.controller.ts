@@ -15,6 +15,8 @@ import { UpdateGameDto } from './dto/update-game.dto';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 
 @ApiTags('Games (Ігрові дисципліни)')
 @Controller('games')
@@ -22,7 +24,8 @@ export class GamesController {
   constructor(private readonly gamesService: GamesService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Додати нову ігрову дисципліну (для Адмінів)' })
   create(@Body() createGameDto: CreateGameDto) {
@@ -45,7 +48,8 @@ export class GamesController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Оновити назву або slug гри' })
   update(@Param('id') id: string, @Body() updateGameDto: UpdateGameDto) {
@@ -53,7 +57,8 @@ export class GamesController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Видалити гру (якщо немає активних гравців/турнірів)',

@@ -24,6 +24,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('Tournaments (Турніри)')
 @Controller('tournaments')
@@ -32,6 +33,7 @@ export class TournamentsController {
 
   @Post()
   @UseGuards(JwtAuthGuard)
+  @Throttle({ invitations: { limit: 20, ttl: 60000 } })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Створити новий турнір' })
   create(
@@ -43,6 +45,7 @@ export class TournamentsController {
 
   @Post('generate-test')
   @UseGuards(JwtAuthGuard)
+  @Throttle({ heavy: { limit: 3, ttl: 60000 } })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Створити турнір із кастомними налаштуваннями',
@@ -78,7 +81,6 @@ export class TournamentsController {
 
   @Get('workflow')
   @UseInterceptors(CacheInterceptor)
-  @CacheKey('tournaments_workflow')
   @CacheTTL(30000) // Кешуємо на 30 секунд
   @ApiOperation({
     summary: 'Отримати турніри для екрану генерації або симуляції',
@@ -103,6 +105,16 @@ export class TournamentsController {
     return this.tournamentsService.findWorkflow(workflow, status);
   }
 
+  @Get('my')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Отримати список турнірів, які створив поточний користувач',
+  })
+  findMyTournaments(@CurrentUser() user: JwtPayload) {
+    return this.tournamentsService.findMyTournaments(user.userId);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Отримати деталі турніру за ID' })
   findOne(@Param('id') id: string) {
@@ -116,8 +128,9 @@ export class TournamentsController {
   update(
     @Param('id') id: string,
     @Body() updateTournamentDto: UpdateTournamentDto,
+    @CurrentUser() user: JwtPayload,
   ) {
-    return this.tournamentsService.update(id, updateTournamentDto);
+    return this.tournamentsService.update(id, updateTournamentDto, user);
   }
 
   @Delete(':id')
@@ -126,7 +139,7 @@ export class TournamentsController {
   @ApiOperation({
     summary: 'Видалити турнір (тільки якщо він ще не розпочався)',
   })
-  remove(@Param('id') id: string) {
-    return this.tournamentsService.remove(id);
+  remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.tournamentsService.remove(id, user);
   }
 }
