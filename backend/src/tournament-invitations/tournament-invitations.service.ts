@@ -17,7 +17,7 @@ export class TournamentInvitationsService {
     private mailService: MailService,
   ) {}
 
-  async create(dto: CreateTournamentInvitationDto) {
+  async create(dto: CreateTournamentInvitationDto, user: JwtPayload) {
     // 1. Отримуємо дані турніру та команди для аналізу логіки
     const tournament = await this.prisma.tournament.findUnique({
       where: { id: dto.tournamentId },
@@ -29,8 +29,13 @@ export class TournamentInvitationsService {
     if (!tournament || !team)
       throw new NotFoundException('Турнір або команда не знайдені');
 
-    // --- ПРАВИЛО 1: Блокування нелогічних інвайтів (Tier різниця) ---
-    // Чим менша цифра тіру, тим сильніша команда (1 - Pro, 3 - Amateur).
+    if (tournament.creatorId !== user.userId && user.role !== 'ADMIN') {
+      throw new ForbiddenException(
+        'Тільки організатор цього турніру або адміністратор може надсилати запрошення',
+      );
+    }
+
+    // ПРАВИЛО 1: Блокування нелогічних інвайтів (Tier різниця)
     // Тобто, якщо team.tier (3) - tournament.tier (1) > 1 -> це порушення.
     const tierDifference = team.tier - tournament.tier;
 
@@ -40,7 +45,7 @@ export class TournamentInvitationsService {
       );
     }
 
-    // --- ПРАВИЛО 2: Контроль ліміту місць ---
+    // ПРАВИЛО 2: Контроль ліміту місць
     const currentParticipants = await this.prisma.tournamentParticipant.count({
       where: { tournamentId: dto.tournamentId },
     });
@@ -152,7 +157,7 @@ export class TournamentInvitationsService {
         );
       }
 
-      // --- ПРАВИЛО 3: Розумна маршрутизація по стадіях ---
+      // ПРАВИЛО 3: Розумна маршрутизація по стадіях
       // Якщо команда такого ж тіру (або сильніша), вона йде в Групу.
       // Якщо команда на 1 тір слабша, вона йде в Закриті Кваліфікації (CQ).
       let assignedStage = 'CQ';
@@ -230,7 +235,23 @@ export class TournamentInvitationsService {
     });
   }
 
-  findAllByTournament(tournamentId: string) {
+  async findAllByTournament(tournamentId: string, user: JwtPayload) {
+    // 1. Шукаємо турнір, щоб дізнатися, хто його створив
+    const tournament = await this.prisma.tournament.findUnique({
+      where: { id: tournamentId },
+      select: { creatorId: true },
+    });
+
+    if (!tournament) throw new NotFoundException('Турнір не знайдено');
+
+    // 2. Перевіряємо, чи це творець турніру або Адмін
+    if (tournament.creatorId !== user.userId && user.role !== 'ADMIN') {
+      throw new ForbiddenException(
+        'Ви не маєте доступу до списку запрошень цього турніру',
+      );
+    }
+
+    // 3. Віддаємо інвайти
     return this.prisma.tournamentInvitation.findMany({
       where: { tournamentId },
       include: { team: { select: { name: true, tag: true } } },

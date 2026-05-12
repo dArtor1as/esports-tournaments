@@ -1,11 +1,13 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateTournamentParticipantDto } from './dto/create-tournament-participant.dto';
 import { PrismaService } from '../prisma/prisma.service';
+import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 
 @Injectable()
 export class TournamentParticipantsService {
@@ -102,26 +104,43 @@ export class TournamentParticipantsService {
     });
   }
 
-  async remove(id: string) {
-    // Скасування реєстрації (можливо лише до старту турніру)
+  async remove(id: string, user: JwtPayload) {
+    // 1. Шукаємо учасника разом із даними турніру (для creatorId) та команди (для captainId)
     const participant = await this.prisma.tournamentParticipant.findUnique({
       where: { id },
-      include: { tournament: true },
+      include: {
+        tournament: { select: { status: true, creatorId: true } },
+        team: { include: { captain: true } },
+      },
     });
 
     if (!participant) throw new NotFoundException('Учасника не знайдено');
-    if (participant.tournament.status !== 'planned') {
-      throw new BadRequestException(
-        'Неможливо знятися з турніру, який вже розпочався',
+
+    // 2.Перевіряємо права доступу
+    const isTeamCaptain = participant.team.captain.userId === user.userId;
+    const isTournamentCreator =
+      participant.tournament.creatorId === user.userId;
+    const isAdmin = user.role === 'ADMIN';
+
+    if (!isTeamCaptain && !isTournamentCreator && !isAdmin) {
+      throw new ForbiddenException(
+        'Ви не маєте прав для скасування реєстрації цієї команди. Це може зробити лише капітан, організатор турніру або адміністратор.',
       );
     }
 
-    // Транзакція: видаляємо спочатку Roster, потім самого учасника
-    return this.prisma.$transaction(async (prisma) => {
-      await prisma.tournamentRoster.deleteMany({
+    // 3. Перевірка статусу турніру (тільки до старту)
+    if (participant.tournament.status !== 'planned') {
+      throw new BadRequestException(
+        'Неможливо знятися з турніру, який вже розпочався або завершився',
+      );
+    }
+
+    // 4. Транзакція: видаляємо ростер та запис учасника
+    return this.prisma.$transaction(async (tx) => {
+      await tx.tournamentRoster.deleteMany({
         where: { participantId: id },
       });
-      return prisma.tournamentParticipant.delete({ where: { id } });
+      return tx.tournamentParticipant.delete({ where: { id } });
     });
   }
 }

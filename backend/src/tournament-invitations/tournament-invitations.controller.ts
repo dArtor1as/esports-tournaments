@@ -15,9 +15,10 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
-import { CacheInterceptor } from 'node_modules/@nestjs/cache-manager/dist/interceptors/cache.interceptor';
-import { CacheTTL } from 'node_modules/@nestjs/cache-manager/dist/decorators/cache-ttl.decorator';
-import { Throttle } from 'node_modules/@nestjs/throttler/dist/throttler.decorator';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
+import { Throttle } from '@nestjs/throttler';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
 
 @ApiTags('Tournament Invitations (Запрошення на турнір)')
 @Controller('tournament-invitations')
@@ -30,9 +31,14 @@ export class TournamentInvitationsController {
   @UseGuards(JwtAuthGuard)
   @Throttle({ invitations: { limit: 5, ttl: 60000 } })
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Створити запрошення для команди ' })
-  create(@Body() createDto: CreateTournamentInvitationDto) {
-    return this.invitationsService.create(createDto);
+  @ApiOperation({
+    summary: 'Створити запрошення до команди ',
+  })
+  create(
+    @Body() createDto: CreateTournamentInvitationDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.invitationsService.create(createDto, user);
   }
 
   @Patch(':token/accept')
@@ -62,11 +68,16 @@ export class TournamentInvitationsController {
   }
 
   @Get('tournament/:tournamentId')
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(30000)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Отримати всі запрошення конкретного турніру' })
-  findAllByTournament(@Param('tournamentId') tournamentId: string) {
-    return this.invitationsService.findAllByTournament(tournamentId);
+  findAllByTournament(
+    @Param('tournamentId') tournamentId: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.invitationsService.findAllByTournament(tournamentId, user);
   }
 
   @Get('my-inbox')

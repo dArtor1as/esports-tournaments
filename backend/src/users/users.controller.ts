@@ -17,6 +17,7 @@ import type { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { RolesGuard } from 'src/auth/roles.guard';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('Users (Користувачі)') // Групування у Swagger
 @Controller('users')
@@ -24,6 +25,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
+  @Throttle({ auth: { limit: 3, ttl: 60000 } })
   @ApiOperation({ summary: 'Створити нового користувача' })
   create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
@@ -37,18 +39,18 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Отримати користувача за ID' })
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(id);
-  }
-
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Отримати профіль поточного користувача' })
   getMe(@CurrentUser() user: JwtPayload) {
     return this.usersService.getMe(user.userId);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Отримати користувача за ID' })
+  findOne(@Param('id') id: string) {
+    return this.usersService.findOne(id);
   }
 
   @Patch(':id')

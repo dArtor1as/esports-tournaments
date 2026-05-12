@@ -2,7 +2,7 @@ import { Controller, Post, Param, UseGuards } from '@nestjs/common';
 import { StatsService } from './stats.service';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { Throttle } from 'node_modules/@nestjs/throttler/dist/throttler.decorator';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('Analytics & Stats (Аналітика)')
 @Controller('stats')

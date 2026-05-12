@@ -12,8 +12,10 @@ import { TournamentParticipantsService } from './tournament-participants.service
 import { CreateTournamentParticipantDto } from './dto/create-tournament-participant.dto';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { CacheTTL } from 'node_modules/@nestjs/cache-manager/dist/decorators/cache-ttl.decorator';
-import { CacheInterceptor } from 'node_modules/@nestjs/cache-manager/dist/interceptors/cache.interceptor';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
+import { Throttle } from '@nestjs/throttler';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 
 @ApiTags('Tournament Participants (Реєстрація команд)')
 @Controller('tournament-participants')
@@ -24,6 +26,7 @@ export class TournamentParticipantsController {
 
   @Post()
   @UseGuards(JwtAuthGuard)
+  @Throttle({ invitations: { limit: 20, ttl: 60000 } })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Зареєструвати команду на турнір та зафіксувати склад',
@@ -44,9 +47,10 @@ export class TournamentParticipantsController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
+  @Throttle({ invitations: { limit: 10, ttl: 60000 } })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Скасувати реєстрацію команди (тільки до старту)' })
-  remove(@Param('id') id: string) {
-    return this.participantsService.remove(id);
+  remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.participantsService.remove(id, user);
   }
 }

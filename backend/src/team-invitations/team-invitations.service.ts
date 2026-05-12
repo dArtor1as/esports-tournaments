@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -8,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from 'src/mail/mail.service';
 import * as crypto from 'crypto';
 import { TeamsService } from 'src/teams/teams.service';
+import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 
 @Injectable()
 export class TeamInvitationsService {
@@ -17,8 +19,23 @@ export class TeamInvitationsService {
     private teamsService: TeamsService,
   ) {}
 
-  async create(createDto: CreateTeamInvitationDto) {
-    // 1. Перевіряємо, чи немає вже активного інвайту для цього юзера в цю команду
+  async create(createDto: CreateTeamInvitationDto, user: JwtPayload) {
+    // 1. Шукаємо команду, щоб перевірити, хто її капітан
+    const team = await this.prisma.team.findUnique({
+      where: { id: createDto.teamId },
+      include: { captain: true },
+    });
+
+    if (!team) throw new NotFoundException('Команду не знайдено');
+
+    // 2. Тільки капітан цієї команди або Адмін можуть надсилати запрошення
+    if (team.captain.userId !== user.userId && user.role !== 'ADMIN') {
+      throw new ForbiddenException(
+        'Тільки капітан команди або адміністратор може запрошувати гравців',
+      );
+    }
+
+    // 3. Перевіряємо, чи немає вже активного інвайту для цього юзера в цю команду
     const existingInvite = await this.prisma.teamInvitation.findUnique({
       where: {
         teamId_userId: { teamId: createDto.teamId, userId: createDto.userId },
@@ -31,10 +48,10 @@ export class TeamInvitationsService {
       );
     }
 
-    // 2. Генеруємо унікальний токен (32 символи)
+    // 4. Генеруємо унікальний токен (32 символи)
     const token = crypto.randomBytes(16).toString('hex');
 
-    // 3. Ставимо термін дії (наприклад, 7 днів від сьогодні)
+    // 5. Ставимо термін дії (наприклад, 7 днів від сьогодні)
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
@@ -47,7 +64,7 @@ export class TeamInvitationsService {
       },
       include: { team: true, user: true },
     });
-    // 4. Відправляємо листа з посиланням для прийняття запрошення
+    // 6. Відправляємо листа з посиланням для прийняття запрошення
     await this.mailService.sendTeamInvite(
       invite.user.email,
       invite.team.name,

@@ -5,7 +5,7 @@ import { ApiOperation, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
-import { Throttle } from 'node_modules/@nestjs/throttler/dist/throttler.decorator';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('Genetic Simulator (Алгоритм)')
 @ApiBearerAuth('JWT-auth')
