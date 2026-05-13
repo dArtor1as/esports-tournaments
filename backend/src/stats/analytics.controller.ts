@@ -1,12 +1,12 @@
 import { Controller, Get, Param, UseInterceptors } from '@nestjs/common';
-import { StatsService } from './stats.service';
+import { StatsAnalyticsService } from './stats-analytics.service';
 import { ApiOperation, ApiTags, ApiParam } from '@nestjs/swagger';
-import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 
 @ApiTags('Analytics & History (Графіки)')
 @Controller('analytics')
 export class AnalyticsController {
-  constructor(private readonly statsService: StatsService) {}
+  constructor(private readonly statsAnalyticsService: StatsAnalyticsService) {}
 
   @Get('team/:teamId/rating-history')
   @UseInterceptors(CacheInterceptor)
@@ -16,7 +16,7 @@ export class AnalyticsController {
   })
   @ApiParam({ name: 'teamId', description: 'ID команди' })
   getTeamHistory(@Param('teamId') teamId: string) {
-    return this.statsService.getTeamRatingHistory(teamId);
+    return this.statsAnalyticsService.getTeamRatingHistory(teamId);
   }
 
   @Get('player/:playerId/rating-history')
@@ -25,6 +25,6 @@ export class AnalyticsController {
   @ApiOperation({ summary: 'Історія зміни Elo гравця (для лінійного графіка)' })
   @ApiParam({ name: 'playerId', description: 'ID гравця' })
   getPlayerHistory(@Param('playerId') playerId: string) {
-    return this.statsService.getPlayerRatingHistory(playerId);
+    return this.statsAnalyticsService.getPlayerRatingHistory(playerId);
   }
 }

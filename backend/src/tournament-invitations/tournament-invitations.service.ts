@@ -9,12 +9,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import * as crypto from 'crypto';
 import { MailService } from 'src/mail/mail.service';
 import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { InvitationPolicyService } from './invitation-policy.service';
 
 @Injectable()
 export class TournamentInvitationsService {
   constructor(
     private prisma: PrismaService,
     private mailService: MailService,
+    private invitationPolicyService: InvitationPolicyService,
   ) {}
 
   async create(dto: CreateTournamentInvitationDto, user: JwtPayload) {
@@ -35,31 +37,26 @@ export class TournamentInvitationsService {
       );
     }
 
+    // перевірки перед створенням інвайту
     // ПРАВИЛО 1: Блокування нелогічних інвайтів (Tier різниця)
-    // Тобто, якщо team.tier (3) - tournament.tier (1) > 1 -> це порушення.
-    const tierDifference = team.tier - tournament.tier;
+    this.invitationPolicyService.checkTierDifference(
+      team.tier,
+      tournament.tier,
+    );
 
-    if (tierDifference > 1) {
-      throw new BadRequestException(
-        `Команда Tier ${team.tier} занадто слабка для отримання прямого запрошення на турнір Tier ${tournament.tier}. Вони мають проходити Відкриті Кваліфікації.`,
-      );
-    }
-
-    // ПРАВИЛО 2: Контроль ліміту місць
     const currentParticipants = await this.prisma.tournamentParticipant.count({
       where: { tournamentId: dto.tournamentId },
     });
     const pendingInvites = await this.prisma.tournamentInvitation.count({
       where: { tournamentId: dto.tournamentId, status: 'PENDING' },
     });
+    // ПРАВИЛО 2: Контроль ліміту місць
+    this.invitationPolicyService.checkCapacity(
+      currentParticipants,
+      pendingInvites,
+      tournament.maxParticipants,
+    );
 
-    if (currentParticipants + pendingInvites >= tournament.maxParticipants) {
-      throw new BadRequestException(
-        'На турнірі більше немає вільних слотів (враховуючи вже надіслані запрошення)',
-      );
-    }
-
-    // 3. Перевірки на дублікати
     const existingParticipant =
       await this.prisma.tournamentParticipant.findUnique({
         where: {
@@ -69,9 +66,6 @@ export class TournamentInvitationsService {
           },
         },
       });
-    if (existingParticipant)
-      throw new BadRequestException('Команда вже бере участь у цьому турнірі');
-
     const existingInvite = await this.prisma.tournamentInvitation.findFirst({
       where: {
         tournamentId: dto.tournamentId,
@@ -79,10 +73,13 @@ export class TournamentInvitationsService {
         status: 'PENDING',
       },
     });
-    if (existingInvite)
-      throw new BadRequestException('Запрошення вже надіслано');
+    // ПРАВИЛО 3: Перевірка на дублікати
+    this.invitationPolicyService.checkDuplicates(
+      existingParticipant,
+      existingInvite,
+    );
 
-    // 4. Створюємо інвайт
+    // 2. Створюємо інвайт
     const token = crypto.randomBytes(16).toString('hex');
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
@@ -108,7 +105,7 @@ export class TournamentInvitationsService {
       },
     });
 
-    // 4. Відправляємо листа з посиланням для прийняття запрошення
+    // 3. Відправляємо листа з посиланням для прийняття запрошення
     await this.mailService.sendTournamentInvite(
       invite.team.captain.user.email,
       invite.tournament.title,
@@ -157,15 +154,12 @@ export class TournamentInvitationsService {
         );
       }
 
-      // ПРАВИЛО 3: Розумна маршрутизація по стадіях
-      // Якщо команда такого ж тіру (або сильніша), вона йде в Групу.
-      // Якщо команда на 1 тір слабша, вона йде в Закриті Кваліфікації (CQ).
-      let assignedStage = 'CQ';
-      if (invite.team.tier <= invite.tournament.tier) {
-        assignedStage = 'GROUP';
-      }
+      // 3. Визначаємо стадію, на яку потрапляє команда (CQ або GROUP) та створюємо учасника турніру
+      const assignedStage = this.invitationPolicyService.determineAssignedStage(
+        invite.team.tier,
+        invite.tournament.tier,
+      );
 
-      // 3. Створюємо учасника
       const participantCount = await prisma.tournamentParticipant.count({
         where: { tournamentId: invite.tournamentId },
       });
@@ -174,12 +168,11 @@ export class TournamentInvitationsService {
         data: {
           tournamentId: invite.tournamentId,
           teamId: invite.teamId,
-          joinedStage: assignedStage as any, // TypeScript підказка
+          joinedStage: assignedStage as any,
           seed: participantCount + 1,
         },
       });
 
-      // 4. Фіксуємо склад
       const rosterData = rosterPlayerIds.map((playerId) => ({
         participantId: participant.id,
         playerId: playerId,
@@ -187,7 +180,6 @@ export class TournamentInvitationsService {
       }));
       await prisma.tournamentRoster.createMany({ data: rosterData });
 
-      // 5. Оновлюємо статус
       await prisma.tournamentInvitation.update({
         where: { id: invite.id },
         data: { status: 'ACCEPTED' },
@@ -197,7 +189,7 @@ export class TournamentInvitationsService {
     });
   }
 
-  // ... методи decline та findAllByTournament залишаються без змін
+  // Капітан відхиляє запрошення, статус інвайту змінюється на DECLINED
   async decline(token: string, user: JwtPayload) {
     const invite = await this.prisma.tournamentInvitation.findUnique({
       where: { token },

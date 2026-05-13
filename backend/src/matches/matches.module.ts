@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { MatchesService } from './matches.service';
 import { MatchesController } from './matches.controller';
 import { HeuristicSeedingService } from './heuristic-seeding.service';
 import { GroupStageGenerator } from './generators/group-stage.generator';
@@ -8,11 +7,14 @@ import { SingleEliminationGenerator } from './generators/single-elimination.gene
 import { StatsService } from 'src/stats/stats.service';
 import { TeamsService } from 'src/teams/teams.service';
 import { PlayersService } from 'src/players/players.service';
+import { MatchesProgressionService } from './matches-progression.service';
+import { MatchesConsensusService } from './matches-consensus.service';
+import { MatchesGeneratorService } from './matches-generator.service';
+import { MatchesQueryController } from './matches-query.controller';
 
 @Module({
-  controllers: [MatchesController],
+  controllers: [MatchesController, MatchesQueryController],
   providers: [
-    MatchesService,
     HeuristicSeedingService,
     SingleEliminationGenerator,
     DoubleEliminationGenerator,
@@ -20,6 +22,9 @@ import { PlayersService } from 'src/players/players.service';
     StatsService,
     TeamsService,
     PlayersService,
+    MatchesGeneratorService,
+    MatchesConsensusService,
+    MatchesProgressionService,
   ],
 })
 export class MatchesModule {}

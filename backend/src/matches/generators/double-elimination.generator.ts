@@ -14,12 +14,12 @@ export class DoubleEliminationGenerator implements IBracketGenerator {
     participants: any[],
     format: string,
   ) {
-    const k = Math.log2(teamCount);
+    const roundsCount = Math.log2(teamCount);
     const bestOf = format === 'TEAM' ? 3 : 1;
 
     const ubMatches: MatchPayload[][] = [];
-    for (let r = 1; r <= k; r++) {
-      const count = Math.pow(2, k - r);
+    for (let r = 1; r <= roundsCount; r++) {
+      const count = Math.pow(2, roundsCount - r);
       const roundMatches: MatchPayload[] = Array.from(
         { length: count },
         () => ({
@@ -38,7 +38,7 @@ export class DoubleEliminationGenerator implements IBracketGenerator {
       ubMatches.push(roundMatches);
     }
 
-    for (let r = 0; r < k - 1; r++) {
+    for (let r = 0; r < roundsCount - 1; r++) {
       for (let i = 0; i < ubMatches[r].length; i++) {
         ubMatches[r][i].nextMatchWinnerId =
           ubMatches[r + 1][Math.floor(i / 2)].id;
@@ -47,7 +47,7 @@ export class DoubleEliminationGenerator implements IBracketGenerator {
 
     const lbMatches: MatchPayload[][] = [];
     let lbMatchCount = teamCount / 4;
-    for (let m = 1; m <= 2 * k - 2; m++) {
+    for (let m = 1; m <= 2 * roundsCount - 2; m++) {
       const roundMatches: MatchPayload[] = Array.from(
         { length: lbMatchCount },
         () => ({
@@ -67,7 +67,7 @@ export class DoubleEliminationGenerator implements IBracketGenerator {
       if (m % 2 === 0) lbMatchCount /= 2;
     }
 
-    for (let m = 0; m < 2 * k - 3; m++) {
+    for (let m = 0; m < 2 * roundsCount - 3; m++) {
       const currentRound = lbMatches[m];
       const nextRound = lbMatches[m + 1];
       const isOddRound = (m + 1) % 2 !== 0;
@@ -85,7 +85,7 @@ export class DoubleEliminationGenerator implements IBracketGenerator {
       ubMatches[0][i].nextMatchLoserId = lbMatches[0][Math.floor(i / 2)].id;
     }
 
-    for (let r = 1; r < k; r++) {
+    for (let r = 1; r < roundsCount; r++) {
       const targetLBRoundIndex = 2 * r - 1;
       const targetLbRound = lbMatches[targetLBRoundIndex];
       for (let i = 0; i < ubMatches[r].length; i++) {
@@ -107,7 +107,7 @@ export class DoubleEliminationGenerator implements IBracketGenerator {
       bestOf: format === 'TEAM' ? 5 : 3,
     };
 
-    ubMatches[k - 1][0].nextMatchWinnerId = grandFinal.id;
+    ubMatches[roundsCount - 1][0].nextMatchWinnerId = grandFinal.id;
     lbMatches[lbMatches.length - 1][0].nextMatchWinnerId = grandFinal.id;
 
     for (let i = 0; i < teamCount / 2; i++) {

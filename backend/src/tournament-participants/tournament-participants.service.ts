@@ -136,11 +136,11 @@ export class TournamentParticipantsService {
     }
 
     // 4. Транзакція: видаляємо ростер та запис учасника
-    return this.prisma.$transaction(async (tx) => {
-      await tx.tournamentRoster.deleteMany({
+    return this.prisma.$transaction(async (prismaTx) => {
+      await prismaTx.tournamentRoster.deleteMany({
         where: { participantId: id },
       });
-      return tx.tournamentParticipant.delete({ where: { id } });
+      return prismaTx.tournamentParticipant.delete({ where: { id } });
     });
   }
 }

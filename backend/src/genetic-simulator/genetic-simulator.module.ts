@@ -7,6 +7,7 @@ import { SingleEliminationStrategy } from './strategies/single-elimination.strat
 import { GroupStageStrategy } from './strategies/group-stage.strategy';
 import { DoubleEliminationStrategy } from './strategies/double-elimination.strategy';
 import { StatsModule } from 'src/stats/stats.module';
+import { SimulationContextBuilder } from './simulation-context.builder';
 
 @Module({
   imports: [MatchSimulatorsModule, StatsModule],
@@ -18,6 +19,7 @@ import { StatsModule } from 'src/stats/stats.module';
     SingleEliminationStrategy,
     GroupStageStrategy,
     DoubleEliminationStrategy,
+    SimulationContextBuilder,
   ],
 })
 export class GeneticSimulatorModule {}

@@ -62,27 +62,27 @@ export abstract class BaseGeneticStrategy {
 
   protected processMatchSimulation(
     match: SimulationMatch,
-    ctx: SimulationContext,
+    simulationContext: SimulationContext,
     getGeneRoll: () => number,
   ) {
     const teamAId = match.teamAId!;
     const teamBId = match.teamBId!;
 
     const baseProbA = this.probabilityCalc.getBaseProbability(
-      ctx.teamRatings[teamAId],
-      ctx.teamRatings[teamBId],
+      simulationContext.teamRatings[teamAId],
+      simulationContext.teamRatings[teamBId],
     );
     const expectedProbA = this.probabilityCalc.getAdjustedProbability(
       baseProbA,
       teamAId,
       teamBId,
-      ctx.pastMatches,
+      simulationContext.pastMatches,
     );
 
-    const teamA = ctx.teamsData[teamAId];
-    const teamB = ctx.teamsData[teamBId];
+    const teamA = simulationContext.teamsData[teamAId];
+    const teamB = simulationContext.teamsData[teamBId];
 
-    const result = ctx.simulator.simulateSeries(
+    const result = simulationContext.simulator.simulateSeries(
       teamA,
       teamB,
       expectedProbA,
