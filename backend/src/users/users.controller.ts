@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -49,7 +50,7 @@ export class UsersController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Отримати користувача за ID' })
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.findOne(id);
   }
 
@@ -61,7 +62,7 @@ export class UsersController {
       'Оновити інформацію про користувача (тільки свій профіль або Адмін)',
   })
   update(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updateUserDto: UpdateUserDto,
     @CurrentUser() user: JwtPayload,
   ) {
@@ -74,7 +75,10 @@ export class UsersController {
   @ApiOperation({
     summary: 'Видалити користувача (тільки свій профіль або Адмін)',
   })
-  remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
     return this.usersService.remove(id, user);
   }
 }

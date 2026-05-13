@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
   UseInterceptors,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { TournamentsService } from './tournaments.service';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
@@ -117,7 +118,7 @@ export class TournamentsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Отримати деталі турніру за ID' })
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.tournamentsService.findOne(id);
   }
 
@@ -126,7 +127,7 @@ export class TournamentsController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Оновити налаштування турніру (до старту)' })
   update(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updateTournamentDto: UpdateTournamentDto,
     @CurrentUser() user: JwtPayload,
   ) {
@@ -139,7 +140,10 @@ export class TournamentsController {
   @ApiOperation({
     summary: 'Видалити турнір (тільки якщо він ще не розпочався)',
   })
-  remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
     return this.tournamentsService.remove(id, user);
   }
 }

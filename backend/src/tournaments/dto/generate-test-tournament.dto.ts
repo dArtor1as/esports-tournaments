@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsIn, IsInt, IsOptional, IsString } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, IsEnum } from 'class-validator';
+import { BracketType } from './create-tournament.dto';
 
 export class GenerateTestTournamentDto {
   @ApiPropertyOptional({
@@ -14,14 +15,13 @@ export class GenerateTestTournamentDto {
   teamCount?: number;
 
   @ApiPropertyOptional({
-    example: 'DOUBLE_ELIMINATION',
-    description: 'Формат сітки. SINGLE_ELIMINATION або DOUBLE_ELIMINATION',
-    enum: ['SINGLE_ELIMINATION', 'DOUBLE_ELIMINATION'],
+    example: BracketType.DOUBLE_ELIMINATION,
+    description: 'Формат сітки турніру',
+    enum: BracketType,
   })
   @IsOptional()
-  @IsString()
-  @IsIn(['SINGLE_ELIMINATION', 'DOUBLE_ELIMINATION'])
-  bracketType?: string;
+  @IsEnum(BracketType)
+  bracketType?: BracketType = BracketType.SINGLE_ELIMINATION;
 
   @ApiPropertyOptional({
     example: 'Турнір від користувача',

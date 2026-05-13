@@ -7,6 +7,7 @@ import {
   Delete,
   UseGuards,
   UseInterceptors,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { TournamentParticipantsService } from './tournament-participants.service';
 import { CreateTournamentParticipantDto } from './dto/create-tournament-participant.dto';
@@ -41,7 +42,9 @@ export class TournamentParticipantsController {
   @ApiOperation({
     summary: 'Отримати список усіх зареєстрованих команд конкретного турніру',
   })
-  findAllByTournament(@Param('tournamentId') tournamentId: string) {
+  findAllByTournament(
+    @Param('tournamentId', ParseUUIDPipe) tournamentId: string,
+  ) {
     return this.participantsService.findAllByTournament(tournamentId);
   }
 
@@ -50,7 +53,10 @@ export class TournamentParticipantsController {
   @Throttle({ invitations: { limit: 10, ttl: 60000 } })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Скасувати реєстрацію команди (тільки до старту)' })
-  remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
     return this.participantsService.remove(id, user);
   }
 }

@@ -5,6 +5,7 @@ import {
   IsNotEmpty,
   MinLength,
   IsString,
+  IsOptional,
 } from 'class-validator';
 import { Role } from '@prisma/client';
 
@@ -27,7 +28,8 @@ export class CreateUserDto {
   @MinLength(6, { message: 'Пароль має містити щонайменше 6 символів' })
   password: string;
 
-  @ApiProperty({ enum: Role, default: Role.USER, required: false })
+  @ApiPropertyOptional({ enum: Role, default: Role.USER, required: false })
+  @IsOptional()
   @IsEnum(Role)
   role?: Role;
 }

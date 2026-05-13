@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   UseInterceptors,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { PlayersService } from './players.service';
 import { CreatePlayerDto } from './dto/create-player.dto';
@@ -47,7 +48,7 @@ export class PlayersController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Отримати деталі конкретного гравця за ID' })
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.playersService.findOne(id);
   }
 
@@ -64,7 +65,7 @@ export class PlayersController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Оновити дані гравця (наприклад, змінити нікнейм)' })
   update(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updatePlayerDto: UpdatePlayerDto,
     @CurrentUser() user: JwtPayload,
   ) {
@@ -75,7 +76,10 @@ export class PlayersController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Видалити ігровий профіль' })
-  remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
     return this.playersService.remove(id, user.userId);
   }
 }

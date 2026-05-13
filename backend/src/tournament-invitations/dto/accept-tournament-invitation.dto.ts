@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsUUID } from 'class-validator';
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  ArrayUnique,
+  IsArray,
+  IsUUID,
+} from 'class-validator';
 
 export class AcceptTournamentInvitationDto {
   @ApiProperty({
@@ -7,6 +13,7 @@ export class AcceptTournamentInvitationDto {
     example: ['uuid-1', 'uuid-2', 'uuid-3', 'uuid-4', 'uuid-5'],
   })
   @IsArray()
+  @ArrayUnique()
   @IsUUID('all', { each: true })
   @ArrayMinSize(1)
   @ArrayMaxSize(7)

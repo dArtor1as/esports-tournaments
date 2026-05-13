@@ -7,6 +7,7 @@ import {
   Query,
   UseGuards,
   UseInterceptors,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { GenerateBracketDto } from './dto/generate-bracket.dto';
 import {
@@ -73,7 +74,7 @@ export class MatchesController {
     summary: 'Здатися у поточному матчі або видати технічну поразку (FF)',
   })
   forfeitMatch(
-    @Param('id') matchId: string,
+    @Param('id', ParseUUIDPipe) matchId: string,
     @Body() dto: ForfeitMatchDto,
     @CurrentUser() user: JwtPayload,
   ) {
@@ -85,7 +86,7 @@ export class MatchesController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Капітан вносить рахунок (Чекає підтвердження)' })
   reportMatch(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ReportScoreDto,
     @CurrentUser() user: JwtPayload,
   ) {
@@ -96,7 +97,10 @@ export class MatchesController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Капітан-опонент підтверджує рахунок' })
-  confirmMatch(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+  confirmMatch(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
     return this.consensusService.confirmMatch(id, user);
   }
 
@@ -105,7 +109,7 @@ export class MatchesController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Капітан-опонент оскаржує рахунок' })
   disputeMatch(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: DisputeMatchDto,
     @CurrentUser() user: JwtPayload,
   ) {
@@ -117,7 +121,7 @@ export class MatchesController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Адмін примусово закриває матч (вирішує конфлікт)' })
   forceResolveMatch(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ReportScoreDto,
     @CurrentUser() user: JwtPayload,
   ) {

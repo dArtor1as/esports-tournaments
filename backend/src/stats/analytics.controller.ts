@@ -1,4 +1,10 @@
-import { Controller, Get, Param, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  UseInterceptors,
+} from '@nestjs/common';
 import { StatsAnalyticsService } from './stats-analytics.service';
 import { ApiOperation, ApiTags, ApiParam } from '@nestjs/swagger';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
@@ -15,7 +21,7 @@ export class AnalyticsController {
     summary: 'Історія зміни Elo команди (для лінійного графіка)',
   })
   @ApiParam({ name: 'teamId', description: 'ID команди' })
-  getTeamHistory(@Param('teamId') teamId: string) {
+  getTeamHistory(@Param('teamId', ParseUUIDPipe) teamId: string) {
     return this.statsAnalyticsService.getTeamRatingHistory(teamId);
   }
 
@@ -24,7 +30,7 @@ export class AnalyticsController {
   @CacheTTL(30000)
   @ApiOperation({ summary: 'Історія зміни Elo гравця (для лінійного графіка)' })
   @ApiParam({ name: 'playerId', description: 'ID гравця' })
-  getPlayerHistory(@Param('playerId') playerId: string) {
+  getPlayerHistory(@Param('playerId', ParseUUIDPipe) playerId: string) {
     return this.statsAnalyticsService.getPlayerRatingHistory(playerId);
   }
 }

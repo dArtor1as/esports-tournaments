@@ -5,14 +5,35 @@ import {
   IsInt,
   IsNotEmpty,
   IsNumber,
-  IsObject,
   IsOptional,
   IsString,
   IsUUID,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import { Region, TournamentFormat } from '@prisma/client';
+import { Type } from 'class-transformer';
 
+export enum BracketType {
+  SINGLE_ELIMINATION = 'SINGLE_ELIMINATION',
+  DOUBLE_ELIMINATION = 'DOUBLE_ELIMINATION',
+  ROUND_ROBIN = 'ROUND_ROBIN',
+}
+export class TournamentSettingsDto {
+  @ApiPropertyOptional({
+    enum: BracketType,
+    default: BracketType.SINGLE_ELIMINATION,
+  })
+  @IsOptional()
+  @IsEnum(BracketType)
+  bracketType?: BracketType = BracketType.SINGLE_ELIMINATION;
+
+  @ApiPropertyOptional({ description: 'Очки за перемогу в групі', default: 3 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  pointsPerWin?: number = 3;
+}
 export class CreateTournamentDto {
   @ApiProperty({ example: 'IEM Katowice 2026', description: 'Назва турніру' })
   @IsString()
@@ -33,8 +54,9 @@ export class CreateTournamentDto {
   tier: number;
 
   @ApiProperty({ enum: Region, default: Region.GLOBAL })
+  @IsOptional()
   @IsEnum(Region)
-  region: Region;
+  region?: Region;
 
   @ApiProperty({
     example: 1.0,
@@ -60,17 +82,11 @@ export class CreateTournamentDto {
   @IsOptional()
   maxParticipants?: number;
 
-  @ApiProperty({
-    example: {
-      pointsForWin: 3,
-      tiebreaker: 'h2h',
-      bracketType: 'DOUBLE_ELIMINATION',
-    },
-    description:
-      'Гнучкі налаштування турніру (bracketType: SINGLE_ELIMINATION або DOUBLE_ELIMINATION)',
-  })
-  @IsObject()
-  settings: Record<string, any>;
+  @ApiPropertyOptional({ type: () => TournamentSettingsDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => TournamentSettingsDto)
+  settings?: TournamentSettingsDto;
 
   @ApiProperty({
     example: true,

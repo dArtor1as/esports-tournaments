@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Inject,
@@ -10,6 +11,8 @@ import { UpdatePlayerDto } from './dto/update-player.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
+import { Cs2Role, Dota2Role, GameSlug } from './player.enums';
+import { assertRoleAllowedForGame } from './players-role.policy';
 
 @Injectable()
 export class PlayersService {
@@ -19,12 +22,10 @@ export class PlayersService {
   ) {}
 
   async create(createPlayerDto: CreatePlayerDto, userId: string) {
-    const existingProfile = await this.prisma.player.findUnique({
+    const existingProfile = await this.prisma.player.findFirst({
       where: {
-        userId_gameId: {
-          userId,
-          gameId: createPlayerDto.gameId,
-        },
+        userId,
+        game: { slug: createPlayerDto.gameSlug },
       },
     });
 
@@ -32,7 +33,7 @@ export class PlayersService {
       throw new ConflictException('У вас вже є профіль у цій дисципліні');
     }
 
-    // --- ЛОГІКА ГЕНЕРАЦІЇ РЕЙТИНГУ ---
+    //  ЛОГІКА ГЕНЕРАЦІЇ РЕЙТИНГУ
     let initialRating = 1000;
 
     if (createPlayerDto.expectedTier) {
@@ -51,8 +52,8 @@ export class PlayersService {
 
     const newPlayer = await this.prisma.player.create({
       data: {
-        userId,
-        gameId: createPlayerDto.gameId,
+        user: { connect: { id: userId } },
+        game: { connect: { slug: createPlayerDto.gameSlug } },
         nickname: createPlayerDto.nickname,
         rating: initialRating, // Використовуємо згенерований рейтинг
       },
@@ -91,8 +92,11 @@ export class PlayersService {
   }
 
   async update(id: string, updatePlayerDto: UpdatePlayerDto, userId: string) {
-    // 1. Перевіряємо, чи існує гравець
-    const player = await this.prisma.player.findUnique({ where: { id } });
+    // 1. Шукаємо профіль разом із грою (нам потрібен slug гри для валідації ролі)
+    const player = await this.prisma.player.findUnique({
+      where: { id },
+      include: { game: true },
+    });
     if (!player) throw new NotFoundException('Ігровий профіль не знайдено');
 
     // 2.Перевіряємо, чи не намагається юзер змінити чужий профіль?
@@ -102,7 +106,15 @@ export class PlayersService {
       );
     }
 
-    // 3. Оновлюємо профіль
+    // 3.Якщо змінюється роль, перевіряємо її сумісність з грою профілю
+    if (updatePlayerDto.inGameRole) {
+      assertRoleAllowedForGame(
+        player.game.slug as GameSlug,
+        updatePlayerDto.inGameRole,
+      );
+    }
+
+    // 4. Оновлюємо профіль
     const updatedPlayer = await this.prisma.player.update({
       where: { id },
       data: updatePlayerDto,
