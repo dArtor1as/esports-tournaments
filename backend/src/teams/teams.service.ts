@@ -3,17 +3,21 @@ import {
   ConflictException,
   Inject,
   Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
+import { AccessPolicyService } from 'src/auth/access-policy.service';
+import type { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 
 @Injectable()
 export class TeamsService {
   constructor(
     private prisma: PrismaService,
+    private accessPolicy: AccessPolicyService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
@@ -131,7 +135,17 @@ export class TeamsService {
     });
   }
 
-  async update(id: string, updateTeamDto: UpdateTeamDto) {
+  async update(id: string, updateTeamDto: UpdateTeamDto, user: JwtPayload) {
+    // 1. Шукаємо команду разом із капітаном
+    const team = await this.prisma.team.findUnique({
+      where: { id },
+      include: { captain: true }, // Тягнемо капітана
+    });
+
+    if (!team) throw new NotFoundException('Команду не знайдено');
+
+    // перевіряємо, чи юзер є капітаном або адміном
+    this.accessPolicy.checkCaptainOrAdmin(team.captain.userId, user);
     // Якщо хочуть змінити назву або тег, перевіряємо, чи вони вільні
     if (updateTeamDto.name || updateTeamDto.tag) {
       const existingTeam = await this.prisma.team.findFirst({
@@ -161,7 +175,14 @@ export class TeamsService {
     return updatedTeam;
   }
 
-  async remove(id: string) {
+  async remove(id: string, user: JwtPayload) {
+    const teamCheck = await this.prisma.team.findUnique({
+      where: { id },
+      include: { captain: true },
+    });
+
+    if (!teamCheck) throw new NotFoundException('Команду не знайдено');
+    this.accessPolicy.checkCaptainOrAdmin(teamCheck.captain.userId, user);
     // Використовуємо транзакцію для безпечного дісбанду
     const disbandedTeam = await this.prisma.$transaction(async (prisma) => {
       // 1. Змінюємо статус команди на DISBANDED

@@ -6,6 +6,8 @@ import { TeamsService } from '../teams/teams.service';
 import { PlayersService } from '../players/players.service';
 import { PlayerStatsAggregatorService } from './player-stats-aggregator.service';
 import { EloCalculatorService } from './elo-calculator.service';
+import { AccessPolicyService } from 'src/auth/access-policy.service';
+import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 
 @Injectable()
 export class StatsService {
@@ -15,9 +17,10 @@ export class StatsService {
     private playersService: PlayersService,
     private eloCalculator: EloCalculatorService,
     private statsAggregator: PlayerStatsAggregatorService,
+    private accessPolicy: AccessPolicyService,
   ) {}
 
-  async processTournamentStats(tournamentId: string) {
+  async processTournamentStats(tournamentId: string, user?: JwtPayload) {
     // 1. Отримуємо турнір разом із матчами
     const tournament = await this.prisma.tournament.findUnique({
       where: { id: tournamentId },
@@ -34,6 +37,12 @@ export class StatsService {
     });
 
     if (!tournament) throw new NotFoundException('Турнір не знайдено');
+    if (user) {
+      this.accessPolicy.checkTournamentCreatorOrAdmin(
+        tournament.creatorId,
+        user,
+      );
+    }
     if (tournament.matches.length === 0) {
       return {
         message:

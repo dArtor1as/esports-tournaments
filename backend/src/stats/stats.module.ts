@@ -5,6 +5,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { TeamsService } from 'src/teams/teams.service';
 import { PlayersService } from 'src/players/players.service';
 import { StatsAnalyticsService } from './stats-analytics.service';
+import { AccessPolicyService } from 'src/auth/access-policy.service';
 
 @Module({
   controllers: [StatsController],
@@ -14,6 +15,7 @@ import { StatsAnalyticsService } from './stats-analytics.service';
     TeamsService,
     PlayersService,
     StatsAnalyticsService,
+    AccessPolicyService,
   ],
   exports: [StatsService],
 })

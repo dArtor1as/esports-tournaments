@@ -57,15 +57,19 @@ export class TeamsController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateTeamDto: UpdateTeamDto,
+    @CurrentUser() user: JwtPayload,
   ) {
-    return this.teamsService.update(id, updateTeamDto);
+    return this.teamsService.update(id, updateTeamDto, user);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Видалити команду (дісбанд)' })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.teamsService.remove(id);
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.teamsService.remove(id, user);
   }
 }
