@@ -189,6 +189,9 @@ model SimulationRun {
   executionTimeMs Int?
   createdAt       DateTime   @default(now())
 
+  isDryRun        Boolean    @default(true) // Чи це просто аналітика (прогноз) чи реальна симуляція для оновлення Elo
+  predictedData   Json?      // Зберігаємо сюди JSON з результатами симуляції 
+
   @@index([tournamentId])
 }
 
