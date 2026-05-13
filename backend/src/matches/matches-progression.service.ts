@@ -5,10 +5,15 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, Stage } from '@prisma/client';
+import { AccessPolicyService } from 'src/auth/access-policy.service';
+import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 
 @Injectable()
 export class MatchesProgressionService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private accessPolicy: AccessPolicyService,
+  ) {}
   // метод для безпечного завершення матчу і просування по сітці
   public async finalizeMatchProgression(
     prismaTx: Prisma.TransactionClient,
@@ -73,11 +78,12 @@ export class MatchesProgressionService {
 
   // Аналізує результати групового етапу, визначає Топ-2 команди кожної групи
   // та оновлює їхні посіви (seed) для подальшої участі у Плей-оф.
-  async transitionToPlayoffs(tournamentId: string) {
+  async transitionToPlayoffs(tournamentId: string, user: JwtPayload) {
     const tournament = await this.prisma.tournament.findUnique({
       where: { id: tournamentId },
     });
     if (!tournament) throw new NotFoundException('Турнір не знайдено');
+    this.accessPolicy.checkTournamentCreatorOrAdmin(tournament.creatorId, user);
 
     // Витягуємо всі матчі групи для визначення приналежності команд до груп
     const groupMatches = await this.prisma.match.findMany({

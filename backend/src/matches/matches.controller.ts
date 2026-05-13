@@ -44,8 +44,11 @@ export class MatchesController {
   @ApiOperation({
     summary: 'Згенерувати сітку для турніру (Single або Double Elimination)',
   })
-  generateBracket(@Body() dto: GenerateBracketDto) {
-    return this.generatorService.generateBracket(dto);
+  generateBracket(
+    @Body() dto: GenerateBracketDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.generatorService.generateBracket(dto, user);
   }
 
   @Post('generate-groups')
@@ -53,8 +56,11 @@ export class MatchesController {
   @Throttle({ heavy: { limit: 3, ttl: 60000 } })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Згенерувати матчі групового етапу (Round Robin)' })
-  generateGroups(@Body() dto: GenerateBracketDto) {
-    return this.generatorService.generateGroupStage(dto);
+  generateGroups(
+    @Body() dto: GenerateBracketDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.generatorService.generateGroupStage(dto, user);
   }
 
   @Post('transition-to-playoffs')
@@ -64,8 +70,11 @@ export class MatchesController {
   @ApiOperation({
     summary: 'Відібрати Топ-8 з груп та призначити їм посіви для Плей-оф',
   })
-  transitionToPlayoffs(@Body() dto: GenerateBracketDto) {
-    return this.progressionService.transitionToPlayoffs(dto.tournamentId);
+  transitionToPlayoffs(
+    @Body() dto: GenerateBracketDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.progressionService.transitionToPlayoffs(dto.tournamentId, user);
   }
   @Post(':id/forfeit')
   @UseGuards(JwtAuthGuard)

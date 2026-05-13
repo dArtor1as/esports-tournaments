@@ -11,6 +11,7 @@ import { MatchesProgressionService } from './matches-progression.service';
 import { MatchesConsensusService } from './matches-consensus.service';
 import { MatchesGeneratorService } from './matches-generator.service';
 import { MatchesQueryController } from './matches-query.controller';
+import { AccessPolicyService } from 'src/auth/access-policy.service';
 
 @Module({
   controllers: [MatchesController, MatchesQueryController],
@@ -22,6 +23,7 @@ import { MatchesQueryController } from './matches-query.controller';
     StatsService,
     TeamsService,
     PlayersService,
+    AccessPolicyService,
     MatchesGeneratorService,
     MatchesConsensusService,
     MatchesProgressionService,

@@ -9,6 +9,8 @@ import { Stage } from '@prisma/client';
 import { SingleEliminationGenerator } from './generators/single-elimination.generator';
 import { DoubleEliminationGenerator } from './generators/double-elimination.generator';
 import { GroupStageGenerator } from './generators/group-stage.generator';
+import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
+import { AccessPolicyService } from 'src/auth/access-policy.service';
 
 @Injectable()
 export class MatchesGeneratorService {
@@ -17,11 +19,12 @@ export class MatchesGeneratorService {
     private singleEliminationGenerator: SingleEliminationGenerator,
     private doubleEliminationGenerator: DoubleEliminationGenerator,
     private groupStageGenerator: GroupStageGenerator,
+    private accessPolicy: AccessPolicyService,
   ) {}
 
   // Маршрутизатор для генерації сітки Плей-оф.
   // Читає налаштування турніру та делегує створення матчу відповідній стратегії.
-  async generateBracket(dto: GenerateBracketDto) {
+  async generateBracket(dto: GenerateBracketDto, user: JwtPayload) {
     const { tournamentId } = dto;
 
     const tournament = await this.prisma.tournament.findUnique({
@@ -29,6 +32,7 @@ export class MatchesGeneratorService {
     });
 
     if (!tournament) throw new NotFoundException('Турнір не знайдено');
+    this.accessPolicy.checkTournamentCreatorOrAdmin(tournament.creatorId, user);
     if (tournament.status === 'finished') {
       throw new BadRequestException('Турнір вже завершено');
     }
@@ -93,7 +97,7 @@ export class MatchesGeneratorService {
   }
 
   // Делегує генерацію кругової системи (Round Robin) для групового етапу
-  async generateGroupStage(dto: GenerateBracketDto) {
+  async generateGroupStage(dto: GenerateBracketDto, user: JwtPayload) {
     const { tournamentId, groupCount = 4 } = dto;
 
     const tournament = await this.prisma.tournament.findUnique({
@@ -101,6 +105,7 @@ export class MatchesGeneratorService {
     });
 
     if (!tournament) throw new NotFoundException('Турнір не знайдено');
+    this.accessPolicy.checkTournamentCreatorOrAdmin(tournament.creatorId, user);
     if (tournament.status !== 'planned') {
       throw new BadRequestException(
         'Групи вже згенеровані або турнір завершено',

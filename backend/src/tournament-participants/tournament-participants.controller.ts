@@ -32,8 +32,11 @@ export class TournamentParticipantsController {
   @ApiOperation({
     summary: 'Зареєструвати команду на турнір та зафіксувати склад',
   })
-  create(@Body() createDto: CreateTournamentParticipantDto) {
-    return this.participantsService.create(createDto);
+  create(
+    @Body() createDto: CreateTournamentParticipantDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.participantsService.create(createDto, user);
   }
 
   @Get('tournament/:tournamentId')

@@ -19,6 +19,7 @@ import { PlayersService } from '../src/players/players.service';
 import { StatsService } from '../src/stats/stats.service';
 import { PlayerStatsAggregatorService } from '../src/stats/player-stats-aggregator.service';
 import { EloCalculatorService } from '../src/stats/elo-calculator.service';
+import { AccessPolicyService } from '../src/auth/access-policy.service';
 
 dotenv.config();
 
@@ -77,7 +78,8 @@ async function main() {
     set: async () => {},
     del: async () => {},
   } as any;
-  const teamsService = new TeamsService(prisma as any, dummyCache);
+  const accessPolicy = new AccessPolicyService();
+  const teamsService = new TeamsService(prisma as any, accessPolicy, dummyCache);
   const playersService = new PlayersService(prisma as any, dummyCache);
   const eloCalculator = new EloCalculatorService();
   const statsAggregator = new PlayerStatsAggregatorService();
@@ -87,6 +89,7 @@ async function main() {
     playersService,
     eloCalculator,
     statsAggregator,
+    accessPolicy,
   );
 
   const admin = await prisma.user.create({

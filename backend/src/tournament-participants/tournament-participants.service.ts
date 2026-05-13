@@ -1,19 +1,22 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateTournamentParticipantDto } from './dto/create-tournament-participant.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
+import { AccessPolicyService } from 'src/auth/access-policy.service';
 
 @Injectable()
 export class TournamentParticipantsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private accessPolicy: AccessPolicyService,
+  ) {}
 
-  async create(dto: CreateTournamentParticipantDto) {
+  async create(dto: CreateTournamentParticipantDto, user: JwtPayload) {
     // 1. Перевіряємо турнір
     const tournament = await this.prisma.tournament.findUnique({
       where: { id: dto.tournamentId },
@@ -28,6 +31,14 @@ export class TournamentParticipantsService {
     if (tournament._count.participants >= tournament.maxParticipants) {
       throw new BadRequestException('На турнірі більше немає вільних місць');
     }
+
+    const team = await this.prisma.team.findUnique({
+      where: { id: dto.teamId },
+      include: { captain: true },
+    });
+    if (!team) throw new NotFoundException('Команду не знайдено');
+
+    this.accessPolicy.checkCaptainOrAdmin(team.captain.userId, user);
 
     // 2. Перевіряємо, чи не зареєстрована вже ця команда
     const existingParticipant =
@@ -117,16 +128,11 @@ export class TournamentParticipantsService {
     if (!participant) throw new NotFoundException('Учасника не знайдено');
 
     // 2.Перевіряємо права доступу
-    const isTeamCaptain = participant.team.captain.userId === user.userId;
-    const isTournamentCreator =
-      participant.tournament.creatorId === user.userId;
-    const isAdmin = user.role === 'ADMIN';
-
-    if (!isTeamCaptain && !isTournamentCreator && !isAdmin) {
-      throw new ForbiddenException(
-        'Ви не маєте прав для скасування реєстрації цієї команди. Це може зробити лише капітан, організатор турніру або адміністратор.',
-      );
-    }
+    this.accessPolicy.checkTeamCaptainOrTournamentCreatorOrAdmin(
+      participant.team.captain.userId,
+      participant.tournament.creatorId,
+      user,
+    );
 
     // 3. Перевірка статусу турніру (тільки до старту)
     if (participant.tournament.status !== 'planned') {
