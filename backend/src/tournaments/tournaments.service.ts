@@ -142,7 +142,9 @@ export class TournamentsService {
         kFactor: createTournamentDto.kFactor,
         format: createTournamentDto.format || 'TEAM',
         maxParticipants: createTournamentDto.maxParticipants || 16,
-        settings: createTournamentDto.settings, // JSON-поля
+        settings: createTournamentDto.settings
+          ? (createTournamentDto.settings as Prisma.InputJsonValue)
+          : Prisma.JsonNull, // JSON-поля
         creatorId: userId,
         isPublic: createTournamentDto.isPublic,
       },
@@ -317,7 +319,7 @@ export class TournamentsService {
 
     const updatedTournament = await this.prisma.tournament.update({
       where: { id },
-      data: updateTournamentDto,
+      data: updateTournamentDto as unknown as Prisma.TournamentUpdateInput,
     });
 
     await this.cacheManager.del('all_tournaments'); // Очищаємо кеш при оновленні турніру

@@ -1,4 +1,10 @@
-import { Controller, Post, Param, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Param,
+  UseGuards,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import { StatsService } from './stats.service';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -16,7 +22,7 @@ export class StatsController {
   @ApiOperation({
     summary: 'Перерахувати Elo та Lifetime статистику після завершення турніру',
   })
-  processTournamentStats(@Param('id') id: string) {
+  processTournamentStats(@Param('id', ParseUUIDPipe) id: string) {
     return this.statsService.processTournamentStats(id);
   }
 }

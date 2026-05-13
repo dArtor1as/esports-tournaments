@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Param,
+  ParseUUIDPipe,
   Query,
   UseGuards,
   UseInterceptors,
@@ -21,6 +22,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { MatchesQueryService } from './matches-query.service';
+import { MatchesQueryDto } from './dto/matches-query.dto';
 
 @ApiTags('Matches Queries (Перегляд матчів)')
 @Controller('matches')
@@ -54,7 +56,7 @@ export class MatchesQueryController {
     summary: 'Конфліктні матчі конкретного турніру (для Організатора)',
   })
   getTournamentDisputed(
-    @Param('id') tournamentId: string,
+    @Param('id', ParseUUIDPipe) tournamentId: string,
     @CurrentUser() user: JwtPayload,
   ) {
     return this.queryService.getTournamentDisputedMatches(tournamentId, user);
@@ -71,10 +73,12 @@ export class MatchesQueryController {
     description: 'Фільтр за стадією турніру',
   })
   findAllByTournament(
-    @Param('id') tournamentId: string,
-    @Query('stage') stage?: string,
+    @Param('id', ParseUUIDPipe) tournamentId: string,
+    @Query() query: MatchesQueryDto,
   ) {
-    const formattedStage = stage ? (stage.toUpperCase() as Stage) : undefined;
+    const formattedStage = query.stage
+      ? (query.stage.toUpperCase() as Stage)
+      : undefined;
     return this.queryService.findAllByTournament(tournamentId, formattedStage);
   }
 
@@ -82,7 +86,7 @@ export class MatchesQueryController {
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(30000)
   @ApiOperation({ summary: 'Розклад майбутніх матчів конкретної команди' })
-  getUpcoming(@Param('teamId') teamId: string) {
+  getUpcoming(@Param('teamId', ParseUUIDPipe) teamId: string) {
     return this.queryService.getUpcomingMatches(teamId);
   }
 
@@ -90,7 +94,7 @@ export class MatchesQueryController {
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(30000)
   @ApiOperation({ summary: 'Детальна сторінка матчу (Match Room)' })
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.queryService.findOne(id);
   }
 }

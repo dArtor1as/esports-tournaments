@@ -1,4 +1,12 @@
-import { Controller, Post, Body, Get, Param, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Param,
+  UseGuards,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import { GeneticSimulatorService } from './genetic-simulator.service';
 import { SimulateTournamentDto } from './dto/simulate-tournament.dto';
 import { ApiOperation, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
@@ -44,7 +52,7 @@ export class GeneticSimulatorController {
   @Get('tournament/:id/runs')
   @ApiOperation({ summary: 'Отримати історію запусків GA для турніру' })
   getTournamentRuns(
-    @Param('id') tournamentId: string,
+    @Param('id', ParseUUIDPipe) tournamentId: string,
     @CurrentUser() user: JwtPayload,
   ) {
     return this.geneticSimulatorService.findRunsByTournament(

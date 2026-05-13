@@ -7,6 +7,7 @@ import {
   Patch,
   UseGuards,
   UseInterceptors,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { TournamentInvitationsService } from './tournament-invitations.service';
 import { CreateTournamentInvitationDto } from './dto/create-tournament-invitation.dto';
@@ -74,7 +75,7 @@ export class TournamentInvitationsController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Отримати всі запрошення конкретного турніру' })
   findAllByTournament(
-    @Param('tournamentId') tournamentId: string,
+    @Param('tournamentId', ParseUUIDPipe) tournamentId: string,
     @CurrentUser() user: JwtPayload,
   ) {
     return this.invitationsService.findAllByTournament(tournamentId, user);

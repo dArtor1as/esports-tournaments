@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   UseInterceptors,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { TeamsService } from './teams.service';
 import { CreateTeamDto } from './dto/create-team.dto';
@@ -45,7 +46,7 @@ export class TeamsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Отримати інформацію про команду та її гравців' })
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.teamsService.findOne(id);
   }
 
@@ -53,7 +54,10 @@ export class TeamsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Оновити дані команди (ребрендинг)' })
-  update(@Param('id') id: string, @Body() updateTeamDto: UpdateTeamDto) {
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateTeamDto: UpdateTeamDto,
+  ) {
     return this.teamsService.update(id, updateTeamDto);
   }
 
@@ -61,7 +65,7 @@ export class TeamsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Видалити команду (дісбанд)' })
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.teamsService.remove(id);
   }
 }

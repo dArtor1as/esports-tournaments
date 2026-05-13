@@ -2,38 +2,40 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsNotEmpty,
   IsString,
-  IsUUID,
   Min,
   Max,
   IsInt,
   IsOptional,
+  ValidationArguments,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
   IsEnum,
+  Validate,
 } from 'class-validator';
+import { GameSlug } from '../player.enums';
+import { isRoleAllowedForGame, ROLES_BY_GAME } from '../players-role.policy';
 
-export enum Cs2Role {
-  SNIPER = 'SNIPER',
-  RIFLER = 'RIFLER',
-  ENTRY = 'ENTRY',
-  SUPPORT = 'SUPPORT',
-  IGL = 'IGL',
-}
-
-export enum Dota2Role {
-  POS_1 = 'POS_1',
-  POS_2 = 'POS_2',
-  POS_3 = 'POS_3',
-  POS_4 = 'POS_4',
-  POS_5 = 'POS_5',
+@ValidatorConstraint({ name: 'isRoleValidForGame', async: false })
+export class IsRoleValidForGameConstraint implements ValidatorConstraintInterface {
+  validate(role: string, args: ValidationArguments) {
+    const dto = args.object as CreatePlayerDto;
+    return isRoleAllowedForGame(dto.gameSlug, role);
+  }
+  defaultMessage(args: ValidationArguments) {
+    const dto = args.object as CreatePlayerDto;
+    const allowed = ROLES_BY_GAME[dto.gameSlug] ?? [];
+    return `Для гри ${dto.gameSlug} доступні ролі: ${allowed.join(', ')}`;
+  }
 }
 
 export class CreatePlayerDto {
   @ApiProperty({
-    example: '987fcdeb-51a2-43d7-9012-3456789abcde', // приклад UUID
-    description: 'ID дисципліни (гри), наприклад CS2',
+    enum: GameSlug,
+    description: 'Код дисципліни (наприклад, cs2)',
   })
-  @IsUUID()
+  @IsEnum(GameSlug)
   @IsNotEmpty()
-  gameId: string;
+  gameSlug: GameSlug;
 
   @ApiProperty({
     example: 'NAVI | dArtor1as', // приклад нікнейму
@@ -54,7 +56,12 @@ export class CreatePlayerDto {
   @Max(3)
   expectedTier?: number;
 
+  @ApiPropertyOptional({
+    description: 'Внутрішньоігрова роль (залежить від гри)',
+    example: 'SNIPER',
+  })
   @IsOptional()
   @IsString()
+  @Validate(IsRoleValidForGameConstraint)
   inGameRole?: string;
 }
