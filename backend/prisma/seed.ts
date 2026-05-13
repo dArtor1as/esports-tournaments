@@ -17,6 +17,8 @@ import { Cs2SimulatorService } from '../src/match-simulators/simulators/cs2-simu
 import { TeamsService } from '../src/teams/teams.service';
 import { PlayersService } from '../src/players/players.service';
 import { StatsService } from '../src/stats/stats.service';
+import { PlayerStatsAggregatorService } from '../src/stats/player-stats-aggregator.service';
+import { EloCalculatorService } from '../src/stats/elo-calculator.service';
 
 dotenv.config();
 
@@ -77,10 +79,14 @@ async function main() {
   } as any;
   const teamsService = new TeamsService(prisma as any, dummyCache);
   const playersService = new PlayersService(prisma as any, dummyCache);
+  const eloCalculator = new EloCalculatorService();
+  const statsAggregator = new PlayerStatsAggregatorService();
   const statsService = new StatsService(
     prisma as any,
     teamsService,
     playersService,
+    eloCalculator,
+    statsAggregator,
   );
 
   const admin = await prisma.user.create({

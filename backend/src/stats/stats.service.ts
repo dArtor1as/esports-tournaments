@@ -4,54 +4,17 @@ import { Prisma } from '@prisma/client';
 import { MatchStatsJson, GamePlayerStat } from './stats.types';
 import { TeamsService } from '../teams/teams.service';
 import { PlayersService } from '../players/players.service';
+import { PlayerStatsAggregatorService } from './player-stats-aggregator.service';
+import { EloCalculatorService } from './elo-calculator.service';
 
 @Injectable()
 export class StatsService {
-  private readonly STAT_RULES: Record<
-    string,
-    { total?: boolean; avg?: boolean }
-  > = {
-    kills: { total: true, avg: true },
-    deaths: { total: true, avg: true },
-    assists: { total: true, avg: true },
-    headshots: { total: true, avg: true },
-    netWorth: { total: true, avg: true },
-    roundsPlayed: { total: true },
-    adr: { avg: true },
-    gpm: { avg: true },
-    xpm: { avg: true },
-  };
-  // НОВЕ: Правила для похідних метрик (OCP-compliant)
-  private readonly DERIVED_STATS: Array<{
-    name: string;
-    formula: (stats: Record<string, string | number>) => string | null;
-  }> = [
-    {
-      name: 'kpr',
-      formula: (s) =>
-        Number(s.total_roundsPlayed)
-          ? (Number(s.total_kills) / Number(s.total_roundsPlayed)).toFixed(2)
-          : null,
-    },
-    {
-      name: 'dpr',
-      formula: (s) =>
-        Number(s.total_roundsPlayed)
-          ? (Number(s.total_deaths) / Number(s.total_roundsPlayed)).toFixed(2)
-          : null,
-    },
-    {
-      name: 'apr',
-      formula: (s) =>
-        Number(s.total_roundsPlayed)
-          ? (Number(s.total_assists) / Number(s.total_roundsPlayed)).toFixed(2)
-          : null,
-    },
-  ];
   constructor(
     private prisma: PrismaService,
     private teamsService: TeamsService,
     private playersService: PlayersService,
+    private eloCalculator: EloCalculatorService,
+    private statsAggregator: PlayerStatsAggregatorService,
   ) {}
 
   async processTournamentStats(tournamentId: string) {
@@ -62,7 +25,6 @@ export class StatsService {
         matches: {
           where: {
             isProcessed: true,
-            stats: { not: Prisma.AnyNull }, // Перевірка на наявність статів
             // Беремо лише ті матчі, які ще не оброблені в історії рейтингу
             ratingHistories: { none: {} },
           },
@@ -93,7 +55,7 @@ export class StatsService {
     const matches = tournament.matches; // Зберігаємо в змінну для TS
 
     for (const match of matches) {
-      if (!match.teamAId || !match.teamBId || !match.stats) continue;
+      if (!match.teamAId || !match.teamBId) continue;
 
       // SRP: Використовуємо інжектовані сервіси для читання даних
       const ratingA = await this.fetchTeamRating(
@@ -107,45 +69,18 @@ export class StatsService {
 
       // Використовуємо динамічну типізацію для JSON
       const stats = match.stats as unknown as MatchStatsJson;
+      // Визначаємо переможця по рахунку
+      const isAWinner = match.scoreA > match.scoreB;
 
-      let winsA = 0;
-      let winsB = 0;
-      if (stats.maps && Array.isArray(stats.maps)) {
-        stats.maps.forEach((m) => {
-          if (m.teamA.score > m.teamB.score) winsA++;
-          else winsB++;
-        });
-      }
-
-      const isAWinner = winsA > winsB;
-
-      // K-FACTOR
-      // 1. Групи = 20, Плей-оф = 32, Гранд Фінал = 40
-      let baseK = 32;
-      if (match.stage === 'GROUP') baseK = 20;
-      if (match.bracket === 'GRAND_FINAL') baseK = 40;
-
-      // 2. Якщо грають профи топ рівня (>3000 Elo), зменшуємо зміну рейтингу
-      if (ratingA > 3000 || ratingB > 3000) baseK = 16;
-
-      const finalK = baseK * tournament.kFactor;
-
-      // Рахуємо зміну Elo
-      const expectedA = 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
-      const expectedB = 1 / (1 + Math.pow(10, (ratingA - ratingB) / 400));
-
-      const actualA = isAWinner ? 1 : 0;
-      const actualB = isAWinner ? 0 : 1;
-
-      let changeA = Math.round(finalK * (actualA - expectedA));
-      let changeB = Math.round(finalK * (actualB - expectedB));
-
-      //  бонус за чемпіонство
-      if (match.bracket === 'GRAND_FINAL') {
-        const championshipBonus = Math.round(30 * tournament.kFactor); // +30 Elo за кубок
-        if (isAWinner) changeA += championshipBonus;
-        else changeB += championshipBonus;
-      }
+      // ДЕЛЕГУЄМО РОЗРАХУНОК ELO
+      const { changeA, changeB } = this.eloCalculator.calculateElo(
+        ratingA,
+        ratingB,
+        isAWinner,
+        tournament.kFactor,
+        match.stage,
+        match.bracket,
+      );
 
       const newRatingA = ratingA + changeA;
       const newRatingB = ratingB + changeB;
@@ -166,10 +101,8 @@ export class StatsService {
           where: { id: match.teamBId },
           data: { averageRating: newRatingB, tier: newTierB },
         }),
-      );
 
-      // Б) Записуємо Історію Команд
-      transactionQueries.push(
+        // Б) Записуємо Історію Команд
         this.prisma.ratingHistory.create({
           data: {
             teamId: match.teamAId,
@@ -190,13 +123,13 @@ export class StatsService {
         }),
       );
 
-      // В) Обробляємо Lifetime Stats гравців (через динамічний метод)
-      if (stats.maps && Array.isArray(stats.maps)) {
-        const avgPlayersA = this.getSummedPlayerStatsForMatch(
+      // В) Обробляємо Lifetime Stats гравців (тільки якщо є детальна статистика)
+      if (stats && stats.maps && Array.isArray(stats.maps)) {
+        const avgPlayersA = this.statsAggregator.getSummedPlayerStatsForMatch(
           stats.maps,
           'teamA',
         );
-        const avgPlayersB = this.getSummedPlayerStatsForMatch(
+        const avgPlayersB = this.statsAggregator.getSummedPlayerStatsForMatch(
           stats.maps,
           'teamB',
         );
@@ -222,41 +155,11 @@ export class StatsService {
       }
     }
 
-    // виконуємо всі накопичені оновлення в одній транзакції для цілісності даних
     await this.prisma.$transaction(transactionQueries);
-
     return {
       message: "Рейтинги Elo та кар'єрна статистика успішно оновлені.",
-      processedMatches: matches.length,
+      processedMatches: tournament.matches.length,
     };
-  }
-
-  //  допоміжні методи (Через відповідні сервіси)
-
-  private getSummedPlayerStatsForMatch(
-    maps: any[],
-    teamKey: 'teamA' | 'teamB',
-  ): GamePlayerStat[] {
-    const playerTotals = new Map<string, any>();
-
-    for (const m of maps) {
-      if (!m[teamKey] || !Array.isArray(m[teamKey].players)) continue;
-      for (const p of m[teamKey].players) {
-        if (!playerTotals.has(p.playerId)) {
-          // Зберігаємо першу карту і додаємо лічильник
-          playerTotals.set(p.playerId, { ...p, mapCount: 1 });
-        } else {
-          const current = playerTotals.get(p.playerId);
-          current.mapCount += 1;
-          for (const [k, v] of Object.entries(p)) {
-            // СУМУЄМО показники (кіли, смерті, adr) з усіх карт матчу
-            if (typeof v === 'number' && k !== 'mapCount') current[k] += v;
-          }
-        }
-      }
-    }
-
-    return Array.from(playerTotals.values()) as GamePlayerStat[];
   }
 
   private async fetchTeamRating(
@@ -291,26 +194,6 @@ export class StatsService {
     return player.rating;
   }
 
-  async getTeamRatingHistory(teamId: string) {
-    return this.prisma.ratingHistory.findMany({
-      where: { teamId },
-      orderBy: { createdAt: 'asc' }, // Від найстарішого до найновішого
-      include: {
-        match: { select: { tournament: { select: { title: true } } } },
-      },
-    });
-  }
-
-  async getPlayerRatingHistory(playerId: string) {
-    return this.prisma.ratingHistory.findMany({
-      where: { playerId },
-      orderBy: { createdAt: 'asc' },
-      include: {
-        match: { select: { tournament: { select: { title: true } } } },
-      },
-    });
-  }
-
   private async queuePlayerUpdates(
     mapPlayers: GamePlayerStat[],
     matchId: string,
@@ -343,68 +226,11 @@ export class StatsService {
         oldStats = (player?.stats as Record<string, string | number>) || {};
       }
 
-      const oldMatches = Number(oldStats.matchesPlayed) || 0;
-      const newMatches = oldMatches + 1;
-
-      // Рахуємо карти (якщо є старі дані)
-      const oldMaps = Number(oldStats.totalMapsPlayed) || oldMatches;
-      const addedMaps = Number((pStat as any).mapCount) || 1;
-      const newTotalMaps = oldMaps + addedMaps;
-
-      // Спільна логіка для всіх ігор : Вінрейт
-      const oldWinRate = parseFloat(String(oldStats.winRate || '50'));
-      const winValue = isWinner ? 100 : 0;
-      const newWinRate = (oldWinRate * oldMatches + winValue) / newMatches;
-
-      // Об'єкт нової статі (динамічно наповнюється)
-      const newStatsJson: Record<string, string | number> = {
-        matchesPlayed: newMatches,
-        totalMapsPlayed: newTotalMaps,
-        winRate: newWinRate.toFixed(2),
-      };
-
-      // динамічний парсинг ключів
-      // проходимо по всіх полях, які прийшли з симулятора
-      for (const [key, value] of Object.entries(pStat)) {
-        // 1. Шукаємо ключ у нашому словнику STAT_RULES
-        const rule = this.STAT_RULES[key];
-
-        // 2. Якщо ключа немає в словнику (playerId, mapCount, rating)
-        // або це не число - просто ігноруємо його
-        if (!rule || typeof value !== 'number') continue;
-
-        const avgKey = `avg_${key}`;
-
-        if (rule.total) {
-          const totalKey = `total_${key}`;
-          const fallbackTotal =
-            parseFloat(String(oldStats[avgKey] || '0')) * oldMaps;
-          const oldTotalValue = Number(oldStats[totalKey]) || fallbackTotal;
-
-          const newTotalValue = oldTotalValue + value;
-          const newAvgValue = newTotalValue / newTotalMaps;
-
-          newStatsJson[totalKey] = Number.isInteger(value)
-            ? Math.round(newTotalValue)
-            : Number(newTotalValue.toFixed(1));
-
-          newStatsJson[avgKey] = newAvgValue.toFixed(2);
-        } else if (rule.avg) {
-          const oldAvgValue = parseFloat(String(oldStats[avgKey] || '0'));
-          const newAvgValue = (oldAvgValue * oldMaps + value) / newTotalMaps;
-
-          newStatsJson[avgKey] = newAvgValue.toFixed(1);
-        }
-      }
-
-      // розрахунок похідних метрик (KPR, DPR, APR)
-      for (const rule of this.DERIVED_STATS) {
-        const value = rule.formula(newStatsJson);
-        if (value !== null) {
-          newStatsJson[rule.name] = value;
-        }
-      }
-
+      const newStatsJson = this.statsAggregator.calculateNewLifetimeStats(
+        oldStats,
+        pStat,
+        isWinner,
+      );
       statsCache.set(pStat.playerId, newStatsJson);
 
       transactionQueries.push(
@@ -415,9 +241,6 @@ export class StatsService {
             stats: newStatsJson as Prisma.InputJsonValue,
           },
         }),
-      );
-
-      transactionQueries.push(
         this.prisma.ratingHistory.create({
           data: {
             playerId: pStat.playerId,

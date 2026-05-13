@@ -14,13 +14,13 @@ export class DoubleEliminationStrategy extends BaseGeneticStrategy {
     super(probabilityCalc);
   }
 
-  async execute(ctx: SimulationContext, populations: number) {
+  async execute(simulationContext: SimulationContext, populations: number) {
     const startedAt = Date.now();
 
     const bestIndividual = this.evolvePopulation<Individual>(
       populations,
-      ctx.estimatedGenesNeeded,
-      (genes) => this.evaluateIndividual(genes, ctx),
+      simulationContext.estimatedGenesNeeded,
+      (genes) => this.evaluateIndividual(genes, simulationContext),
     );
 
     const executionTimeMs = Date.now() - startedAt;
@@ -41,12 +41,12 @@ export class DoubleEliminationStrategy extends BaseGeneticStrategy {
         }),
       ),
       this.prisma.tournament.update({
-        where: { id: ctx.tournament.id },
+        where: { id: simulationContext.tournament.id },
         data: { status: 'finished' },
       }),
       this.prisma.simulationRun.create({
         data: {
-          tournamentId: ctx.tournament.id,
+          tournamentId: simulationContext.tournament.id,
           algorithmType: 'DOUBLE_ELIMINATION',
           populations,
           generations: this.generations,
@@ -64,9 +64,11 @@ export class DoubleEliminationStrategy extends BaseGeneticStrategy {
 
   private evaluateIndividual(
     genes: number[],
-    ctx: SimulationContext,
+    simulationContext: SimulationContext,
   ): Individual {
-    const bracket: SimulationMatch[] = ctx.baseSkeleton.map((m) => ({ ...m }));
+    const bracket: SimulationMatch[] = simulationContext.baseSkeleton.map(
+      (m) => ({ ...m }),
+    );
     let fitness = 0;
     let currentGeneIndex = 0;
     const getGeneRoll = () =>
@@ -81,7 +83,7 @@ export class DoubleEliminationStrategy extends BaseGeneticStrategy {
       if (!match.teamAId || !match.teamBId) continue;
 
       const { matchWinnerIsA, winnerId, loserId, winnerProb, winsA, winsB } =
-        this.processMatchSimulation(match, ctx, getGeneRoll);
+        this.processMatchSimulation(match, simulationContext, getGeneRoll);
 
       // Розрахунок Fitness
       if (winnerProb >= 0.5) {

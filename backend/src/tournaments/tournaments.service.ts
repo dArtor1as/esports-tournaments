@@ -62,8 +62,8 @@ export class TournamentsService {
     const shuffled = [...availableTeams].sort(() => 0.5 - Math.random());
     const selected = shuffled.slice(0, teamCount);
 
-    const tournament = await this.prisma.$transaction(async (tx) => {
-      const createdTournament = await tx.tournament.create({
+    const tournament = await this.prisma.$transaction(async (prismaTx) => {
+      const createdTournament = await prismaTx.tournament.create({
         data: {
           title: title,
           gameId: game.id,
@@ -87,7 +87,7 @@ export class TournamentsService {
       for (let i = 0; i < selected.length; i++) {
         const team = selected[i];
         // 1. Реєструємо команду на турнір
-        const participant = await tx.tournamentParticipant.create({
+        const participant = await prismaTx.tournamentParticipant.create({
           data: {
             tournamentId: createdTournament.id,
             teamId: team.id,
@@ -106,7 +106,7 @@ export class TournamentsService {
               : RosterRole.PLAYER,
         }));
 
-        await tx.tournamentRoster.createMany({
+        await prismaTx.tournamentRoster.createMany({
           data: rosterData,
         });
       }

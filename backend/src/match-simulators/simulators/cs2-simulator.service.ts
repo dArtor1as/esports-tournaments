@@ -106,9 +106,9 @@ export class Cs2SimulatorService implements IMatchSimulator {
   }
 
   private initTeamStats(team: TeamInput): Cs2PlayerStat[] {
-    return team.players.map((p) => ({
-      playerId: p.id,
-      rating: p.rating,
+    return team.players.map((participant) => ({
+      playerId: participant.id,
+      rating: participant.rating,
       kills: 0,
       deaths: 0,
       assists: 0,
@@ -135,20 +135,20 @@ export class Cs2SimulatorService implements IMatchSimulator {
     const fallbackRoles = ['SNIPER', 'RIFLER', 'ENTRY', 'SUPPORT', 'IGL'];
 
     // Рахуємо "Щоденну форму"
-    const playersWithForm = players.map((p) => {
+    const playersWithForm = players.map((participant) => {
       const dailyForm = Math.random() * 0.6 + 0.7;
 
-      let role = p.inGameRole;
+      let role = participant.inGameRole;
       if (!role || !this.ROLE_MULTIPLIERS[role]) {
-        const index = sortedPlayers.findIndex((sp) => sp.id === p.id);
+        const index = sortedPlayers.findIndex((sp) => sp.id === participant.id);
         role = fallbackRoles[index] || 'RIFLER';
       }
 
-      const effectiveRating = Math.pow(p.rating * dailyForm, 1.2);
-      return { id: p.id, effectiveRating, role };
+      const effectiveRating = Math.pow(participant.rating * dailyForm, 1.2);
+      return { id: participant.id, effectiveRating, role };
     });
     const totalEffective = playersWithForm.reduce(
-      (sum, p) => sum + p.effectiveRating,
+      (sum, participant) => sum + participant.effectiveRating,
       0,
     );
 

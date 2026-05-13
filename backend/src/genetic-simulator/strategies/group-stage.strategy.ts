@@ -18,13 +18,13 @@ export class GroupStageStrategy extends BaseGeneticStrategy {
     super(probabilityCalc);
   }
 
-  async execute(ctx: SimulationContext, populations: number) {
+  async execute(simulationContext: SimulationContext, populations: number) {
     const startedAt = Date.now();
 
     const bestIndividual = this.evolvePopulation<GroupIndividual>(
       populations,
-      ctx.estimatedGenesNeeded,
-      (genes) => this.evaluateGroupIndividual(genes, ctx),
+      simulationContext.estimatedGenesNeeded,
+      (genes) => this.evaluateGroupIndividual(genes, simulationContext),
     );
 
     const executionTimeMs = Date.now() - startedAt;
@@ -43,7 +43,7 @@ export class GroupStageStrategy extends BaseGeneticStrategy {
           },
         }),
       ),
-      ...ctx.tournament.participants.map((participant: any) => {
+      ...simulationContext.tournament.participants.map((participant: any) => {
         const stats = bestIndividual.standings[participant.teamId];
         return this.prisma.tournamentParticipant.update({
           where: { id: participant.id },
@@ -58,7 +58,7 @@ export class GroupStageStrategy extends BaseGeneticStrategy {
       }),
       this.prisma.simulationRun.create({
         data: {
-          tournamentId: ctx.tournament.id,
+          tournamentId: simulationContext.tournament.id,
           algorithmType: 'GROUP_STAGE',
           populations,
           generations: this.generations,
@@ -69,7 +69,7 @@ export class GroupStageStrategy extends BaseGeneticStrategy {
     ]);
 
     return {
-      message: `Групову еволюцію завершено. Проаналізовано ${ctx.matchCount} матчів.`,
+      message: `Групову еволюцію завершено. Проаналізовано ${simulationContext.matchCount} матчів.`,
       bestFitnessScore: bestIndividual.fitness,
       standings: bestIndividual.standings,
     };
@@ -77,9 +77,11 @@ export class GroupStageStrategy extends BaseGeneticStrategy {
 
   private evaluateGroupIndividual(
     genes: number[],
-    ctx: SimulationContext,
+    simulationContext: SimulationContext,
   ): GroupIndividual {
-    const bracket: SimulationMatch[] = ctx.baseSkeleton.map((m) => ({ ...m }));
+    const bracket: SimulationMatch[] = simulationContext.baseSkeleton.map(
+      (m) => ({ ...m }),
+    );
     let fitness = 0;
     let currentGeneIndex = 0;
     const getGeneRoll = () =>
@@ -88,7 +90,7 @@ export class GroupStageStrategy extends BaseGeneticStrategy {
         : Math.random();
 
     const standings: Record<string, GroupStanding> = {};
-    Object.keys(ctx.teamRatings).forEach((teamId) => {
+    Object.keys(simulationContext.teamRatings).forEach((teamId) => {
       standings[teamId] = {
         points: 0,
         matchesWon: 0,
@@ -107,7 +109,7 @@ export class GroupStageStrategy extends BaseGeneticStrategy {
       const teamB = match.teamBId;
 
       const { matchWinnerIsA, winnerProb, winsA, winsB } =
-        this.processMatchSimulation(match, ctx, getGeneRoll);
+        this.processMatchSimulation(match, simulationContext, getGeneRoll);
 
       if (matchWinnerIsA) {
         standings[teamA].points += 3;

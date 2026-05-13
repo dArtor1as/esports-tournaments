@@ -96,9 +96,9 @@ export class Dota2SimulatorService implements IMatchSimulator {
   }
 
   private initTeamStats(team: TeamInput): Dota2PlayerStat[] {
-    return team.players.map((p) => ({
-      playerId: p.id,
-      rating: p.rating,
+    return team.players.map((participant) => ({
+      playerId: participant.id,
+      rating: participant.rating,
       kills: 0,
       deaths: 0,
       assists: 0,
@@ -122,25 +122,25 @@ export class Dota2SimulatorService implements IMatchSimulator {
     const sortedPlayers = [...players].sort((a, b) => b.rating - a.rating);
     const fallbackRoles = ['POS_1', 'POS_2', 'POS_3', 'POS_4', 'POS_5'];
 
-    const playersWithForm = players.map((p) => {
+    const playersWithForm = players.map((participant) => {
       const dailyForm = Math.random() * 0.6 + 0.7;
       const playerRating =
-        teamStats.find((s) => s.playerId === p.id)?.rating || 1000;
+        teamStats.find((s) => s.playerId === participant.id)?.rating || 1000;
 
       // Визначаємо роль: або з БД, або фолбек
-      let role = p.inGameRole;
+      let role = participant.inGameRole;
       if (!role || !this.ROLE_MULTIPLIERS[role]) {
-        const index = sortedPlayers.findIndex((sp) => sp.id === p.id);
+        const index = sortedPlayers.findIndex((sp) => sp.id === participant.id);
         role = fallbackRoles[index] || 'POS_5';
       }
 
       const effectiveRating = Math.pow(playerRating * dailyForm, 1.2);
-      return { id: p.id, effectiveRating, role };
+      return { id: participant.id, effectiveRating, role };
     });
 
     // 2. Рахуємо сумарний рейтинг для пропорцій (як і раніше)
     const totalEffective = playersWithForm.reduce(
-      (sum, p) => sum + p.effectiveRating,
+      (sum, participant) => sum + participant.effectiveRating,
       0,
     );
 

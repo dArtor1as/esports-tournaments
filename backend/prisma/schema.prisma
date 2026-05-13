@@ -58,6 +58,12 @@ enum TournamentFormat {
   TEAM // 5v5, 2v2 і т.д.
   SOLO // 1v1
 }
+enum MatchStatus {
+  PENDING        // Матч очікує початку
+  REPORTED       // Один капітан вніс рахунок, очікує підтвердження
+  DISPUTED       // Інший капітан не згоден (Конфлікт)
+  COMPLETED      // Рахунок підтверджено (або закрито адміном)
+}
 
 // ------------------------------------------------------
 // 3. ТАБЛИЦІ (Моделі)
@@ -229,6 +235,16 @@ model Match {
   bestOf       Int        @default(3) // ФОРМАТ (1 = Bo1, 3 = Bo3, 5 = Bo5)
   details      Json?      // Мапи, піки, бани
   stats        Json?      //  Статистика гравців (Kills, Deaths, GPM, XPM)
+
+
+  matchStatus    MatchStatus @default(PENDING)
+
+  // Поля для системи консенсусу
+  reportedScoreA Int?
+  reportedScoreB Int?
+  reportedById   String?     // ID користувача (капітана), який першим вніс рахунок
+  disputeReason  String?     // Причина конфлікту, якщо є
+
   
   isProcessed  Boolean    @default(false) // Чи оновлено Elo після цього матчу
   playedAt     DateTime?
