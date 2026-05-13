@@ -62,7 +62,6 @@ export class StatsService {
         matches: {
           where: {
             isProcessed: true,
-            stats: { not: Prisma.AnyNull }, // Перевірка на наявність статів
             // Беремо лише ті матчі, які ще не оброблені в історії рейтингу
             ratingHistories: { none: {} },
           },
@@ -93,7 +92,7 @@ export class StatsService {
     const matches = tournament.matches; // Зберігаємо в змінну для TS
 
     for (const match of matches) {
-      if (!match.teamAId || !match.teamBId || !match.stats) continue;
+      if (!match.teamAId || !match.teamBId) continue;
 
       // SRP: Використовуємо інжектовані сервіси для читання даних
       const ratingA = await this.fetchTeamRating(
@@ -108,16 +107,7 @@ export class StatsService {
       // Використовуємо динамічну типізацію для JSON
       const stats = match.stats as unknown as MatchStatsJson;
 
-      let winsA = 0;
-      let winsB = 0;
-      if (stats.maps && Array.isArray(stats.maps)) {
-        stats.maps.forEach((m) => {
-          if (m.teamA.score > m.teamB.score) winsA++;
-          else winsB++;
-        });
-      }
-
-      const isAWinner = winsA > winsB;
+      const isAWinner = match.scoreA > match.scoreB;
 
       // K-FACTOR
       // 1. Групи = 20, Плей-оф = 32, Гранд Фінал = 40
@@ -190,8 +180,8 @@ export class StatsService {
         }),
       );
 
-      // В) Обробляємо Lifetime Stats гравців (через динамічний метод)
-      if (stats.maps && Array.isArray(stats.maps)) {
+      // В) Обробляємо Lifetime Stats гравців (тільки якщо є детальна статистика)
+      if (stats && stats.maps && Array.isArray(stats.maps)) {
         const avgPlayersA = this.getSummedPlayerStatsForMatch(
           stats.maps,
           'teamA',

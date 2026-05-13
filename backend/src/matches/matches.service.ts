@@ -1,14 +1,20 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GenerateBracketDto } from './dto/generate-bracket.dto';
-import { Stage } from '@prisma/client';
+import { Prisma, Stage } from '@prisma/client';
 import { SingleEliminationGenerator } from './generators/single-elimination.generator';
 import { DoubleEliminationGenerator } from './generators/double-elimination.generator';
 import { GroupStageGenerator } from './generators/group-stage.generator';
+import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
+import { ForfeitMatchDto } from './dto/forfeit-match.dto';
+import { ReportScoreDto } from './dto/report-score.dto';
+import { DisputeMatchDto } from './dto/consensus.dto';
+import { StatsService } from 'src/stats/stats.service';
 
 @Injectable()
 export class MatchesService {
@@ -17,6 +23,7 @@ export class MatchesService {
     private singleEliminationGenerator: SingleEliminationGenerator,
     private doubleEliminationGenerator: DoubleEliminationGenerator,
     private groupStageGenerator: GroupStageGenerator,
+    private statsService: StatsService,
   ) {}
 
   /**
@@ -264,6 +271,266 @@ export class MatchesService {
         points: t.groupPoints,
       })),
     };
+  }
+  async forfeitMatch(matchId: string, dto: ForfeitMatchDto, user: JwtPayload) {
+    const match = await this.prisma.match.findUnique({
+      where: { id: matchId },
+      include: {
+        tournament: true,
+        teamA: { include: { captain: true } },
+        teamB: { include: { captain: true } },
+      },
+    });
+
+    if (!match) throw new NotFoundException('Матч не знайдено');
+    if (match.isProcessed)
+      throw new BadRequestException('Цей матч вже завершено');
+    if (match.tournament.status !== 'live')
+      throw new BadRequestException('Турнір не активний');
+    if (!match.teamAId || !match.teamBId)
+      throw new BadRequestException(
+        'В цьому матчі ще не визначені обидва опоненти',
+      );
+
+    let isTeamAForfeiting = false;
+    let isTeamBForfeiting = false;
+
+    // 1. Визначаємо ролі
+    const isCaptainA = match.teamA?.captain.userId === user.userId;
+    const isCaptainB = match.teamB?.captain.userId === user.userId;
+    const isAdminOrCreator =
+      user.role === 'ADMIN' || match.tournament.creatorId === user.userId;
+
+    // 2. Логіка визначення "хто здається"
+    if (isCaptainA) {
+      isTeamAForfeiting = true;
+    } else if (isCaptainB) {
+      isTeamBForfeiting = true;
+    } else if (isAdminOrCreator) {
+      // Якщо це адмін/організатор, він ЗОБОВ'ЯЗАНИЙ передати forfeitingTeamId
+      if (!dto.forfeitingTeamId) {
+        throw new BadRequestException(
+          'Адміністратор або Організатор повинен вказати ID команди, яку дискваліфікують (forfeitingTeamId)',
+        );
+      }
+
+      if (dto.forfeitingTeamId === match.teamAId) {
+        isTeamAForfeiting = true;
+      } else if (dto.forfeitingTeamId === match.teamBId) {
+        isTeamBForfeiting = true;
+      } else {
+        throw new BadRequestException(
+          'Вказана команда не бере участі в цьому матчі',
+        );
+      }
+    } else {
+      throw new ForbiddenException(
+        'Тільки капітан команди, адміністратор або організатор турніру може зарахувати технічну поразку',
+      );
+    }
+
+    // 3. Визначаємо рахунок (Технічна перемога залежить від формату: 1:0, 2:0 або 3:0)
+    const pointsToWin = Math.ceil(match.bestOf / 2);
+    const scoreA = isTeamAForfeiting ? 0 : pointsToWin;
+    const scoreB = isTeamAForfeiting ? pointsToWin : 0;
+
+    await this.prisma.$transaction(async (tx) => {
+      await this.finalizeMatchProgression(tx, match, scoreA, scoreB);
+    });
+
+    // 4. Рахуємо Elo!
+    await this.statsService.processTournamentStats(match.tournamentId);
+
+    return { message: 'Технічна поразка зарахована. Elo оновлено.' };
+  }
+
+  // Допоміжний метод для безпечного завершення матчу і просування по сітці
+  private async finalizeMatchProgression(
+    tx: Prisma.TransactionClient,
+    match: any,
+    scoreA: number,
+    scoreB: number,
+  ) {
+    const winnerId = scoreA > scoreB ? match.teamAId : match.teamBId;
+    const loserId = scoreA > scoreB ? match.teamBId : match.teamAId;
+
+    const updatedMatch = await tx.match.update({
+      where: { id: match.id },
+      data: {
+        scoreA,
+        scoreB,
+        isProcessed: true,
+        matchStatus: 'COMPLETED', // Відразу закриваємо консенсус
+        stats: Prisma.JsonNull, // Ручні матчі не мають статистики K/D
+      },
+    });
+
+    // Просування переможця (Верхня сітка)
+    if (match.nextMatchWinnerId && winnerId) {
+      const nextMatch = await tx.match.findUnique({
+        where: { id: match.nextMatchWinnerId },
+      });
+      if (nextMatch) {
+        if (!nextMatch.teamAId)
+          await tx.match.update({
+            where: { id: nextMatch.id },
+            data: { teamAId: winnerId },
+          });
+        else
+          await tx.match.update({
+            where: { id: nextMatch.id },
+            data: { teamBId: winnerId },
+          });
+      }
+    }
+
+    // Просування переможеного (Нижня сітка Double Elim)
+    if (match.nextMatchLoserId && loserId) {
+      const nextLoserMatch = await tx.match.findUnique({
+        where: { id: match.nextMatchLoserId },
+      });
+      if (nextLoserMatch) {
+        if (!nextLoserMatch.teamAId)
+          await tx.match.update({
+            where: { id: nextLoserMatch.id },
+            data: { teamAId: loserId },
+          });
+        else
+          await tx.match.update({
+            where: { id: nextLoserMatch.id },
+            data: { teamBId: loserId },
+          });
+      }
+    }
+
+    return updatedMatch;
+  }
+
+  //  1. внесення рахунку (REPORT)
+  async reportMatch(matchId: string, dto: ReportScoreDto, user: JwtPayload) {
+    const match = await this.prisma.match.findUnique({
+      where: { id: matchId },
+      include: {
+        teamA: { include: { captain: true } },
+        teamB: { include: { captain: true } },
+      },
+    });
+
+    if (!match || match.matchStatus === 'COMPLETED')
+      throw new BadRequestException('Матч недоступний для звітування');
+
+    const isCaptainA = match.teamA?.captain.userId === user.userId;
+    const isCaptainB = match.teamB?.captain.userId === user.userId;
+
+    if (!isCaptainA && !isCaptainB)
+      throw new ForbiddenException('Тільки капітани можуть вносити рахунок');
+
+    return this.prisma.match.update({
+      where: { id: matchId },
+      data: {
+        reportedScoreA: dto.scoreA,
+        reportedScoreB: dto.scoreB,
+        reportedById: user.userId,
+        matchStatus: 'REPORTED',
+      },
+    });
+  }
+
+  //  2. підтвердження (CONFIRM)
+  async confirmMatch(matchId: string, user: JwtPayload) {
+    const match = await this.prisma.match.findUnique({
+      where: { id: matchId },
+      include: {
+        teamA: { include: { captain: true } },
+        teamB: { include: { captain: true } },
+      },
+    });
+
+    if (match?.matchStatus !== 'REPORTED')
+      throw new BadRequestException('Немає рахунку для підтвердження');
+
+    const isCaptainA = match.teamA?.captain.userId === user.userId;
+    const isCaptainB = match.teamB?.captain.userId === user.userId;
+
+    if (!isCaptainA && !isCaptainB)
+      throw new ForbiddenException('Тільки капітан може підтвердити');
+    if (match.reportedById === user.userId)
+      throw new BadRequestException(
+        'Ви не можете підтвердити власний звіт. Чекайте на опонента.',
+      );
+
+    await this.prisma.$transaction(async (tx) => {
+      await this.finalizeMatchProgression(
+        tx,
+        match,
+        match.reportedScoreA!,
+        match.reportedScoreB!,
+      );
+    });
+
+    // 2. Рахуємо Elo та оновлюємо статистику турніру
+    await this.statsService.processTournamentStats(match.tournamentId);
+
+    return { message: 'Рахунок підтверджено. Elo нараховано.' };
+  }
+
+  //  3. оскарження (DISPUTE)
+  async disputeMatch(matchId: string, dto: DisputeMatchDto, user: JwtPayload) {
+    const match = await this.prisma.match.findUnique({
+      where: { id: matchId },
+      include: {
+        teamA: { include: { captain: true } },
+        teamB: { include: { captain: true } },
+      },
+    });
+
+    if (match?.matchStatus !== 'REPORTED')
+      throw new BadRequestException('Неможливо оскаржити');
+    if (match.reportedById === user.userId)
+      throw new BadRequestException('Ви не можете оскаржити власний звіт');
+
+    return this.prisma.match.update({
+      where: { id: matchId },
+      data: {
+        matchStatus: 'DISPUTED',
+        disputeReason: dto.reason,
+      },
+    });
+  }
+
+  //  4. примусове рішення адміна (FORCE RESOLVE)
+  async forceResolveMatch(
+    matchId: string,
+    dto: ReportScoreDto,
+    user: JwtPayload,
+  ) {
+    const match = await this.prisma.match.findUnique({
+      where: { id: matchId },
+      include: { tournament: true },
+    });
+
+    if (!match || match.matchStatus === 'COMPLETED')
+      throw new BadRequestException('Матч вже закритий');
+
+    if (match.tournament.creatorId !== user.userId && user.role !== 'ADMIN') {
+      throw new ForbiddenException(
+        'Тільки організатор або адмін може примусово закрити матч',
+      );
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await this.finalizeMatchProgression(tx, match, dto.scoreA, dto.scoreB);
+      // Очищаємо причину диспуту
+      await tx.match.update({
+        where: { id: matchId },
+        data: { disputeReason: null },
+      });
+    });
+
+    // Рахуємо Elo!
+    await this.statsService.processTournamentStats(match.tournamentId);
+
+    return { message: 'Матч примусово закрито. Elo нараховано.' };
   }
 
   findAllByTournament(tournamentId: string, stage?: Stage) {

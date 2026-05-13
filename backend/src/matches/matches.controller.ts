@@ -20,6 +20,10 @@ import { Stage } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Throttle } from '@nestjs/throttler';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
+import { ForfeitMatchDto } from './dto/forfeit-match.dto';
+import type { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
+import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
+import { ReportScoreDto, DisputeMatchDto } from './dto/consensus.dto';
 
 @ApiTags('Matches (Турнірна сітка та матчі)')
 @Controller('matches')
@@ -76,5 +80,62 @@ export class MatchesController {
       tournamentId,
       formattedStage,
     );
+  }
+  @Post(':id/forfeit')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Здатися у поточному матчі або видати технічну поразку (FF)',
+  })
+  forfeitMatch(
+    @Param('id') matchId: string,
+    @Body() dto: ForfeitMatchDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.matchesService.forfeitMatch(matchId, dto, user);
+  }
+
+  @Post(':id/report')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Капітан вносить рахунок (Чекає підтвердження)' })
+  reportMatch(
+    @Param('id') id: string,
+    @Body() dto: ReportScoreDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.matchesService.reportMatch(id, dto, user);
+  }
+
+  @Post(':id/confirm')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Капітан-опонент підтверджує рахунок' })
+  confirmMatch(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.matchesService.confirmMatch(id, user);
+  }
+
+  @Post(':id/dispute')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Капітан-опонент оскаржує рахунок' })
+  disputeMatch(
+    @Param('id') id: string,
+    @Body() dto: DisputeMatchDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.matchesService.disputeMatch(id, dto, user);
+  }
+
+  @Post(':id/force-resolve')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Адмін примусово закриває матч (вирішує конфлікт)' })
+  forceResolveMatch(
+    @Param('id') id: string,
+    @Body() dto: ReportScoreDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.matchesService.forceResolveMatch(id, dto, user);
   }
 }
