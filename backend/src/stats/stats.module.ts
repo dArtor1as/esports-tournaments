@@ -6,6 +6,8 @@ import { TeamsService } from 'src/teams/teams.service';
 import { PlayersService } from 'src/players/players.service';
 import { StatsAnalyticsService } from './stats-analytics.service';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
+import { EloCalculatorService } from './elo-calculator.service';
+import { PlayerStatsAggregatorService } from './player-stats-aggregator.service';
 
 @Module({
   controllers: [StatsController],
@@ -16,6 +18,8 @@ import { AccessPolicyService } from 'src/auth/access-policy.service';
     PlayersService,
     StatsAnalyticsService,
     AccessPolicyService,
+    EloCalculatorService,
+    PlayerStatsAggregatorService,
   ],
   exports: [StatsService],
 })

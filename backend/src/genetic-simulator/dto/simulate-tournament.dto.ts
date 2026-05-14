@@ -1,5 +1,15 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsNotEmpty, IsUUID, Max, Min } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsUUID,
+  Max,
+  Min,
+} from 'class-validator';
+import { Stage } from '@prisma/client';
 
 export class SimulateTournamentDto {
   @ApiProperty({
@@ -17,4 +27,17 @@ export class SimulateTournamentDto {
   @Min(10)
   @Max(1000)
   populations: number;
+
+  @ApiPropertyOptional({ enum: Stage, default: Stage.PLAYOFF })
+  @IsOptional()
+  @IsEnum(Stage)
+  stage?: Stage = Stage.PLAYOFF;
+
+  @ApiPropertyOptional({
+    description:
+      'Якщо true - це аналітичний прогноз. Якщо false - алгоритм перезапише результати матчів у БД (COMMIT).',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isDryRun?: boolean = true;
 }

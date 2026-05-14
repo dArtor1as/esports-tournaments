@@ -161,6 +161,33 @@ export class StatsService {
           transactionQueries,
           !isAWinner,
         );
+      } else {
+        // Технічна поразка (forfeit) або ручне введення без карт
+        // Нараховуємо Elo всім гравцям, що були заявлені в TournamentRoster
+        const rosters = await this.prisma.tournamentRoster.findMany({
+          where: {
+            participant: {
+              tournamentId: tournament.id,
+              teamId: { in: [match.teamAId, match.teamBId] },
+            },
+          },
+          include: { participant: true },
+        });
+
+        for (const roster of rosters) {
+          const isTeamA = roster.participant.teamId === match.teamAId;
+          const eloChange = isTeamA ? changeA : changeB;
+          const isWinner = isTeamA ? isAWinner : !isAWinner;
+
+          // Оновлюємо тільки Elo та вінрейт (через агрегатор із порожніми статами сесії)
+          await this.applyTechnicalEloToPlayer(
+            roster.playerId,
+            match.id,
+            eloChange,
+            isWinner,
+            transactionQueries,
+          );
+        }
       }
     }
 
@@ -169,6 +196,45 @@ export class StatsService {
       message: "Рейтинги Elo та кар'єрна статистика успішно оновлені.",
       processedMatches: tournament.matches.length,
     };
+  }
+
+  private async applyTechnicalEloToPlayer(
+    playerId: string,
+    matchId: string,
+    change: number,
+    isWinner: boolean,
+    queries: any[],
+  ) {
+    const player = await this.prisma.player.findUnique({
+      where: { id: playerId },
+    });
+    if (!player) return;
+
+    const newRating = player.rating + change;
+    const oldStats = (player.stats as any) || {};
+
+    // Створюємо "заглушку" сесії для техпоразки (mapCount: 1, але 0 вбивств/смертей)
+    const newStats = this.statsAggregator.calculateNewLifetimeStats(
+      oldStats,
+      { mapCount: 1 },
+      isWinner,
+    );
+
+    queries.push(
+      this.prisma.player.update({
+        where: { id: playerId },
+        data: { rating: newRating, stats: newStats as any },
+      }),
+      this.prisma.ratingHistory.create({
+        data: {
+          playerId,
+          matchId,
+          oldRating: player.rating,
+          newRating,
+          ratingChange: change,
+        },
+      }),
+    );
   }
 
   private async fetchTeamRating(

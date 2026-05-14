@@ -8,6 +8,8 @@ import {
   GroupStanding,
   SimulationMatch,
 } from '../genetic-simulator.types';
+import { Prisma } from '@prisma/client';
+import { toPrismaJson } from 'src/prisma/prisma.utils';
 
 @Injectable()
 export class GroupStageStrategy extends BaseGeneticStrategy {
@@ -18,7 +20,11 @@ export class GroupStageStrategy extends BaseGeneticStrategy {
     super(probabilityCalc);
   }
 
-  async execute(simulationContext: SimulationContext, populations: number) {
+  async execute(
+    simulationContext: SimulationContext,
+    populations: number,
+    isDryRun = true,
+  ) {
     const startedAt = Date.now();
 
     const bestIndividual = this.evolvePopulation<GroupIndividual>(
@@ -28,35 +34,14 @@ export class GroupStageStrategy extends BaseGeneticStrategy {
     );
 
     const executionTimeMs = Date.now() - startedAt;
+    if (isDryRun) {
+      // Зберігаємо і матчі, і згенеровану таблицю
+      const predictedPayload = {
+        bracket: bestIndividual.bracket,
+        standings: bestIndividual.standings,
+      };
 
-    // Зберігаємо результати саме для Груп
-    await this.prisma.$transaction([
-      ...bestIndividual.bracket.map((match) =>
-        this.prisma.match.update({
-          where: { id: match.id },
-          data: {
-            scoreA: match.scoreA,
-            scoreB: match.scoreB,
-            details: match.details,
-            stats: match.stats as any,
-            isProcessed: true,
-          },
-        }),
-      ),
-      ...simulationContext.tournament.participants.map((participant: any) => {
-        const stats = bestIndividual.standings[participant.teamId];
-        return this.prisma.tournamentParticipant.update({
-          where: { id: participant.id },
-          data: {
-            groupPoints: stats?.points || 0,
-            matchesWon: stats?.matchesWon || 0,
-            matchesLost: stats?.matchesLost || 0,
-            mapsWon: stats?.mapsWon || 0,
-            mapsLost: stats?.mapsLost || 0,
-          },
-        });
-      }),
-      this.prisma.simulationRun.create({
+      await this.prisma.simulationRun.create({
         data: {
           tournamentId: simulationContext.tournament.id,
           algorithmType: 'GROUP_STAGE',
@@ -64,15 +49,63 @@ export class GroupStageStrategy extends BaseGeneticStrategy {
           generations: this.generations,
           fitnessScore: bestIndividual.fitness,
           executionTimeMs,
+          isDryRun: true,
+          predictedData: predictedPayload as unknown as Prisma.InputJsonValue,
         },
-      }),
-    ]);
+      });
 
-    return {
-      message: `Групову еволюцію завершено. Проаналізовано ${simulationContext.matchCount} матчів.`,
-      bestFitnessScore: bestIndividual.fitness,
-      standings: bestIndividual.standings,
-    };
+      return {
+        message: `Аналітичний прогноз груп завершено. Проаналізовано ${simulationContext.matchCount} матчів.`,
+        bestFitnessScore: bestIndividual.fitness,
+        standings: bestIndividual.standings,
+      };
+    } else {
+      // Зберігаємо результати саме для Груп
+      await this.prisma.$transaction([
+        ...bestIndividual.bracket.map((match) =>
+          this.prisma.match.update({
+            where: { id: match.id },
+            data: {
+              scoreA: match.scoreA,
+              scoreB: match.scoreB,
+              details: toPrismaJson(match.details),
+              stats: toPrismaJson(match.stats),
+              isProcessed: true,
+            },
+          }),
+        ),
+        ...simulationContext.tournament.participants.map((participant: any) => {
+          const stats = bestIndividual.standings[participant.teamId];
+          return this.prisma.tournamentParticipant.update({
+            where: { id: participant.id },
+            data: {
+              groupPoints: stats?.points || 0,
+              matchesWon: stats?.matchesWon || 0,
+              matchesLost: stats?.matchesLost || 0,
+              mapsWon: stats?.mapsWon || 0,
+              mapsLost: stats?.mapsLost || 0,
+            },
+          });
+        }),
+        this.prisma.simulationRun.create({
+          data: {
+            tournamentId: simulationContext.tournament.id,
+            algorithmType: 'GROUP_STAGE',
+            populations,
+            generations: this.generations,
+            fitnessScore: bestIndividual.fitness,
+            executionTimeMs,
+            isDryRun: false,
+          },
+        }),
+      ]);
+
+      return {
+        message: `Групову еволюцію завершено. Проаналізовано ${simulationContext.matchCount} матчів.`,
+        bestFitnessScore: bestIndividual.fitness,
+        standings: bestIndividual.standings,
+      };
+    }
   }
 
   private evaluateGroupIndividual(

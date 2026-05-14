@@ -4,10 +4,17 @@ import { TeamInvitationsController } from './team-invitations.controller';
 import { MailModule } from 'src/mail/mail.module';
 import { TeamsService } from 'src/teams/teams.service';
 import { RolesGuard } from 'src/auth/roles.guard';
+import { access } from 'fs';
+import { AccessPolicyService } from 'src/auth/access-policy.service';
 
 @Module({
   imports: [MailModule],
   controllers: [TeamInvitationsController],
-  providers: [TeamInvitationsService, TeamsService, RolesGuard],
+  providers: [
+    TeamInvitationsService,
+    TeamsService,
+    RolesGuard,
+    AccessPolicyService,
+  ],
 })
 export class TeamInvitationsModule {}

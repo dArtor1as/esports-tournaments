@@ -1,5 +1,3 @@
-// src/stats/stats.types.ts
-
 export interface BasePlayerStat {
   playerId: string;
   rating?: number; // Додаємо опціонально для потреб симулятора
