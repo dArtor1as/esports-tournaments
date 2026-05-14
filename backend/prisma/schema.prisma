@@ -35,6 +35,12 @@ enum InviteStatus {
   DECLINED
 }
 
+enum TransferType {
+  JOIN     // Гравець вступив у команду
+  LEAVE    // Гравець сам покинув команду
+  KICK     // Гравця вигнали
+}
+
 enum TeamStatus {
   ACTIVE
   DISBANDED
@@ -98,6 +104,7 @@ model Player {
   team      Team?    @relation("TeamPlayers", fields: [teamId], references: [id])
 
   captainedTeams Team[]  @relation("TeamCaptain")
+  teamTransfers TeamTransfer[]
 
   nickname  String   // Ігровий нік (може відрізнятися від username)
   rating    Int      @default(1000)
@@ -139,9 +146,27 @@ model Team {
 
   teamInvites         TeamInvitation[]       // Запрошення гравців у цю команду
   tournamentInvites   TournamentInvitation[] // Запрошення цієї команди на турніри
+  teamTransfers TeamTransfer[]
 
   @@index([averageRating]) // Критично для автоматичних інвайтів
   ratingHistories RatingHistory[]
+}
+
+model TeamTransfer {
+  id        String       @id @default(uuid())
+  
+  playerId  String
+  player    Player       @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  
+  teamId    String
+  team      Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  
+  type      TransferType
+  
+  createdAt DateTime     @default(now())
+
+  @@index([playerId])
+  @@index([teamId])
 }
 
 model Game {
