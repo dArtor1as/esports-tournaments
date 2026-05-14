@@ -10,13 +10,15 @@ import { MatchesProgressionService } from './matches-progression.service';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { ForfeitMatchDto } from './dto/forfeit-match.dto';
 import { DisputeMatchDto, ReportScoreDto } from './dto/consensus.dto';
+import { AccessPolicyService } from '../auth/access-policy.service';
 
 @Injectable()
 export class MatchesConsensusService {
   constructor(
     private prisma: PrismaService,
     private statsService: StatsService,
-    private progressionService: MatchesProgressionService, // Інжектимо сервіс просування
+    private progressionService: MatchesProgressionService,
+    private accessPolicy: AccessPolicyService,
   ) {}
 
   async forfeitMatch(matchId: string, dto: ForfeitMatchDto, user: JwtPayload) {
@@ -42,19 +44,22 @@ export class MatchesConsensusService {
     let isTeamAForfeiting = false;
     let isTeamBForfeiting = false;
 
-    // 1. Визначаємо ролі
+    // 1. Визначаємо , чи діє капітан
     const isCaptainA = match.teamA?.captain.userId === user.userId;
     const isCaptainB = match.teamB?.captain.userId === user.userId;
-    const isAdminOrCreator =
-      user.role === 'ADMIN' || match.tournament.creatorId === user.userId;
 
-    // 2. Логіка визначення "хто здається"
     if (isCaptainA) {
       isTeamAForfeiting = true;
     } else if (isCaptainB) {
       isTeamBForfeiting = true;
-    } else if (isAdminOrCreator) {
-      // Якщо це адмін/організатор, він ЗОБОВ'ЯЗАНИЙ передати forfeitingTeamId
+    } else {
+      // 2. Якщо це не капітан, перевіряємо права Організатора або Адміна через AccessPolicy
+      this.accessPolicy.checkTournamentCreatorOrAdmin(
+        match.tournament.creatorId,
+        user,
+      );
+
+      // Якщо виклик вище не кинув ForbiddenException, значить це адмін/креатор
       if (!dto.forfeitingTeamId) {
         throw new BadRequestException(
           'Адміністратор або Організатор повинен вказати ID команди, яку дискваліфікують (forfeitingTeamId)',
@@ -70,10 +75,6 @@ export class MatchesConsensusService {
           'Вказана команда не бере участі в цьому матчі',
         );
       }
-    } else {
-      throw new ForbiddenException(
-        'Тільки капітан команди, адміністратор або організатор турніру може зарахувати технічну поразку',
-      );
     }
 
     // 3. Визначаємо рахунок (Технічна перемога залежить від формату: 1:0, 2:0 або 3:0)
@@ -199,11 +200,10 @@ export class MatchesConsensusService {
     if (!match || match.matchStatus === 'COMPLETED')
       throw new BadRequestException('Матч вже закритий');
 
-    if (match.tournament.creatorId !== user.userId && user.role !== 'ADMIN') {
-      throw new ForbiddenException(
-        'Тільки організатор або адмін може примусово закрити матч',
-      );
-    }
+    this.accessPolicy.checkTournamentCreatorOrAdmin(
+      match.tournament.creatorId,
+      user,
+    );
 
     await this.prisma.$transaction(async (prismaTx) => {
       await this.progressionService.finalizeMatchProgression(

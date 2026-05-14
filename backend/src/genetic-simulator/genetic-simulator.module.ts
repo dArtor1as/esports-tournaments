@@ -8,6 +8,7 @@ import { GroupStageStrategy } from './strategies/group-stage.strategy';
 import { DoubleEliminationStrategy } from './strategies/double-elimination.strategy';
 import { StatsModule } from 'src/stats/stats.module';
 import { SimulationContextBuilder } from './simulation-context.builder';
+import { AccessPolicyService } from 'src/auth/access-policy.service';
 
 @Module({
   imports: [MatchSimulatorsModule, StatsModule],
@@ -20,6 +21,7 @@ import { SimulationContextBuilder } from './simulation-context.builder';
     GroupStageStrategy,
     DoubleEliminationStrategy,
     SimulationContextBuilder,
+    AccessPolicyService,
   ],
 })
 export class GeneticSimulatorModule {}

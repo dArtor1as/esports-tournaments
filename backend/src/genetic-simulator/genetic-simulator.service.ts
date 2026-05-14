@@ -2,7 +2,6 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SimulateTournamentDto } from './dto/simulate-tournament.dto';
@@ -14,6 +13,7 @@ import { DoubleEliminationStrategy } from './strategies/double-elimination.strat
 import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { StatsService } from 'src/stats/stats.service';
 import { SimulationContextBuilder } from './simulation-context.builder';
+import { AccessPolicyService } from 'src/auth/access-policy.service';
 
 @Injectable()
 export class GeneticSimulatorService {
@@ -22,6 +22,7 @@ export class GeneticSimulatorService {
     private matchSimulator: SimulatorFactoryService,
     private statsService: StatsService,
     private simulationContextBuilder: SimulationContextBuilder,
+    private accessPolicy: AccessPolicyService,
     // Інжектимо стратегії:
     private singleEliminationStrategy: SingleEliminationStrategy,
     private groupStageStrategy: GroupStageStrategy,
@@ -51,7 +52,7 @@ export class GeneticSimulatorService {
       });
       if (hasManualMatches) {
         throw new BadRequestException(
-          'Турнір вже містить зіграні матчі. Перезапис неможливий. Використовуйте режим прогнозу (isDryRun: true).',
+          'Турнір вже містить зіграні матчі. Перезапис неможливий. Використовуйте режим прогнозу.',
         );
       }
     }
@@ -142,11 +143,7 @@ export class GeneticSimulatorService {
       throw new NotFoundException('Турнір не знайдено');
     }
 
-    if (tournament.creatorId !== user.userId && user.role !== 'ADMIN') {
-      throw new ForbiddenException(
-        'Ви не маєте права запускати симуляцію для чужого турніру',
-      );
-    }
+    this.accessPolicy.checkTournamentCreatorOrAdmin(tournament.creatorId, user);
 
     return this.prisma.simulationRun.findMany({
       where: { tournamentId },

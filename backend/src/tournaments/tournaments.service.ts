@@ -19,6 +19,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
+import { AccessPolicyService } from 'src/auth/access-policy.service';
 
 type WorkflowMode = 'generation' | 'simulation';
 type TournamentStatus = 'planned' | 'live' | 'finished';
@@ -27,6 +28,7 @@ type TournamentStatus = 'planned' | 'live' | 'finished';
 export class TournamentsService {
   constructor(
     private prisma: PrismaService,
+    private accessPolicy: AccessPolicyService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
@@ -305,11 +307,7 @@ export class TournamentsService {
 
     if (!tournament) throw new NotFoundException('Турнір не знайдено');
 
-    if (tournament.creatorId !== user.userId && user.role !== 'ADMIN') {
-      throw new ForbiddenException(
-        'Ви не маєте прав на редагування цього турніру',
-      );
-    }
+    this.accessPolicy.checkTournamentCreatorOrAdmin(tournament.creatorId, user);
 
     // Захист: якщо турнір вже йде або завершився, забороняємо міняти ключові формати
     if (
@@ -339,11 +337,7 @@ export class TournamentsService {
 
     if (!tournament) throw new NotFoundException('Турнір не знайдено');
 
-    if (tournament.creatorId !== user.userId && user.role !== 'ADMIN') {
-      throw new ForbiddenException(
-        'Ви не маєте прав на видалення цього турніру',
-      );
-    }
+    this.accessPolicy.checkTournamentCreatorOrAdmin(tournament.creatorId, user);
 
     // Безпечне видалення: дозволяємо видаляти тільки якщо немає згенерованих матчів
     if (tournament.matches.length > 0) {
