@@ -49,6 +49,10 @@ export class TournamentsService {
     }
     //  Витягуємо команди одразу з гравцями, щоб сформувати ростер
     const availableTeams = await this.prisma.team.findMany({
+      where: {
+        gameId: game.id,
+        isComplete: true, // Беремо тільки укомплектовані команди
+      },
       include: { players: true },
     });
 

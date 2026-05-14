@@ -133,6 +133,12 @@ model Team {
 
   countryCode   String   @default("INT") // "INT" для International
   isManualCountry Boolean @default(false) // Для ручної зміни прапору команди
+  isComplete    Boolean  @default(false) // Чи укомплектована команда (5 гравців для CS2)
+  gameId        String
+  game          Game     @relation(fields: [gameId], references: [id])
+  //унІкальні назва та тег в межах однієї гри (щоб уникнути плутанини між командами різних ігор)
+  @@unique([name, gameId]) 
+  @@unique([tag, gameId])  
   
   players       Player[]   @relation("TeamPlayers")
 
@@ -173,6 +179,8 @@ model Game {
   id          String       @id @default(uuid())
   name        String       // "Counter-Strike 2"
   slug        String       @unique // "cs2"
+  minTeamSize Int          @default(5)
+  teams       Team[]
   players Player[]
   tournaments Tournament[]
 }

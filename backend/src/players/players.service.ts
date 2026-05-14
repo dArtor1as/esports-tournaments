@@ -11,7 +11,7 @@ import { UpdatePlayerDto } from './dto/update-player.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
-import { Cs2Role, Dota2Role, GameSlug } from './player.enums';
+import { GameSlug } from './player.enums';
 import { assertRoleAllowedForGame } from './players-role.policy';
 
 @Injectable()

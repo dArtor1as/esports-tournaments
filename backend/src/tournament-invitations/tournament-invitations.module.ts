@@ -4,6 +4,7 @@ import { TournamentInvitationsController } from './tournament-invitations.contro
 import { MailModule } from 'src/mail/mail.module';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { InvitationPolicyService } from './invitation-policy.service';
+import { AccessPolicyService } from 'src/auth/access-policy.service';
 
 @Module({
   imports: [MailModule],
@@ -12,6 +13,7 @@ import { InvitationPolicyService } from './invitation-policy.service';
     TournamentInvitationsService,
     RolesGuard,
     InvitationPolicyService,
+    AccessPolicyService,
   ],
 })
 export class TournamentInvitationsModule {}

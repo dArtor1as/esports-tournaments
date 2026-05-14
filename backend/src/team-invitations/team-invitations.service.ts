@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Inject,
 } from '@nestjs/common';
 import { CreateTeamInvitationDto } from './dto/create-team-invitation.dto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -10,6 +11,8 @@ import { MailService } from 'src/mail/mail.service';
 import * as crypto from 'crypto';
 import { TeamsService } from 'src/teams/teams.service';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 
 @Injectable()
 export class TeamInvitationsService {
@@ -17,6 +20,7 @@ export class TeamInvitationsService {
     private prisma: PrismaService,
     private mailService: MailService,
     private teamsService: TeamsService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async create(createDto: CreateTeamInvitationDto, user: JwtPayload) {
@@ -82,6 +86,11 @@ export class TeamInvitationsService {
     return this.prisma.$transaction(async (prisma) => {
       const invite = await prisma.teamInvitation.findUnique({
         where: { token },
+        include: {
+          team: {
+            include: { game: true }, // Тягнемо гру, щоб знати minTeamSize
+          },
+        },
       });
 
       if (!invite) throw new NotFoundException('Запрошення не знайдено');
@@ -104,17 +113,32 @@ export class TeamInvitationsService {
 
       if (!player) throw new NotFoundException('Ігровий профіль не знайдено');
 
+      // Перевірка гри профілю
+      if (player.gameId !== invite.team.gameId) {
+        throw new BadRequestException(
+          'Цей ігровий профіль належить до іншої гри, ніж команда, яка вас запрошує',
+        );
+      }
       // Перевірка: чи намагається юзер зайти чужим профілем?
       if (player.userId !== userId) {
         throw new BadRequestException('Цей ігровий профіль вам не належить');
       }
       if (player.teamId)
         throw new BadRequestException('Цей ігровий профіль вже в команді');
-
+      // Беремо значення з гри (напр. 5 для CS2, 1 для Solo гри)
       // 2. Додаємо гравця в команду
       await prisma.player.update({
         where: { id: player.id },
         data: { teamId: invite.teamId },
+      });
+
+      //Фіксуємо трансфер (JOIN)
+      await prisma.teamTransfer.create({
+        data: {
+          playerId: player.id,
+          teamId: invite.teamId,
+          type: 'JOIN',
+        },
       });
 
       // 3. Перераховуємо середній рейтинг і тір команди після додавання нового гравця
@@ -123,21 +147,33 @@ export class TeamInvitationsService {
         select: { rating: true },
       });
 
-      // Рахуємо суму і ділимо на кількість
-      const totalRating = teamPlayers.reduce((sum, p) => sum + p.rating, 0);
-      const newAverageRating = Math.floor(totalRating / teamPlayers.length);
+      const requiredSize = invite.team.game.minTeamSize;
+      const isTeamNowComplete = teamPlayers.length >= requiredSize;
 
-      // Визначаємо новий тір
-      const newTier = this.teamsService.calculateTier(newAverageRating);
+      if (isTeamNowComplete) {
+        // Рахуємо суму і ділимо на кількість
+        const totalRating = teamPlayers.reduce((sum, p) => sum + p.rating, 0);
+        const newAverageRating = Math.floor(totalRating / teamPlayers.length);
 
-      // Оновлюємо команду
-      await prisma.team.update({
-        where: { id: invite.teamId },
-        data: {
-          averageRating: newAverageRating,
-          tier: newTier,
-        },
-      });
+        // Визначаємо новий тір
+        const newTier = this.teamsService.calculateTier(newAverageRating);
+
+        // Оновлюємо команду
+        await prisma.team.update({
+          where: { id: invite.teamId },
+          data: {
+            averageRating: newAverageRating,
+            tier: newTier,
+            isComplete: true,
+          },
+        });
+      } else {
+        await prisma.team.update({
+          where: { id: invite.teamId },
+          data: { isComplete: false },
+        });
+      }
+      await this.cacheManager.del('all_teams');
 
       // 4. Змінюємо статус інвайту на ACCEPTED
       return prisma.teamInvitation.update({

@@ -70,8 +70,9 @@ export class TeamsService {
 
   async create(createTeamDto: CreateTeamDto, userId: string) {
     // Шукаємо за конкретним ID, який передали в DTO
-    const captain = await this.prisma.player.findUnique({
+    const captain = await this.prisma.player.findFirst({
       where: { id: createTeamDto.captainPlayerId },
+      include: { game: true },
     });
 
     if (!captain) throw new BadRequestException('Ігровий профіль не знайдено');
@@ -89,7 +90,10 @@ export class TeamsService {
     }
 
     const existingTeam = await this.prisma.team.findFirst({
-      where: { OR: [{ name: createTeamDto.name }, { tag: createTeamDto.tag }] },
+      where: {
+        gameId: captain.gameId,
+        OR: [{ name: createTeamDto.name }, { tag: createTeamDto.tag }],
+      },
     });
     if (existingTeam)
       throw new ConflictException('Команда з такою назвою або тегом вже існує');
@@ -100,11 +104,13 @@ export class TeamsService {
         data: {
           name: createTeamDto.name,
           tag: createTeamDto.tag,
+          gameId: captain.gameId,
           region: createTeamDto.region || 'GLOBAL',
           captainId: captain.id,
           // беремо рейтинг капітана як початковий середній рейтинг команди
           averageRating: captain.rating,
           tier: this.calculateTier(captain.rating),
+          isComplete: captain.game.minTeamSize === 1,
         },
       });
 
@@ -124,6 +130,7 @@ export class TeamsService {
     return this.prisma.team.findMany({
       include: {
         players: { select: { id: true, nickname: true } }, // Одразу показуємо склад команди
+        game: { select: { name: true, slug: true } },
       },
     });
   }
@@ -131,7 +138,7 @@ export class TeamsService {
   findOne(id: string) {
     return this.prisma.team.findUnique({
       where: { id },
-      include: { players: true },
+      include: { players: true, game: true },
     });
   }
 
@@ -150,6 +157,7 @@ export class TeamsService {
     if (updateTeamDto.name || updateTeamDto.tag) {
       const existingTeam = await this.prisma.team.findFirst({
         where: {
+          gameId: team.gameId,
           OR: [{ name: updateTeamDto.name }, { tag: updateTeamDto.tag }],
           NOT: { id }, // Не перевіряємо саму себе
         },
@@ -191,11 +199,26 @@ export class TeamsService {
         data: { status: 'DISBANDED' },
       });
 
+      const teamPlayers = await prisma.player.findMany({
+        where: { teamId: id },
+      });
+
       // 2. Виключаємо всіх гравців із цієї команди (робимо їх вільними агентами)
       await prisma.player.updateMany({
         where: { teamId: id },
         data: { teamId: null },
       });
+
+      // логуємо LEAVE для кожного гравця, який був у команді
+      if (teamPlayers.length > 0) {
+        await prisma.teamTransfer.createMany({
+          data: teamPlayers.map((p) => ({
+            playerId: p.id,
+            teamId: id,
+            type: 'LEAVE',
+          })),
+        });
+      }
 
       return team;
     });

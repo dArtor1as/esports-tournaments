@@ -38,6 +38,11 @@ export class TournamentParticipantsService {
     });
     if (!team) throw new NotFoundException('Команду не знайдено');
 
+    if (team.gameId !== tournament.gameId) {
+      throw new BadRequestException(
+        'Команда та турнір належать до різних ігрових дисциплін',
+      );
+    }
     this.accessPolicy.checkCaptainOrAdmin(team.captain.userId, user);
 
     // 2. Перевіряємо, чи не зареєстрована вже ця команда
