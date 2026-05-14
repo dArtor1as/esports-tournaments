@@ -1,19 +1,17 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SimulatorFactoryService } from 'src/match-simulators/simulator-factory.service';
 import { Stage } from '@prisma/client';
 import { SimulationContext, SimulationMatch } from './genetic-simulator.types';
 import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { AccessPolicyService } from 'src/auth/access-policy.service';
 
 @Injectable()
 export class SimulationContextBuilder {
   constructor(
     private prisma: PrismaService,
     private matchSimulator: SimulatorFactoryService,
+    private accessPolicy: AccessPolicyService,
   ) {}
 
   // метод підготовки, він використовується для всіх типів симуляцій, щоб отримати всі необхідні дані та контекст
@@ -46,11 +44,7 @@ export class SimulationContextBuilder {
       );
     }
 
-    if (tournament.creatorId !== user.userId && user.role !== 'ADMIN') {
-      throw new ForbiddenException(
-        'Ви не маєте права запускати симуляцію для чужого турніру',
-      );
-    }
+    this.accessPolicy.checkTournamentCreatorOrAdmin(tournament.creatorId, user);
 
     const simulator = this.matchSimulator.getSimulator(tournament.game.slug);
 

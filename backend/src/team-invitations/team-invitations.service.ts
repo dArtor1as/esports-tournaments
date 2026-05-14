@@ -13,6 +13,7 @@ import { TeamsService } from 'src/teams/teams.service';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
+import { AccessPolicyService } from 'src/auth/access-policy.service';
 
 @Injectable()
 export class TeamInvitationsService {
@@ -20,6 +21,7 @@ export class TeamInvitationsService {
     private prisma: PrismaService,
     private mailService: MailService,
     private teamsService: TeamsService,
+    private accessPolicy: AccessPolicyService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
@@ -33,11 +35,7 @@ export class TeamInvitationsService {
     if (!team) throw new NotFoundException('Команду не знайдено');
 
     // 2. Тільки капітан цієї команди або Адмін можуть надсилати запрошення
-    if (team.captain.userId !== user.userId && user.role !== 'ADMIN') {
-      throw new ForbiddenException(
-        'Тільки капітан команди або адміністратор може запрошувати гравців',
-      );
-    }
+    this.accessPolicy.checkCaptainOrAdmin(team.captain.userId, user);
 
     // 3. Перевіряємо, чи немає вже активного інвайту для цього юзера в цю команду
     const existingInvite = await this.prisma.teamInvitation.findUnique({

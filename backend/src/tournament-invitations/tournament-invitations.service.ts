@@ -146,8 +146,7 @@ export class TournamentInvitationsService {
       if (invite.expiresAt < new Date())
         throw new BadRequestException('Термін дії запрошення минув');
 
-      if (invite.team.captain.userId !== user.userId)
-        throw new ForbiddenException('Ви не є капітаном цієї команди');
+      this.accessPolicy.checkCaptainOrAdmin(invite.team.captain.userId, user);
 
       // 2. Валідація гравців
       const players = await prisma.player.findMany({
@@ -208,8 +207,7 @@ export class TournamentInvitationsService {
     if (!invite || invite.status !== 'PENDING')
       throw new BadRequestException('Запрошення недійсне');
 
-    if (invite.team.captain.userId !== user.userId)
-      throw new ForbiddenException('Ви не є капітаном цієї команди');
+    this.accessPolicy.checkCaptainOrAdmin(invite.team.captain.userId, user);
 
     return this.prisma.tournamentInvitation.update({
       where: { id: invite.id },
@@ -242,11 +240,7 @@ export class TournamentInvitationsService {
     if (!tournament) throw new NotFoundException('Турнір не знайдено');
 
     // 2. Перевіряємо, чи це творець турніру або Адмін
-    if (tournament.creatorId !== user.userId && user.role !== 'ADMIN') {
-      throw new ForbiddenException(
-        'Ви не маєте доступу до списку запрошень цього турніру',
-      );
-    }
+    this.accessPolicy.checkTournamentCreatorOrAdmin(tournament.creatorId, user);
 
     // 3. Віддаємо інвайти
     return this.prisma.tournamentInvitation.findMany({

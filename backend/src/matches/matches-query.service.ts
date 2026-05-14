@@ -6,10 +6,14 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { Stage } from '@prisma/client';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
+import { AccessPolicyService } from 'src/auth/access-policy.service';
 
 @Injectable()
 export class MatchesQueryService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private accessPolicy: AccessPolicyService,
+  ) {}
 
   // 1. Детальна сторінка матчу (Match Room)
   async findOne(id: string) {
@@ -81,11 +85,7 @@ export class MatchesQueryService {
     if (!tournament) throw new NotFoundException('Турнір не знайдено');
 
     // Перевірка прав (Творець або Адмін)
-    if (tournament.creatorId !== user.userId && user.role !== 'ADMIN') {
-      throw new ForbiddenException(
-        'Ви не маєте прав переглядати конфлікти цього турніру',
-      );
-    }
+    this.accessPolicy.checkTournamentCreatorOrAdmin(tournament.creatorId, user);
 
     return this.prisma.match.findMany({
       where: {

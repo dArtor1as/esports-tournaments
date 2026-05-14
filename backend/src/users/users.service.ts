@@ -9,10 +9,14 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
+import { AccessPolicyService } from 'src/auth/access-policy.service';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private accessPolicy: AccessPolicyService,
+  ) {}
 
   async create(createUserDto: CreateUserDto) {
     // 1. Перевіряємо email
@@ -89,9 +93,7 @@ export class UsersService {
     if (!targetUser) throw new NotFoundException('Користувача не знайдено');
 
     // 2. перевіряємо, чи це сам користувач або він Адмін?
-    if (targetUser.id !== user.userId && user.role !== 'ADMIN') {
-      throw new ForbiddenException('Ви можете редагувати лише власний профіль');
-    }
+    this.accessPolicy.checkSelfOrAdmin(targetUser.id, user);
 
     // 3. Якщо перевірка пройдена - оновлюємо
     return this.prisma.user.update({
@@ -104,9 +106,7 @@ export class UsersService {
     const targetUser = await this.prisma.user.findUnique({ where: { id } });
     if (!targetUser) throw new NotFoundException('Користувача не знайдено');
 
-    if (targetUser.id !== user.userId && user.role !== 'ADMIN') {
-      throw new ForbiddenException('Ви можете видалити лише власний профіль');
-    }
+    this.accessPolicy.checkSelfOrAdmin(targetUser.id, user);
 
     return this.prisma.user.delete({ where: { id } });
   }

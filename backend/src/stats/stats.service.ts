@@ -6,7 +6,7 @@ import { TeamsService } from '../teams/teams.service';
 import { PlayersService } from '../players/players.service';
 import { PlayerStatsAggregatorService } from './player-stats-aggregator.service';
 import { EloCalculatorService } from './elo-calculator.service';
-import { AccessPolicyService } from 'src/auth/access-policy.service';
+import { AccessPolicyService } from '../auth/access-policy.service';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 
 @Injectable()

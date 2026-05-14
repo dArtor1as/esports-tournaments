@@ -10,7 +10,7 @@ import { UpdateTeamDto } from './dto/update-team.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
-import { AccessPolicyService } from 'src/auth/access-policy.service';
+import { AccessPolicyService } from '../auth/access-policy.service';
 import type { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 
 @Injectable()
