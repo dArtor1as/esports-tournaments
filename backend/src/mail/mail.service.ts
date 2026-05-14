@@ -28,6 +28,31 @@ export class MailService {
     });
   }
 
+  async sendMatchDisputeNotification(
+    email: string,
+    tournamentTitle: string,
+    matchId: string,
+    reason: string,
+  ) {
+    const frontendUrl = this.configService.get('FRONTEND_URL');
+    const matchLink = `${frontendUrl}/matches/${matchId}`;
+
+    await this.mailerService.sendMail({
+      to: email,
+      subject: `⚠️ Конфлікт у матчі на турнірі ${tournamentTitle}`,
+      html: `
+        <h2>Увага, Організаторе!</h2>
+        <p>Один із капітанів оскаржив результат матчу на вашому турнірі <b>${tournamentTitle}</b>.</p>
+        <p><b>Причина оскарження:</b> ${reason}</p>
+        <p>Будь ласка, перегляньте деталі та прийміть рішення (Force Resolve):</p>
+        <br/>
+        <a href="${matchLink}" style="padding: 10px 20px; background-color: #dc3545; color: white; text-decoration: none; border-radius: 5px;">
+          Перейти до матчу
+        </a>
+      `,
+    });
+  }
+
   async sendTournamentInvite(
     email: string,
     tournamentName: string,
