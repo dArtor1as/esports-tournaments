@@ -10,6 +10,7 @@ import * as crypto from 'crypto';
 import { MailService } from 'src/mail/mail.service';
 import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { InvitationPolicyService } from './invitation-policy.service';
+import { AccessPolicyService } from 'src/auth/access-policy.service';
 
 @Injectable()
 export class TournamentInvitationsService {
@@ -17,6 +18,7 @@ export class TournamentInvitationsService {
     private prisma: PrismaService,
     private mailService: MailService,
     private invitationPolicyService: InvitationPolicyService,
+    private accessPolicy: AccessPolicyService,
   ) {}
 
   async create(dto: CreateTournamentInvitationDto, user: JwtPayload) {
@@ -31,11 +33,14 @@ export class TournamentInvitationsService {
     if (!tournament || !team)
       throw new NotFoundException('Турнір або команда не знайдені');
 
-    if (tournament.creatorId !== user.userId && user.role !== 'ADMIN') {
-      throw new ForbiddenException(
-        'Тільки організатор цього турніру або адміністратор може надсилати запрошення',
+    //  Перевірка відповідності гри команди та турніру
+    if (tournament.gameId !== team.gameId) {
+      throw new BadRequestException(
+        'Команда та турнір належать до різних ігрових ігор',
       );
     }
+
+    this.accessPolicy.checkTournamentCreatorOrAdmin(tournament.creatorId, user);
 
     // перевірки перед створенням інвайту
     // ПРАВИЛО 1: Блокування нелогічних інвайтів (Tier різниця)

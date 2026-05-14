@@ -18,11 +18,15 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
+import { TeamTransfersService } from '../teams/team-transfers.service';
 
 @ApiTags('Players (Ігрові профілі)') // Назва розділу в Swagger
 @Controller('players')
 export class PlayersController {
-  constructor(private readonly playersService: PlayersService) {}
+  constructor(
+    private readonly playersService: PlayersService,
+    private readonly transfersService: TeamTransfersService,
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard)
@@ -46,18 +50,24 @@ export class PlayersController {
     return this.playersService.findAll();
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Отримати деталі конкретного гравця за ID' })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.playersService.findOne(id);
-  }
-
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Отримати всі ігрові профілі поточного юзера' })
   findMyProfiles(@CurrentUser() user: JwtPayload) {
     return this.playersService.findMyProfiles(user.userId);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Отримати деталі конкретного гравця за ID' })
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
+    return this.playersService.findOne(id);
+  }
+
+  @Get(':id/transfers')
+  @ApiOperation({ summary: 'Отримати історію команд гравця' })
+  getPlayerTransfers(@Param('id', ParseUUIDPipe) id: string) {
+    return this.transfersService.getPlayerTransfers(id);
   }
 
   @Patch(':id')

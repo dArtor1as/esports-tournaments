@@ -79,7 +79,11 @@ async function main() {
     del: async () => {},
   } as any;
   const accessPolicy = new AccessPolicyService();
-  const teamsService = new TeamsService(prisma as any, accessPolicy, dummyCache);
+  const teamsService = new TeamsService(
+    prisma as any,
+    accessPolicy,
+    dummyCache,
+  );
   const playersService = new PlayersService(prisma as any, dummyCache);
   const eloCalculator = new EloCalculatorService();
   const statsAggregator = new PlayerStatsAggregatorService();
@@ -166,6 +170,8 @@ async function main() {
         averageRating: 1000,
         tier: 1,
         region: tData.region,
+        gameId: game.id,
+        isComplete: true,
       },
     });
 
