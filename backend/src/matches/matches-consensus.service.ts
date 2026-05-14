@@ -11,6 +11,7 @@ import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { ForfeitMatchDto } from './dto/forfeit-match.dto';
 import { DisputeMatchDto, ReportScoreDto } from './dto/consensus.dto';
 import { AccessPolicyService } from '../auth/access-policy.service';
+import { MailService } from 'src/mail/mail.service';
 
 @Injectable()
 export class MatchesConsensusService {
@@ -19,6 +20,7 @@ export class MatchesConsensusService {
     private statsService: StatsService,
     private progressionService: MatchesProgressionService,
     private accessPolicy: AccessPolicyService,
+    private mailService: MailService,
   ) {}
 
   async forfeitMatch(matchId: string, dto: ForfeitMatchDto, user: JwtPayload) {
@@ -169,6 +171,7 @@ export class MatchesConsensusService {
       include: {
         teamA: { include: { captain: true } },
         teamB: { include: { captain: true } },
+        tournament: { include: { creator: true } },
       },
     });
 
@@ -177,13 +180,29 @@ export class MatchesConsensusService {
     if (match.reportedById === user.userId)
       throw new BadRequestException('Ви не можете оскаржити власний звіт');
 
-    return this.prisma.match.update({
+    const updatedMatch = await this.prisma.match.update({
       where: { id: matchId },
       data: {
         matchStatus: 'DISPUTED',
         disputeReason: dto.reason,
       },
     });
+
+    // --- ВІДПРАВЛЯЄМО ЛИСТ ТВОРЦЮ ---
+    if (match.tournament.creator?.email) {
+      // Відправляємо асинхронно, щоб не блокувати відповідь клієнту
+      this.mailService
+        .sendMatchDisputeNotification(
+          match.tournament.creator.email,
+          match.tournament.title,
+          match.id,
+          dto.reason || 'Причину не вказано',
+        )
+        .catch((err) =>
+          console.error('Помилка відправки листа про диспут:', err),
+        );
+    }
+    return updatedMatch;
   }
 
   //  4. примусове рішення адміна (FORCE RESOLVE)

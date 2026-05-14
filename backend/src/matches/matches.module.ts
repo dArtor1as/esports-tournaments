@@ -15,6 +15,7 @@ import { AccessPolicyService } from 'src/auth/access-policy.service';
 import { EloCalculatorService } from 'src/stats/elo-calculator.service';
 import { PlayerStatsAggregatorService } from 'src/stats/player-stats-aggregator.service';
 import { MatchesQueryService } from './matches-query.service';
+import { MailService } from 'src/mail/mail.service';
 
 @Module({
   controllers: [MatchesController, MatchesQueryController],
@@ -33,6 +34,7 @@ import { MatchesQueryService } from './matches-query.service';
     EloCalculatorService,
     PlayerStatsAggregatorService,
     MatchesQueryService,
+    MailService,
   ],
 })
 export class MatchesModule {}
