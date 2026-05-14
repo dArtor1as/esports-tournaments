@@ -12,6 +12,9 @@ import { MatchesConsensusService } from './matches-consensus.service';
 import { MatchesGeneratorService } from './matches-generator.service';
 import { MatchesQueryController } from './matches-query.controller';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
+import { EloCalculatorService } from 'src/stats/elo-calculator.service';
+import { PlayerStatsAggregatorService } from 'src/stats/player-stats-aggregator.service';
+import { MatchesQueryService } from './matches-query.service';
 
 @Module({
   controllers: [MatchesController, MatchesQueryController],
@@ -27,6 +30,9 @@ import { AccessPolicyService } from 'src/auth/access-policy.service';
     MatchesGeneratorService,
     MatchesConsensusService,
     MatchesProgressionService,
+    EloCalculatorService,
+    PlayerStatsAggregatorService,
+    MatchesQueryService,
   ],
 })
 export class MatchesModule {}

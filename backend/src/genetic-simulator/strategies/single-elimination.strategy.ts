@@ -4,6 +4,8 @@ import { BaseGeneticStrategy } from './base-genetic.strategy';
 import { SimulationContext } from '../genetic-simulator.types';
 import { ProbabilityCalculatorService } from '../probability-calculator.service';
 import { Individual, SimulationMatch } from '../genetic-simulator.types';
+import { Prisma } from '@prisma/client';
+import { toPrismaJson } from 'src/prisma/prisma.utils';
 
 @Injectable()
 export class SingleEliminationStrategy extends BaseGeneticStrategy {
@@ -14,7 +16,11 @@ export class SingleEliminationStrategy extends BaseGeneticStrategy {
     super(probabilityCalc); // Передаємо сервіс у базовий клас
   }
 
-  async execute(simulationContext: SimulationContext, populations: number) {
+  async execute(
+    simulationContext: SimulationContext,
+    populations: number,
+    isDryRun: boolean = true,
+  ) {
     const startedAt = Date.now();
 
     const bestIndividual = this.evolvePopulation<Individual>(
@@ -24,28 +30,9 @@ export class SingleEliminationStrategy extends BaseGeneticStrategy {
     );
 
     const executionTimeMs = Date.now() - startedAt;
-
-    // Зберігаємо результати саме для Playoff
-    await this.prisma.$transaction([
-      ...bestIndividual.bracket.map((match) =>
-        this.prisma.match.update({
-          where: { id: match.id },
-          data: {
-            teamAId: match.teamAId,
-            teamBId: match.teamBId,
-            scoreA: match.scoreA,
-            scoreB: match.scoreB,
-            details: match.details as any,
-            stats: match.stats as any,
-            isProcessed: true,
-          },
-        }),
-      ),
-      this.prisma.tournament.update({
-        where: { id: simulationContext.tournament.id },
-        data: { status: 'finished' },
-      }),
-      this.prisma.simulationRun.create({
+    if (isDryRun) {
+      //режим прогнозу - не зберігаємо результати в БД, а лише повертаємо їх у відповіді
+      await this.prisma.simulationRun.create({
         data: {
           tournamentId: simulationContext.tournament.id,
           algorithmType: 'PLAYOFF',
@@ -53,14 +40,56 @@ export class SingleEliminationStrategy extends BaseGeneticStrategy {
           generations: this.generations,
           fitnessScore: bestIndividual.fitness,
           executionTimeMs,
+          isDryRun: true,
+          predictedData:
+            bestIndividual.bracket as unknown as Prisma.InputJsonValue, // Зберігаємо прогноз сітки
         },
-      }),
-    ]);
+      });
 
-    return {
-      message: `Еволюцію (Playoff) завершено. Пройдено ${this.generations} поколінь.`,
-      bestFitnessScore: bestIndividual.fitness,
-    };
+      return {
+        message: `Аналітичний прогноз завершено. Пройдено ${this.generations} поколінь.`,
+        bestFitnessScore: bestIndividual.fitness,
+        predictedBracket: bestIndividual.bracket,
+      };
+    } else {
+      // Зберігаємо результати саме для Playoff
+      await this.prisma.$transaction([
+        ...bestIndividual.bracket.map((match) =>
+          this.prisma.match.update({
+            where: { id: match.id },
+            data: {
+              teamAId: match.teamAId,
+              teamBId: match.teamBId,
+              scoreA: match.scoreA,
+              scoreB: match.scoreB,
+              details: toPrismaJson(match.details),
+              stats: toPrismaJson(match.stats),
+              isProcessed: true,
+            },
+          }),
+        ),
+        this.prisma.tournament.update({
+          where: { id: simulationContext.tournament.id },
+          data: { status: 'finished' },
+        }),
+        this.prisma.simulationRun.create({
+          data: {
+            tournamentId: simulationContext.tournament.id,
+            algorithmType: 'PLAYOFF',
+            populations,
+            generations: this.generations,
+            fitnessScore: bestIndividual.fitness,
+            executionTimeMs,
+            isDryRun: false,
+          },
+        }),
+      ]);
+
+      return {
+        message: `Еволюцію (Playoff) завершено. Пройдено ${this.generations} поколінь.`,
+        bestFitnessScore: bestIndividual.fitness,
+      };
+    }
   }
 
   private evaluateIndividual(

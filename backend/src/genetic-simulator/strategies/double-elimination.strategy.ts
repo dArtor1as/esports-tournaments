@@ -4,6 +4,8 @@ import { BaseGeneticStrategy } from './base-genetic.strategy';
 import { SimulationContext } from '../genetic-simulator.types';
 import { ProbabilityCalculatorService } from '../probability-calculator.service';
 import { Individual, SimulationMatch } from '../genetic-simulator.types';
+import { Prisma } from '@prisma/client';
+import { toPrismaJson } from 'src/prisma/prisma.utils';
 
 @Injectable()
 export class DoubleEliminationStrategy extends BaseGeneticStrategy {
@@ -14,7 +16,11 @@ export class DoubleEliminationStrategy extends BaseGeneticStrategy {
     super(probabilityCalc);
   }
 
-  async execute(simulationContext: SimulationContext, populations: number) {
+  async execute(
+    simulationContext: SimulationContext,
+    populations: number,
+    isDryRun: boolean = true,
+  ) {
     const startedAt = Date.now();
 
     const bestIndividual = this.evolvePopulation<Individual>(
@@ -25,26 +31,9 @@ export class DoubleEliminationStrategy extends BaseGeneticStrategy {
 
     const executionTimeMs = Date.now() - startedAt;
 
-    await this.prisma.$transaction([
-      ...bestIndividual.bracket.map((match) =>
-        this.prisma.match.update({
-          where: { id: match.id },
-          data: {
-            teamAId: match.teamAId,
-            teamBId: match.teamBId,
-            scoreA: match.scoreA,
-            scoreB: match.scoreB,
-            details: match.details,
-            stats: match.stats as any,
-            isProcessed: true,
-          },
-        }),
-      ),
-      this.prisma.tournament.update({
-        where: { id: simulationContext.tournament.id },
-        data: { status: 'finished' },
-      }),
-      this.prisma.simulationRun.create({
+    if (isDryRun) {
+      // Зберігаємо результати саме для Double Elimination
+      await this.prisma.simulationRun.create({
         data: {
           tournamentId: simulationContext.tournament.id,
           algorithmType: 'DOUBLE_ELIMINATION',
@@ -52,14 +41,54 @@ export class DoubleEliminationStrategy extends BaseGeneticStrategy {
           generations: this.generations,
           fitnessScore: bestIndividual.fitness,
           executionTimeMs,
+          isDryRun: true,
+          predictedData:
+            bestIndividual.bracket as unknown as Prisma.InputJsonValue,
         },
-      }),
-    ]);
+      });
 
-    return {
-      message: `Еволюцію (Double Elimination) завершено. Пройдено ${this.generations} поколінь.`,
-      bestFitnessScore: bestIndividual.fitness,
-    };
+      return {
+        message: `Аналітичний прогноз Double Elimination завершено. Проаналізовано ${simulationContext.matchCount} матчів.`,
+        bestFitnessScore: bestIndividual.fitness,
+      };
+    } else {
+      await this.prisma.$transaction([
+        ...bestIndividual.bracket.map((match) =>
+          this.prisma.match.update({
+            where: { id: match.id },
+            data: {
+              teamAId: match.teamAId,
+              teamBId: match.teamBId,
+              scoreA: match.scoreA,
+              scoreB: match.scoreB,
+              details: toPrismaJson(match.details),
+              stats: toPrismaJson(match.stats),
+              isProcessed: true,
+            },
+          }),
+        ),
+        this.prisma.tournament.update({
+          where: { id: simulationContext.tournament.id },
+          data: { status: 'finished' },
+        }),
+        this.prisma.simulationRun.create({
+          data: {
+            tournamentId: simulationContext.tournament.id,
+            algorithmType: 'DOUBLE_ELIMINATION',
+            populations,
+            generations: this.generations,
+            fitnessScore: bestIndividual.fitness,
+            executionTimeMs,
+            isDryRun: false,
+          },
+        }),
+      ]);
+
+      return {
+        message: `Еволюцію (Double Elimination) завершено. Пройдено ${this.generations} поколінь.`,
+        bestFitnessScore: bestIndividual.fitness,
+      };
+    }
   }
 
   private evaluateIndividual(

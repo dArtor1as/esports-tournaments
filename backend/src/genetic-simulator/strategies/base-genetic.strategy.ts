@@ -15,6 +15,7 @@ export abstract class BaseGeneticStrategy {
   abstract execute(
     context: SimulationContext,
     populations: number,
+    isDryRun?: boolean,
   ): Promise<any>;
 
   protected evolvePopulation<T extends BaseIndividual>(
