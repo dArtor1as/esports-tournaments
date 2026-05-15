@@ -8,6 +8,7 @@ dist/
 build/
 /frontend/dist/
 /backend/dist/
+/frontend_old
 
 # Змінні середовища та секрети
 .env
