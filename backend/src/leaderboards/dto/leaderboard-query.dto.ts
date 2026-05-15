@@ -1,31 +1,10 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsEnum, IsOptional } from 'class-validator';
 import { Region } from '@prisma/client';
+import { PaginationQueryDto } from 'common/dto/pagination-query.dto';
 
-export class LeaderboardQueryDto {
-  @ApiPropertyOptional({ description: 'Номер сторінки', default: 1 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  page?: number = 1;
-
-  @ApiPropertyOptional({
-    description: 'Кількість записів на сторінку',
-    default: 50,
-  })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(100)
-  limit?: number = 50;
-
-  @ApiPropertyOptional({
-    enum: Region,
-    description: 'Фільтр за регіоном (EU, CIS, NA тощо)',
-  })
+export class LeaderboardQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional({ enum: Region, description: 'Фільтр за регіоном' })
   @IsOptional()
   @IsEnum(Region)
   region?: Region;

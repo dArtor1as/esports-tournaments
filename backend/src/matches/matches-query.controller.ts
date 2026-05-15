@@ -23,6 +23,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { MatchesQueryService } from './matches-query.service';
 import { MatchesQueryDto } from './dto/matches-query.dto';
+import { PaginationQueryDto } from 'common/dto/pagination-query.dto';
 
 @ApiTags('Matches Queries (Перегляд матчів)')
 @Controller('matches')
@@ -45,8 +46,8 @@ export class MatchesQueryController {
   @ApiOperation({
     summary: 'Глобальний список конфліктних матчів (тільки для ADMIN)',
   })
-  getGlobalDisputed() {
-    return this.queryService.getAllDisputedMatches();
+  getGlobalDisputed(@Query() query: PaginationQueryDto) {
+    return this.queryService.getAllDisputedMatches(query);
   }
 
   @Get('tournament/:id/disputed')
@@ -88,6 +89,28 @@ export class MatchesQueryController {
   @ApiOperation({ summary: 'Розклад майбутніх матчів конкретної команди' })
   getUpcoming(@Param('teamId', ParseUUIDPipe) teamId: string) {
     return this.queryService.getUpcomingMatches(teamId);
+  }
+
+  @Get('team/:teamId/history')
+  @ApiOperation({
+    summary: 'Отримати історію зіграних матчів команди (з пагінацією)',
+  })
+  getTeamMatchesHistory(
+    @Param('teamId', ParseUUIDPipe) teamId: string,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.queryService.getTeamMatchesHistory(teamId, query);
+  }
+
+  @Get('player/:playerId/history')
+  @ApiOperation({
+    summary: 'Отримати історію зіграних матчів гравця (з пагінацією)',
+  })
+  getPlayerMatchesHistory(
+    @Param('playerId', ParseUUIDPipe) playerId: string,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.queryService.getPlayerMatchesHistory(playerId, query);
   }
 
   @Get(':id')
