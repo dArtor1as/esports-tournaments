@@ -52,7 +52,7 @@ export class PlayersController {
   }
 
   @Get('me')
-  @Throttle({ default: { limit: 200, ttl: 60000 } })
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Отримати всі ігрові профілі поточного юзера' })
@@ -61,13 +61,14 @@ export class PlayersController {
   }
 
   @Get(':id')
-  @Throttle({ default: { limit: 200, ttl: 60000 } })
+  @Throttle({ default: { limit: 100, ttl: 60000 } })
   @ApiOperation({ summary: 'Отримати деталі конкретного гравця за ID' })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.playersService.findOne(id);
   }
 
   @Get(':id/transfers')
+  @Throttle({ default: { limit: 50, ttl: 60000 } })
   @ApiOperation({ summary: 'Отримати історію команд гравця' })
   getPlayerTransfers(@Param('id', ParseUUIDPipe) id: string) {
     return this.transfersService.getPlayerTransfers(id);

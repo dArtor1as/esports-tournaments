@@ -26,7 +26,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  @Throttle({ auth: { limit: 3, ttl: 60000 } })
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @ApiOperation({ summary: 'Створити нового користувача' })
   create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
