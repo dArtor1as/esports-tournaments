@@ -20,7 +20,7 @@ export class StatsController {
   @Post('tournament/:id/process')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @Throttle({ heavy: { limit: 3, ttl: 60000 } })
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @ApiOperation({
     summary: 'Перерахувати Elo та Lifetime статистику після завершення турніру',
   })

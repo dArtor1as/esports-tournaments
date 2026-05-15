@@ -27,7 +27,7 @@ export class TournamentParticipantsController {
 
   @Post()
   @UseGuards(JwtAuthGuard)
-  @Throttle({ invitations: { limit: 20, ttl: 60000 } })
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Зареєструвати команду на турнір та зафіксувати склад',
@@ -53,7 +53,7 @@ export class TournamentParticipantsController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
-  @Throttle({ invitations: { limit: 10, ttl: 60000 } })
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Скасувати реєстрацію команди (тільки до старту)' })
   remove(

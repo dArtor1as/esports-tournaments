@@ -27,7 +27,7 @@ export class GeneticSimulatorController {
   @Post('run')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @Throttle({ heavy: { limit: 3, ttl: 60000 } })
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @ApiOperation({
     summary: 'Запустити генетичний алгоритм для заповнення сітки турніру',
   })
@@ -38,7 +38,7 @@ export class GeneticSimulatorController {
   @Post('run-groups')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @Throttle({ heavy: { limit: 3, ttl: 60000 } })
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @ApiOperation({
     summary: 'Запустити генетичний алгоритм для ГРУПОВОГО етапу (Round Robin)',
   })

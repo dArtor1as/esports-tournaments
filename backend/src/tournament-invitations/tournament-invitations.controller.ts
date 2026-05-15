@@ -28,7 +28,7 @@ export class TournamentInvitationsController {
 
   @Post()
   @UseGuards(JwtAuthGuard)
-  @Throttle({ invitations: { limit: 5, ttl: 60000 } })
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Створити запрошення до команди ',
@@ -42,7 +42,7 @@ export class TournamentInvitationsController {
 
   @Patch(':token/accept')
   @UseGuards(JwtAuthGuard)
-  @Throttle({ invitations: { limit: 5, ttl: 60000 } })
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Прийняти запрошення та зафіксувати склад команди' })
   accept(
@@ -59,7 +59,7 @@ export class TournamentInvitationsController {
 
   @Patch(':token/decline')
   @UseGuards(JwtAuthGuard)
-  @Throttle({ invitations: { limit: 5, ttl: 60000 } })
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Відхилити запрошення на турнір' })
   decline(@Param('token') token: string, @CurrentUser() user: JwtPayload) {

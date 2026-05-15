@@ -23,7 +23,7 @@ export class TournamentsController {
 
   @Post()
   @UseGuards(JwtAuthGuard)
-  @Throttle({ invitations: { limit: 20, ttl: 60000 } })
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Створити новий турнір' })
   create(

@@ -29,7 +29,7 @@ export class MatchesController {
 
   @Post('generate-bracket')
   @UseGuards(JwtAuthGuard)
-  @Throttle({ heavy: { limit: 3, ttl: 60000 } })
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Згенерувати сітку для турніру (Single або Double Elimination)',
@@ -43,7 +43,7 @@ export class MatchesController {
 
   @Post('generate-groups')
   @UseGuards(JwtAuthGuard)
-  @Throttle({ heavy: { limit: 3, ttl: 60000 } })
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Згенерувати матчі групового етапу (Round Robin)' })
   generateGroups(
@@ -54,7 +54,7 @@ export class MatchesController {
   }
 
   @Post('transition-to-playoffs')
-  @Throttle({ heavy: { limit: 3, ttl: 60000 } })
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({

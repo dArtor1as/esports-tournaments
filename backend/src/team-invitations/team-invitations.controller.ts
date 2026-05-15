@@ -29,7 +29,7 @@ export class TeamInvitationsController {
 
   @Post()
   @UseGuards(JwtAuthGuard)
-  @Throttle({ invitations: { limit: 5, ttl: 60000 } })
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Згенерувати посилання-запрошення для користувача',
@@ -43,7 +43,7 @@ export class TeamInvitationsController {
 
   @Patch(':token/accept')
   @UseGuards(JwtAuthGuard)
-  @Throttle({ invitations: { limit: 10, ttl: 60000 } })
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Прийняти запрошення за токеном' })
   accept(
@@ -56,7 +56,7 @@ export class TeamInvitationsController {
 
   @Patch(':token/decline')
   @UseGuards(JwtAuthGuard)
-  @Throttle({ invitations: { limit: 10, ttl: 60000 } })
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Відхилити запрошення за токеном' })
   decline(@Param('token') token: string, @CurrentUser() user: JwtPayload) {
