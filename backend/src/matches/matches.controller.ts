@@ -1,25 +1,15 @@
 import {
   Controller,
-  Get,
   Post,
   Body,
   Param,
-  Query,
   UseGuards,
-  UseInterceptors,
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { GenerateBracketDto } from './dto/generate-bracket.dto';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiTags,
-  ApiQuery,
-} from '@nestjs/swagger';
-import { Stage } from '@prisma/client';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Throttle } from '@nestjs/throttler';
-import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { ForfeitMatchDto } from './dto/forfeit-match.dto';
 import type { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { CurrentUser } from 'src/auth/decorators/current-user.decorator';

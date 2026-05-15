@@ -1,6 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { GamePlayerStat } from './stats.types';
 
+export interface PlayerStatsData {
+  total_roundsPlayed?: number | string;
+  total_kills?: number | string;
+  total_deaths?: number | string;
+  total_assists?: number | string;
+  matchesPlayed?: number | string;
+  totalMapsPlayed?: number | string;
+  winRate?: string | number;
+  [key: string]: string | number | undefined; // Дозволяємо інші динамічні поля
+}
+
 @Injectable()
 export class PlayerStatsAggregatorService {
   private readonly STAT_RULES: Record<
@@ -21,7 +32,7 @@ export class PlayerStatsAggregatorService {
   private readonly DERIVED_STATS = [
     {
       name: 'kpr',
-      formula: (stat: any) =>
+      formula: (stat: PlayerStatsData) =>
         Number(stat.total_roundsPlayed)
           ? (
               Number(stat.total_kills) / Number(stat.total_roundsPlayed)
@@ -30,7 +41,7 @@ export class PlayerStatsAggregatorService {
     },
     {
       name: 'dpr',
-      formula: (stat: any) =>
+      formula: (stat: PlayerStatsData) =>
         Number(stat.total_roundsPlayed)
           ? (
               Number(stat.total_deaths) / Number(stat.total_roundsPlayed)
@@ -39,7 +50,7 @@ export class PlayerStatsAggregatorService {
     },
     {
       name: 'apr',
-      formula: (stat: any) =>
+      formula: (stat: PlayerStatsData) =>
         Number(stat.total_roundsPlayed)
           ? (
               Number(stat.total_assists) / Number(stat.total_roundsPlayed)
@@ -49,7 +60,7 @@ export class PlayerStatsAggregatorService {
   ];
 
   getSummedPlayerStatsForMatch(
-    maps: any[],
+    maps: Record<string, any>[],
     teamKey: 'teamA' | 'teamB',
   ): GamePlayerStat[] {
     const playerTotals = new Map<string, any>();
@@ -78,8 +89,8 @@ export class PlayerStatsAggregatorService {
   }
 
   calculateNewLifetimeStats(
-    oldStats: any,
-    sessionStats: any,
+    oldStats: PlayerStatsData,
+    sessionStats: Record<string, any>,
     isWinner: boolean,
   ): Record<string, string | number> {
     const oldMatches = Number(oldStats.matchesPlayed) || 0;

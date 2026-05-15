@@ -1,0 +1,12 @@
+node_modules/
+dist/
+npm-debug.log
+.git
+.gitignore
+README.md
+.eslintcache
+.prettierrc
+test/
+*.spec.ts
+coverage/
+.env
