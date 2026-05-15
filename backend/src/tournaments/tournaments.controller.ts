@@ -55,4 +55,17 @@ export class TournamentsController {
   ) {
     return this.tournamentsService.remove(id, user);
   }
+
+  @Patch(':id/cancel')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Екстрено скасувати турнір (закриває всі незіграні матчі)',
+  })
+  cancelTournament(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.tournamentsService.cancelTournament(id, user);
+  }
 }

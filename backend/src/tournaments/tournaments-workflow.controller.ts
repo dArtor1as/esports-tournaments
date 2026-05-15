@@ -41,17 +41,17 @@ export class TournamentsWorkflowController {
   @ApiQuery({
     name: 'status',
     required: false,
-    enum: ['planned', 'live', 'finished'],
+    enum: ['planned', 'live', 'finished', 'cancelled'],
   })
   findWorkflow(
-    @Query('workflow') workflow?: WorkflowMode, // Строга типізація TS
-    @Query('status') status?: TournamentStatus, // Строга типізація TS
+    @Query('workflow') workflow?: WorkflowMode,
+    @Query('status') status?: TournamentStatus,
   ) {
     return this.workflowService.findWorkflow(workflow, status);
   }
 
   @Post('generate-test')
-  @Throttle({ heavy: { limit: 3, ttl: 60000 } }) // Повернули ліміт
+  @Throttle({ heavy: { limit: 3, ttl: 60000 } })
   @ApiOperation({ summary: 'Згенерувати тестовий турнір з командами' })
   generateTestTournament(
     @Body() dto: GenerateTestTournamentDto,

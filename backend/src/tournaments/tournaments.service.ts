@@ -85,6 +85,50 @@ export class TournamentsService {
     return updatedTournament;
   }
 
+  //  Скасування LIVE турніру
+  async cancelTournament(id: string, user: JwtPayload) {
+    const tournament = await this.prisma.tournament.findUnique({
+      where: { id },
+    });
+    if (!tournament) throw new NotFoundException('Турнір не знайдено');
+
+    this.accessPolicy.checkTournamentCreatorOrAdmin(tournament.creatorId, user);
+
+    if (tournament.status === 'finished' || tournament.status === 'cancelled') {
+      throw new BadRequestException('Турнір вже завершено або скасовано');
+    }
+
+    await this.prisma.$transaction(async (prismaTx) => {
+      // 1. Анулюємо всі матчі, які ще не були зіграні
+      await prismaTx.match.updateMany({
+        where: {
+          tournamentId: id,
+          isProcessed: false,
+          matchStatus: { not: 'COMPLETED' }, // <--- РЯТІВНИЙ ФІЛЬТР
+        },
+        data: {
+          scoreA: 0,
+          scoreB: 0,
+          isProcessed: true,
+          matchStatus: 'CANCELLED', // Позначаємо їх як скасовані
+          stats: Prisma.JsonNull,
+          details: Prisma.JsonNull,
+        },
+      });
+
+      // 2. Ставимо турніру статус "cancelled"
+      await prismaTx.tournament.update({
+        where: { id },
+        data: { status: 'cancelled' },
+      });
+    });
+
+    await this.cacheManager.del('all_tournaments');
+    return {
+      message: 'Турнір скасовано. Всі незіграні матчі анульовано без змін Elo.',
+    };
+  }
+
   async remove(id: string, user: JwtPayload) {
     const tournament = await this.prisma.tournament.findUnique({
       where: { id },

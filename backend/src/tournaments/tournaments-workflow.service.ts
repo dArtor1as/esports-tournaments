@@ -112,7 +112,12 @@ export class TournamentsWorkflowService {
 
   async findWorkflow(workflow?: string, status?: string) {
     const allowedWorkflows: WorkflowMode[] = ['generation', 'simulation'];
-    const allowedStatuses: TournamentStatus[] = ['planned', 'live', 'finished'];
+    const allowedStatuses: TournamentStatus[] = [
+      'planned',
+      'live',
+      'finished',
+      'cancelled',
+    ];
 
     if (workflow && !allowedWorkflows.includes(workflow as WorkflowMode)) {
       throw new BadRequestException('Невірний параметр workflow.');
