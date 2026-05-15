@@ -22,6 +22,8 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { StatsModule } from './stats/stats.module';
 import { LeaderboardsModule } from './leaderboards/leaderboards.module';
+import { LoggerModule } from './logger/json-logger.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -76,6 +78,8 @@ import { LeaderboardsModule } from './leaderboards/leaderboards.module';
     MailModule,
     StatsModule,
     LeaderboardsModule,
+    LoggerModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [
