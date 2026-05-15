@@ -47,7 +47,6 @@ export class TournamentsService {
         isPublic: createTournamentDto.isPublic,
       },
     });
-    await this.cacheManager.del('all_tournaments'); // Очищаємо кеш при створенні нового турніру
 
     return createdTournament;
   }
@@ -80,8 +79,6 @@ export class TournamentsService {
       data: updateTournamentDto as unknown as Prisma.TournamentUpdateInput,
     });
 
-    await this.cacheManager.del('all_tournaments'); // Очищаємо кеш при оновленні турніру
-
     return updatedTournament;
   }
 
@@ -104,7 +101,7 @@ export class TournamentsService {
         where: {
           tournamentId: id,
           isProcessed: false,
-          matchStatus: { not: 'COMPLETED' }, // <--- РЯТІВНИЙ ФІЛЬТР
+          matchStatus: { not: 'COMPLETED' },
         },
         data: {
           scoreA: 0,
@@ -123,7 +120,6 @@ export class TournamentsService {
       });
     });
 
-    await this.cacheManager.del('all_tournaments');
     return {
       message: 'Турнір скасовано. Всі незіграні матчі анульовано без змін Elo.',
     };
@@ -149,8 +145,6 @@ export class TournamentsService {
     const deletedTournament = await this.prisma.tournament.delete({
       where: { id },
     });
-
-    await this.cacheManager.del('all_tournaments'); // Очищаємо кеш при видаленні турніру
 
     return deletedTournament;
   }
