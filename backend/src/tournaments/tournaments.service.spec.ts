@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { TournamentsService } from './tournaments.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { Stage } from '@prisma/client';
+import { TournamentsWorkflowService } from './tournaments-workflow.service';
 
-describe('TournamentsService', () => {
-  let service: TournamentsService;
+describe('TournamentsWorkflowService', () => {
+  let service: TournamentsWorkflowService;
   const prismaMock = {
     $transaction: jest.fn(),
     game: { findUnique: jest.fn() },
@@ -29,12 +29,14 @@ describe('TournamentsService', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        TournamentsService,
+        TournamentsWorkflowService,
         { provide: PrismaService, useValue: prismaMock },
       ],
     }).compile();
 
-    service = module.get<TournamentsService>(TournamentsService);
+    service = module.get<TournamentsWorkflowService>(
+      TournamentsWorkflowService,
+    );
     jest.clearAllMocks();
   });
 

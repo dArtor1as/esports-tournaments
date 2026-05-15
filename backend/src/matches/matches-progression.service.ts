@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma, Stage } from '@prisma/client';
+import { Prisma, Stage, Match } from '@prisma/client';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 
@@ -17,7 +17,7 @@ export class MatchesProgressionService {
   // метод для безпечного завершення матчу і просування по сітці
   public async finalizeMatchProgression(
     prismaTx: Prisma.TransactionClient,
-    match: any,
+    match: Match,
     scoreA: number,
     scoreB: number,
   ) {

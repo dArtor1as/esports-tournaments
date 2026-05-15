@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { ValidationPipe, ConsoleLogger } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { JsonLoggerService } from './logger/json-logger.service';
 
 async function bootstrap() {
@@ -24,12 +24,8 @@ async function bootstrap() {
     process.exit(1);
   });
 
-  process.on('unhandledRejection', (reason, promise) => {
-    jsonLogger.error(
-      `Unhandled Rejection at: ${promise}, reason: ${reason}`,
-      '',
-      'Process',
-    );
+  process.on('unhandledRejection', (reason) => {
+    jsonLogger.error(`Unhandled Rejection, reason: ${reason}`, '', 'Process');
   });
 
   // 2. Плавне завершення роботи (Graceful Shutdown)
@@ -42,8 +38,12 @@ async function bootstrap() {
     process.exit(0);
   };
 
-  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  process.on('SIGTERM', () => {
+    void gracefulShutdown('SIGTERM');
+  });
+  process.on('SIGINT', () => {
+    void gracefulShutdown('SIGINT');
+  });
 
   // 3. Налаштування CORS для майбутнього фронтенду
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -80,4 +80,6 @@ async function bootstrap() {
   jsonLogger.log(`Application is running on: http://localhost:3000`);
   jsonLogger.log(`Swagger is running on: http://localhost:3000/api`);
 }
-bootstrap();
+bootstrap().catch((err) => {
+  console.error('Помилка під час запуску:', err);
+});

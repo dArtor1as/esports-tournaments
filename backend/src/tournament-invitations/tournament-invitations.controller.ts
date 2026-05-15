@@ -18,8 +18,6 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { Throttle } from '@nestjs/throttler';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { RolesGuard } from '../auth/roles.guard';
 
 @ApiTags('Tournament Invitations (Запрошення на турнір)')
 @Controller('tournament-invitations')
