@@ -1,12 +1,10 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Stage } from '@prisma/client';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
+import { PaginationQueryDto } from 'common/dto/pagination-query.dto';
+import { paginate } from 'common/utils/paginate.util';
 
 @Injectable()
 export class MatchesQueryService {
@@ -63,16 +61,18 @@ export class MatchesQueryService {
 
   // 4. Панель Адміністратора: Конфліктні матчі (Disputed Matches)
   // 4a. ГЛОБАЛЬНІ диспути (Тільки для Адмінів платформи)
-  async getAllDisputedMatches() {
-    return this.prisma.match.findMany({
-      where: { matchStatus: 'DISPUTED' },
-      include: {
+  async getAllDisputedMatches(query: PaginationQueryDto) {
+    return paginate(
+      this.prisma.match,
+      { matchStatus: 'DISPUTED' },
+      query,
+      {
         tournament: { select: { title: true, creatorId: true } },
         teamA: { select: { name: true, tag: true } },
         teamB: { select: { name: true, tag: true } },
       },
-      orderBy: { playedAt: 'asc' },
-    });
+      { playedAt: 'asc' },
+    );
   }
 
   // 4b. ЛОКАЛЬНІ диспути (Для Організатора конкретного турніру)
@@ -98,6 +98,54 @@ export class MatchesQueryService {
       },
       orderBy: { playedAt: 'asc' },
     });
+  }
+
+  //  Історія матчів команди (для профілю команди)
+  async getTeamMatchesHistory(teamId: string, query: PaginationQueryDto) {
+    return paginate(
+      this.prisma.match,
+      {
+        isProcessed: true, // Тільки завершені матчі
+        OR: [{ teamAId: teamId }, { teamBId: teamId }],
+      },
+      query,
+      {
+        tournament: {
+          select: { title: true, tier: true, game: { select: { slug: true } } },
+        },
+        teamA: { select: { id: true, name: true, tag: true, logoUrl: true } },
+        teamB: { select: { id: true, name: true, tag: true, logoUrl: true } },
+      },
+      { playedAt: 'desc' }, // Найновіші зверху
+    );
+  }
+
+  //   Історія матчів ГРАВЦЯ (для профілю гравця)
+  async getPlayerMatchesHistory(playerId: string, query: PaginationQueryDto) {
+    // Шукаємо матчі, де гравець був у ростері команди під час турніру
+    // Це трохи складніший запит, але Prisma з ним впорається
+    return paginate(
+      this.prisma.match,
+      {
+        isProcessed: true,
+        tournament: {
+          participants: {
+            some: {
+              tournamentRosters: { some: { playerId: playerId } },
+            },
+          },
+        },
+      },
+      query,
+      {
+        tournament: {
+          select: { title: true, tier: true, game: { select: { slug: true } } },
+        },
+        teamA: { select: { id: true, name: true, tag: true, logoUrl: true } },
+        teamB: { select: { id: true, name: true, tag: true, logoUrl: true } },
+      },
+      { playedAt: 'desc' },
+    );
   }
 
   // метод отримання сітки матчів для турніру (для сторінки турніру)
