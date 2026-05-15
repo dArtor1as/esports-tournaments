@@ -60,6 +60,7 @@ export class UsersService {
         email: true,
         role: true,
         countryCode: true,
+        birthDate: true,
         // Можна додати короткий список профілів
         players: {
           select: { id: true, gameId: true, nickname: true },

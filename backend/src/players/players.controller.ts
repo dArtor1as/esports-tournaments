@@ -19,6 +19,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
 import { TeamTransfersService } from '../teams/team-transfers.service';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('Players (Ігрові профілі)') // Назва розділу в Swagger
 @Controller('players')
@@ -51,6 +52,7 @@ export class PlayersController {
   }
 
   @Get('me')
+  @Throttle({ default: { limit: 200, ttl: 60000 } })
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Отримати всі ігрові профілі поточного юзера' })
@@ -59,6 +61,7 @@ export class PlayersController {
   }
 
   @Get(':id')
+  @Throttle({ default: { limit: 200, ttl: 60000 } })
   @ApiOperation({ summary: 'Отримати деталі конкретного гравця за ID' })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.playersService.findOne(id);
