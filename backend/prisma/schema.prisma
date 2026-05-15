@@ -69,6 +69,7 @@ enum MatchStatus {
   REPORTED       // Один капітан вніс рахунок, очікує підтвердження
   DISPUTED       // Інший капітан не згоден (Конфлікт)
   COMPLETED      // Рахунок підтверджено (або закрито адміном)
+  CANCELLED      // Матч скасовано
 }
 
 // ------------------------------------------------------
@@ -202,6 +203,10 @@ model Tournament {
   status       String   @default("planned") // planned, live, finished
   format TournamentFormat @default(TEAM)
   maxParticipants Int     @default(16)
+
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   isPublic     Boolean  @default(true) // тип реєстрації: true = відкрита, false = за інвайтами
   
