@@ -83,6 +83,7 @@ model User {
   passwordHash String
   role         Role     @default(USER)
   createdAt    DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   birthDate    DateTime? 
   countryCode  String?   // Наприклад: "UA", "PL", "US"
@@ -104,6 +105,9 @@ model Player {
   teamId    String?
   team      Team?    @relation("TeamPlayers", fields: [teamId], references: [id])
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   captainedTeams Team[]  @relation("TeamCaptain")
   teamTransfers TeamTransfer[]
 
@@ -112,7 +116,6 @@ model Player {
   
   inGameRole String? // Наприклад: "SNIPER", "IGL", "POS_1", "POS_5"
   stats Json? // Додаткові статистичні дані (кількість ігор, K/D, улюблені герої тощо)
-  
 
   @@unique([userId, gameId]) // Юзер не може мати два профілі для однієї ігри!
   @@index([rating])
@@ -137,6 +140,9 @@ model Team {
   isComplete    Boolean  @default(false) // Чи укомплектована команда (5 гравців для CS2)
   gameId        String
   game          Game     @relation(fields: [gameId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   //унІкальні назва та тег в межах однієї гри (щоб уникнути плутанини між командами різних ігор)
   @@unique([name, gameId]) 
   @@unique([tag, gameId])  
@@ -181,6 +187,9 @@ model Game {
   name        String       // "Counter-Strike 2"
   slug        String       @unique // "cs2"
   minTeamSize Int          @default(5)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   teams       Team[]
   players Player[]
   tournaments Tournament[]
@@ -250,6 +259,9 @@ model TournamentParticipant {
   joinedStage  Stage      // На якому етапі команда приєдналася (CQ або GROUP)
   seed         Int        // Номер посіву (1-16)
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@unique([tournamentId, teamId]) // Команда не може бути зареєстрована двічі
   tournamentRosters TournamentRoster[]
 }
@@ -277,8 +289,10 @@ model Match {
   details      Json?      // Мапи, піки, бани
   stats        Json?      //  Статистика гравців (Kills, Deaths, GPM, XPM)
 
-
   matchStatus    MatchStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Поля для системи консенсусу
   reportedScoreA Int?
@@ -318,6 +332,8 @@ model TournamentInvitation {
   status       InviteStatus @default(PENDING)
   token        String       @unique 
   expiresAt    DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 //  Інвайти від Команди до Гравця (Юзера)
@@ -332,6 +348,7 @@ model TeamInvitation {
   token     String       @unique 
   expiresAt DateTime
   createdAt DateTime     @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([teamId, userId]) // Захист від спаму інвайтами
 }
@@ -345,6 +362,9 @@ model TournamentRoster {
   player         Player                @relation(fields: [playerId], references: [id])
   
   role           RosterRole            @default(PLAYER)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([participantId, playerId]) // Один гравець не може бути двічі в одному складі
 }
