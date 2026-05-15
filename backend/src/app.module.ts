@@ -42,24 +42,8 @@ import { HealthModule } from './health/health.module';
     }),
     ThrottlerModule.forRoot([
       {
-        name: 'default',
         ttl: 60000,
-        limit: 100, // 100 запитів на хвилину
-      },
-      {
-        name: 'auth',
-        ttl: 60000,
-        limit: 10, // 10 запитів на хвилину для авторизації
-      },
-      {
-        name: 'invitations',
-        ttl: 60000,
-        limit: 5, // 5 запитів на хвилину для запрошень (щоб уникнути спаму)
-      },
-      {
-        name: 'heavy',
-        ttl: 60000,
-        limit: 3, // 3 запити на хвилину для симуляцій/генерацій
+        limit: 100,
       },
     ]),
     PrismaModule,

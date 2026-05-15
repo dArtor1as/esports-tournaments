@@ -10,7 +10,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login')
-  @Throttle({ auth: { limit: 5, ttl: 60000 } })
+  @Throttle({ default: { limit: 5, ttl: 30000 } })
   @ApiOperation({ summary: 'Увійти в систему (отримати JWT)' })
   login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
