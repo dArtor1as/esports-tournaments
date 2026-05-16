@@ -39,6 +39,10 @@ export class UsersService {
         email: createUserDto.email,
         passwordHash: hashedPassword,
         role: createUserDto.role || 'USER',
+        countryCode: createUserDto.countryCode?.toUpperCase(),
+        birthDate: createUserDto.birthDate
+          ? new Date(createUserDto.birthDate)
+          : undefined,
       },
       select: {
         id: true,
@@ -46,6 +50,8 @@ export class UsersService {
         email: true,
         role: true,
         createdAt: true,
+        countryCode: true,
+        birthDate: true,
       },
     });
 

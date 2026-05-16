@@ -1,4 +1,4 @@
-import { Outlet, Link } from "react-router-dom";
+import { Outlet, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { UserCircle } from "lucide-react";
@@ -6,6 +6,12 @@ import { Toaster } from "@/components/ui/sonner";
 
 export default function MainLayout() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/"); // Примусово викидаємо на головну
+  };
 
   return (
     <div className="min-h-screen bg-esports-dark text-white">
@@ -57,7 +63,7 @@ export default function MainLayout() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={logout}
+                  onClick={handleLogout}
                   className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
                 >
                   Вийти

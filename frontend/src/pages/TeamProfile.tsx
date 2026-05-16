@@ -85,10 +85,10 @@ export default function TeamProfile() {
     <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500">
       <Button
         variant="ghost"
-        onClick={() => navigate("/teams")}
+        onClick={() => navigate(-1)}
         className="text-slate-400 hover:text-white mb-2"
       >
-        <ArrowLeft size={16} className="mr-2" /> До списку команд
+        <ArrowLeft size={16} className="mr-2" /> Назад
       </Button>
 
       <TeamHeader

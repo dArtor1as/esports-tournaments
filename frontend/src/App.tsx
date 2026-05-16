@@ -8,6 +8,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Teams from "./pages/Teams";
 import TeamProfile from "./pages/TeamProfile";
 import AcceptTeamInvite from "./pages/AcceptTeamInvite";
+import Register from "./pages/Register";
 
 const Home = () => (
   <div>
@@ -26,6 +27,7 @@ function App() {
           <Route path="/" element={<MainLayout />}>
             <Route index element={<Home />} />
             <Route path="login" element={<Login />} />
+            <Route path="register" element={<Register />} />
             <Route path="player/:id" element={<PlayerStats />} />
             <Route path="teams" element={<Teams />} />
             <Route path="team/:id" element={<TeamProfile />} />
