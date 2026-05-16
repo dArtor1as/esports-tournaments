@@ -2,6 +2,7 @@ import { Outlet, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { UserCircle } from "lucide-react";
+import { Toaster } from "@/components/ui/sonner";
 
 export default function MainLayout() {
   const { user, logout } = useAuth();
@@ -76,6 +77,7 @@ export default function MainLayout() {
       <main className="container mx-auto px-4 py-8">
         <Outlet />
       </main>
+      <Toaster theme="dark" position="bottom-right" richColors />
     </div>
   );
 }
