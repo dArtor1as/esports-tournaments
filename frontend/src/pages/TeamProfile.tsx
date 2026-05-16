@@ -18,6 +18,9 @@ import {
 } from "lucide-react";
 import InvitePlayerModal from "@/components/InvitePlayerModal";
 import EloRatingChart from "@/components/EloRatingChart";
+import ConfirmModal from "@/components/ConfirmModal";
+import TransferLeadershipModal from "@/components/TransferLeadershipModal";
+import { LogOut } from "lucide-react";
 
 export default function TeamProfile() {
   const { id } = useParams<{ id: string }>();
@@ -92,23 +95,30 @@ export default function TeamProfile() {
   );
 
   const handleDisband = async () => {
-    if (!window.confirm("УВАГА! Це безповоротно видалить команду. Продовжити?"))
-      return;
     try {
       await api.delete(`/teams/${id}`);
       navigate("/teams");
     } catch (err: any) {
-      alert(err.response?.data?.message || "Помилка при видаленні");
+      console.error(err);
     }
   };
 
   const handleKick = async (playerId: string) => {
-    if (!window.confirm("Вилучити гравця зі складу?")) return;
     try {
       await api.delete(`/teams/${id}/kick/${playerId}`);
       queryClient.invalidateQueries({ queryKey: ["teamProfile", id] });
     } catch (err: any) {
-      alert(err.response?.data?.message || "Помилка при виключенні");
+      console.error(err);
+    }
+  };
+
+  const handleLeave = async (playerId: string) => {
+    try {
+      await api.delete(`/teams/${id}/leave/${playerId}`);
+      queryClient.invalidateQueries({ queryKey: ["teamProfile", id] });
+      navigate("/");
+    } catch (err: any) {
+      console.error(err);
     }
   };
 
@@ -168,14 +178,32 @@ export default function TeamProfile() {
           </div>
         </div>
 
+        {/* ПАНЕЛЬ КЕРУВАННЯ КОМАНДОЮ ДЛЯ КАПІТАНА */}
         {isCaptain && (
-          <Button
-            onClick={handleDisband}
-            variant="ghost"
-            className="text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/20 text-xs font-bold"
-          >
-            <Trash2 size={14} className="mr-1.5" /> Розформувати команду
-          </Button>
+          <div className="flex flex-col gap-2">
+            <TransferLeadershipModal
+              teamId={team.id}
+              players={team.players}
+              currentCaptainId={team.captainId}
+              onSuccess={() =>
+                queryClient.invalidateQueries({ queryKey: ["teamProfile", id] })
+              }
+            />
+
+            <ConfirmModal
+              title="Розформувати команду?"
+              description="Ця дія безповоротно видалить команду та звільнить усіх гравців у статус вільних агентів."
+              onConfirm={handleDisband}
+              confirmText="Розформувати"
+            >
+              <Button
+                variant="ghost"
+                className="text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/20 text-xs font-bold w-full"
+              >
+                <Trash2 size={14} className="mr-1.5" /> Розформувати
+              </Button>
+            </ConfirmModal>
+          </div>
         )}
       </div>
 
@@ -283,14 +311,19 @@ export default function TeamProfile() {
                   onClick={() => navigate(`/player/${player.id}`)}
                   className="w-[160px] h-[210px] bg-slate-950 border border-slate-800 rounded-xl overflow-hidden relative cursor-pointer group hover:border-esports-primary hover:scale-[1.03] transition-all duration-300 shadow-md flex flex-col justify-between"
                 >
+                  {/* Капітанська корона */}
                   {isPlayerCaptain && (
                     <div className="absolute top-2 left-2 z-20 bg-esports-accent/90 p-1 rounded shadow-md">
                       <Crown size={12} className="text-black" />
                     </div>
                   )}
+
+                  {/* Показник ELO */}
                   <div className="absolute top-2 right-2 z-20 bg-slate-900/90 border border-slate-800/60 px-1.5 py-0.5 rounded text-[10px] font-black text-yellow-400">
                     {player.rating}
                   </div>
+
+                  {/* Аватар та Нікнейм */}
                   <div className="w-full flex-1 flex items-center justify-center bg-gradient-to-b from-slate-900 to-slate-950 pt-6 relative">
                     <User
                       size={85}
@@ -303,6 +336,8 @@ export default function TeamProfile() {
                       </p>
                     </div>
                   </div>
+
+                  {/* ПІДВАЛ КАРТКИ (Прапор, Роль та Кнопки Дій) */}
                   <div className="bg-slate-900 p-2 flex items-center justify-between gap-1 border-t border-slate-800/60 h-9">
                     <div className="flex items-center gap-1.5 min-w-0">
                       {player.user?.countryCode ? (
@@ -319,17 +354,45 @@ export default function TeamProfile() {
                         {player.inGameRole || "Player"}
                       </span>
                     </div>
-                    {isCaptain && !isPlayerCaptain && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleKick(player.id);
-                        }}
-                        className="text-red-500 hover:text-red-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    )}
+
+                    {/* КОНТЕЙНЕР ДЛЯ КНОПОК ДІЙ */}
+                    <div className="flex gap-1">
+                      {/* 1. Кнопка ПОКИНУТИ (тільки для самого гравця, якщо він не капітан) */}
+                      {!isCaptain && player.userId === currentUser?.id && (
+                        <ConfirmModal
+                          title="Покинути команду?"
+                          description="Ви перейдете в статус вільного агента і втратите доступ до матчів цієї команди."
+                          onConfirm={() => handleLeave(player.id)}
+                          confirmText="Покинути"
+                        >
+                          <button
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-orange-500 hover:text-orange-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity rounded hover:bg-orange-500/10"
+                            title="Покинути команду"
+                          >
+                            <LogOut size={14} />
+                          </button>
+                        </ConfirmModal>
+                      )}
+
+                      {/* 2. Кнопка КІКНУТИ (тільки для капітана, і не на самого себе) */}
+                      {isCaptain && !isPlayerCaptain && (
+                        <ConfirmModal
+                          title="Вилучити гравця?"
+                          description={`Ви впевнені, що хочете перевести ${player.nickname} у статус вільного агента?`}
+                          onConfirm={() => handleKick(player.id)}
+                          confirmText="Вилучити"
+                        >
+                          <button
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-red-500 hover:text-red-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity rounded hover:bg-red-500/10"
+                            title="Виключити з команди"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </ConfirmModal>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -448,14 +511,21 @@ export default function TeamProfile() {
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <span
-                          className={`w-2 h-2 rounded-full ${isWin ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" : "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"}`}
+                          className={`w-2 h-2 rounded-full flex-shrink-0 ${isWin ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" : "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"}`}
                         />
                         <span className="font-black text-white truncate text-sm">
-                          vs{" "}
+                          {/* Додали тег нашої команди */}
+                          <span className="text-slate-500 font-normal">
+                            [{team.tag}]
+                          </span>{" "}
+                          {team.name}
+                          <span className="text-slate-500 font-normal px-1.5 text-xs">
+                            vs
+                          </span>
+                          {oppName || "Unknown Team"}{" "}
                           <span className="text-slate-500 font-normal">
                             [{oppTag || "TBD"}]
-                          </span>{" "}
-                          {oppName || "Unknown Team"}
+                          </span>
                         </span>
                       </div>
                       <div className="flex items-center gap-6">

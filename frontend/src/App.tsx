@@ -7,6 +7,7 @@ import PlayerStats from "./pages/PlayerStats";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Teams from "./pages/Teams";
 import TeamProfile from "./pages/TeamProfile";
+import AcceptTeamInvite from "./pages/AcceptTeamInvite";
 
 const Home = () => (
   <div>
@@ -32,6 +33,7 @@ function App() {
             {/* Тільки для залогінених користувачів */}
             <Route element={<ProtectedRoute />}>
               <Route path="profile/:id" element={<Profile />} />
+              <Route path="invite/team" element={<AcceptTeamInvite />} />
             </Route>
           </Route>
         </Routes>

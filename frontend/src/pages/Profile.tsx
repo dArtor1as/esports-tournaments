@@ -213,31 +213,39 @@ export default function Profile() {
                   </div>
 
                   <div className="p-3 bg-slate-800/40 rounded-lg border border-slate-800/60 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-2 truncate">
+                    <div className="flex items-center gap-2 truncate w-full">
                       <Shield
                         size={16}
                         className="text-slate-500 flex-shrink-0"
                       />
                       {player.team ? (
-                        <div className="font-bold text-esports-light flex items-center gap-2 truncate">
-                          <span className="text-slate-500 font-normal">
+                        // ТУТ МИ РОБИМО КОМАНДУ КЛІКАБЕЛЬНОЮ З ВЛАСНИМ ХОВЕРОМ
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation(); // Зупиняємо перехід на сторінку гравця
+                            navigate(`/team/${player.team.id}`); // Переходимо на сторінку команди
+                          }}
+                          className="font-bold text-esports-light flex items-center gap-2 truncate cursor-pointer hover:text-esports-accent hover:bg-slate-800/80 px-2 py-1 -ml-2 rounded transition-colors w-full"
+                        >
+                          <span className="text-slate-500 font-normal group-hover/team:text-slate-400 transition-colors">
                             [{player.team.tag}]
                           </span>
                           <span className="truncate">{player.team.name}</span>
                         </div>
                       ) : (
-                        <div className="text-sm italic text-esports-muted">
+                        <div className="text-sm italic text-esports-muted px-2 py-1 w-full">
                           Вільний агент
                         </div>
                       )}
                     </div>
-
-                    {/* КНОПКА СТВОРЕННЯ КОМАНДИ ВСЕРЕДИНІ КАРТКИ ВІЛЬНОГО АГЕНТА */}
+                    {/* КНОПКА СТВОРЕННЯ КОМАНДИ */}
                     {!player.team && isMyProfile && (
-                      <CreateTeamModal
-                        player={player}
-                        onSuccess={refreshData}
-                      />
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <CreateTeamModal
+                          player={player}
+                          onSuccess={refreshData}
+                        />
+                      </div>
                     )}
                   </div>
 

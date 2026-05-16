@@ -19,7 +19,7 @@ interface InvitePlayerModalProps {
 
 export default function InvitePlayerModal({ teamId }: InvitePlayerModalProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [userId, setUserId] = useState("");
+  const [playerNickname, setPlayerNickname] = useState("");
   const [loading, setLoading] = useState(false);
   const [inviteToken, setInviteToken] = useState("");
   const [error, setError] = useState("");
@@ -31,16 +31,16 @@ export default function InvitePlayerModal({ teamId }: InvitePlayerModalProps) {
     setInviteToken("");
 
     try {
-      // Виклик POST /team-invitations
+      // Відправляємо playerNickname
       const response = await api.post("/team-invitations", {
         teamId,
-        userId: userId.trim(),
+        playerNickname: playerNickname.trim(),
       });
       setInviteToken(response.data.token);
     } catch (err: any) {
       setError(
         err.response?.data?.message ||
-          "Не вдалося створити запрошення. Перевірте UUID користувача.",
+          "Не вдалося створити запрошення. Перевірте логін.",
       );
     } finally {
       setLoading(false);
@@ -54,7 +54,7 @@ export default function InvitePlayerModal({ teamId }: InvitePlayerModalProps) {
         setIsOpen(val);
         if (!val) {
           setInviteToken("");
-          setUserId("");
+          setPlayerNickname("");
         }
       }}
     >
@@ -63,26 +63,27 @@ export default function InvitePlayerModal({ teamId }: InvitePlayerModalProps) {
           <UserPlus size={14} className="mr-1.5" /> Запросити гравця
         </Button>
       </DialogTrigger>
-      <DialogContent className="bg-slate-900 border-slate-700 text-white sm:max-w-[450px]">
+      <DialogContent className="bg-slate-900 border-slate-700 text-white sm:max-w-[400px]">
         <DialogHeader>
           <DialogTitle className="text-esports-accent">
             Запросити в команду
           </DialogTitle>
           <DialogDescription className="text-slate-400">
-            Введіть унікальний UUID користувача (User ID), щоб згенерувати
-            інвайт-код.
+            Введіть{" "}
+            <span className="text-white font-bold">логін (playerNickname)</span>{" "}
+            користувача, щоб згенерувати для нього інвайт.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleGenerateInvite} className="space-y-4 mt-2">
           <div className="space-y-2">
-            <Label>UUID Користувача</Label>
+            <Label>Логін (playerNickname) гравця</Label>
             <Input
               required
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-              className="bg-slate-800 border-slate-700 text-white font-mono text-sm"
+              value={playerNickname}
+              onChange={(e) => setPlayerNickname(e.target.value)}
+              placeholder="Наприклад: s1mple"
+              className="bg-slate-800 border-slate-700 text-white font-medium"
             />
           </div>
 
@@ -94,22 +95,21 @@ export default function InvitePlayerModal({ teamId }: InvitePlayerModalProps) {
               type="submit"
               className="w-full bg-esports-primary text-white font-bold"
             >
-              {loading ? "Генерація..." : "Створити інвайт токен"}
+              {loading ? "Пошук гравця..." : "Згенерувати інвайт"}
             </Button>
           )}
         </form>
 
         {inviteToken && (
-          <div className="mt-4 p-3 bg-slate-950 border border-slate-800 rounded-lg space-y-2">
+          <div className="mt-4 p-3 bg-slate-950 border border-slate-800 rounded-lg space-y-2 animate-in fade-in zoom-in duration-300">
             <p className="text-xs font-bold text-green-400 uppercase tracking-wider">
-              Токен успішно згенеровано:
+              Гравця знайдено! Токен згенеровано:
             </p>
             <div className="bg-slate-900 p-2 rounded border border-slate-700 font-mono text-xs select-all text-center text-esports-light">
               {inviteToken}
             </div>
             <p className="text-[10px] text-slate-500">
-              Передайте цей токен гравцю. Він зможе прийняти його через API або
-              інтерфейс інвайтів.
+              Надішліть цей токен гравцю, щоб він міг приєднатися до ростера.
             </p>
           </div>
         )}
