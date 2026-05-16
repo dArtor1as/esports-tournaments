@@ -116,8 +116,13 @@ export default function CreatePlayerModal({
 
           <div className="space-y-2">
             <Label>Ігрова роль</Label>
-            <Select value={inGameRole} onValueChange={setInGameRole}>
-              <SelectTrigger className="bg-slate-800 border-slate-700">
+            {/* Додаємо унікальний key, щоб Select повністю скидався при зміні дисципліни */}
+            <Select
+              key={gameSlug}
+              value={inGameRole}
+              onValueChange={setInGameRole}
+            >
+              <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
                 <SelectValue placeholder="Оберіть роль" />
               </SelectTrigger>
               <SelectContent className="bg-slate-800 border-slate-700 text-white">

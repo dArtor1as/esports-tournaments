@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { UserCircle, Trophy, Shield, Swords, ArrowRight } from "lucide-react";
 import CreatePlayerModal from "@/components/CreatePlayerModal";
 import EditProfileModal from "@/components/EditProfileModal";
+import EditPlayerModal from "@/components/EditPlayerModal";
 // ХЕЛПЕР ДЛЯ ВІКУ
 const calculateAge = (dateString?: string) => {
   if (!dateString) return null;
@@ -174,11 +175,23 @@ export default function Profile() {
                         {player.game.name}
                       </CardDescription>
                     </div>
-                    {player.inGameRole && (
-                      <Badge className="bg-esports-accent text-black font-black border-none px-3 py-1 text-xs">
-                        {player.inGameRole}
-                      </Badge>
-                    )}
+
+                    {/* Контейнер для ролі та кнопки налаштувань */}
+                    <div className="flex items-center gap-2">
+                      {player.inGameRole && (
+                        <Badge className="bg-esports-accent text-black font-black border-none px-3 py-1 text-xs">
+                          {player.inGameRole}
+                        </Badge>
+                      )}
+
+                      {/* Показуємо кнопку редагування ТІЛЬКИ якщо це наш профіль */}
+                      {isMyProfile && (
+                        <EditPlayerModal
+                          player={player}
+                          onSuccess={refreshData}
+                        />
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
 

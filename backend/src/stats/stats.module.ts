@@ -8,9 +8,10 @@ import { StatsAnalyticsService } from './stats-analytics.service';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
 import { EloCalculatorService } from './elo-calculator.service';
 import { PlayerStatsAggregatorService } from './player-stats-aggregator.service';
+import { AnalyticsController } from './analytics.controller';
 
 @Module({
-  controllers: [StatsController],
+  controllers: [StatsController, AnalyticsController],
   providers: [
     StatsService,
     PrismaService,
