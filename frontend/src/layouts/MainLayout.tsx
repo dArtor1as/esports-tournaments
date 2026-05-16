@@ -31,6 +31,12 @@ export default function MainLayout() {
             >
               Рейтинги
             </Link>
+            <Link
+              to="/teams"
+              className="text-esports-light hover:text-esports-accent transition"
+            >
+              Команди
+            </Link>
 
             {user ? (
               <div className="flex items-center gap-4 ml-4 pl-6 border-l border-slate-700">

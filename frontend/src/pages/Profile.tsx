@@ -14,6 +14,7 @@ import { UserCircle, Trophy, Shield, Swords, ArrowRight } from "lucide-react";
 import CreatePlayerModal from "@/components/CreatePlayerModal";
 import EditProfileModal from "@/components/EditProfileModal";
 import EditPlayerModal from "@/components/EditPlayerModal";
+import CreateTeamModal from "@/components/CreateTeamModal";
 // ХЕЛПЕР ДЛЯ ВІКУ
 const calculateAge = (dateString?: string) => {
   if (!dateString) return null;
@@ -211,22 +212,32 @@ export default function Profile() {
                     </div>
                   </div>
 
-                  <div className="p-3 bg-slate-800/40 rounded-lg border border-slate-800/60 flex items-center">
-                    <Shield
-                      size={16}
-                      className="text-slate-500 mr-2 flex-shrink-0"
-                    />
-                    {player.team ? (
-                      <div className="font-bold text-esports-light flex items-center gap-2 truncate">
-                        <span className="text-slate-500 font-normal">
-                          [{player.team.tag}]
-                        </span>
-                        <span className="truncate">{player.team.name}</span>
-                      </div>
-                    ) : (
-                      <div className="text-sm italic text-esports-muted">
-                        Вільний агент
-                      </div>
+                  <div className="p-3 bg-slate-800/40 rounded-lg border border-slate-800/60 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2 truncate">
+                      <Shield
+                        size={16}
+                        className="text-slate-500 flex-shrink-0"
+                      />
+                      {player.team ? (
+                        <div className="font-bold text-esports-light flex items-center gap-2 truncate">
+                          <span className="text-slate-500 font-normal">
+                            [{player.team.tag}]
+                          </span>
+                          <span className="truncate">{player.team.name}</span>
+                        </div>
+                      ) : (
+                        <div className="text-sm italic text-esports-muted">
+                          Вільний агент
+                        </div>
+                      )}
+                    </div>
+
+                    {/* КНОПКА СТВОРЕННЯ КОМАНДИ ВСЕРЕДИНІ КАРТКИ ВІЛЬНОГО АГЕНТА */}
+                    {!player.team && isMyProfile && (
+                      <CreateTeamModal
+                        player={player}
+                        onSuccess={refreshData}
+                      />
                     )}
                   </div>
 

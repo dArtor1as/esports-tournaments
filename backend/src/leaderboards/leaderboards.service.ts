@@ -14,9 +14,15 @@ export class LeaderboardsService {
       ...(query.region && { region: query.region }),
     };
 
-    return paginate<Team>(this.prisma.team, whereCondition, query, undefined, {
-      averageRating: 'desc',
-    });
+    return paginate<Team>(
+      this.prisma.team,
+      whereCondition,
+      query,
+      { game: true },
+      {
+        averageRating: 'desc',
+      },
+    );
   }
 
   async getPlayersLeaderboard(query: LeaderboardQueryDto) {

@@ -5,6 +5,7 @@ import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import PlayerStats from "./pages/PlayerStats";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Teams from "./pages/Teams";
 
 const Home = () => (
   <div>
@@ -24,6 +25,7 @@ function App() {
             <Route index element={<Home />} />
             <Route path="login" element={<Login />} />
             <Route path="player/:id" element={<PlayerStats />} />
+            <Route path="teams" element={<Teams />} />
 
             {/* Тільки для залогінених користувачів */}
             <Route element={<ProtectedRoute />}>
