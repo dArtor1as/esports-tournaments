@@ -2,19 +2,13 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../lib/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { UserCircle, Trophy, Shield, Swords, ArrowRight } from "lucide-react";
+import { UserCircle, Swords } from "lucide-react";
 import CreatePlayerModal from "@/components/CreatePlayerModal";
 import EditProfileModal from "@/components/EditProfileModal";
-import EditPlayerModal from "@/components/EditPlayerModal";
-import CreateTeamModal from "@/components/CreateTeamModal";
+import PlayerProfileCard from "@/components/PlayerProfileCard";
+
 // ХЕЛПЕР ДЛЯ ВІКУ
 const calculateAge = (dateString?: string) => {
   if (!dateString) return null;
@@ -55,7 +49,6 @@ export default function Profile() {
   const { data: playerProfiles = [], isLoading: isPlayersLoading } = useQuery({
     queryKey: ["players", id],
     queryFn: async () => {
-      // Поки бекенд підтримує тільки /players/me для себе
       if (!isMyProfile) return [];
       const { data } = await api.get("/players/me");
       return data;
@@ -161,105 +154,12 @@ export default function Profile() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {playerProfiles.map((player: any) => (
-              <Card
+              <PlayerProfileCard
                 key={player.id}
-                onClick={() => navigate(`/player/${player.id}`)}
-                className="bg-slate-900 border-slate-800 text-white transition-all duration-300 shadow-md hover:shadow-xl hover:shadow-esports-primary/20 hover:-translate-y-1 hover:border-esports-primary cursor-pointer group flex flex-col min-h-[220px]"
-              >
-                <CardHeader className="pb-3 flex-none">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-2xl text-white group-hover:text-esports-light transition-colors">
-                        {player.nickname}
-                      </CardTitle>
-                      <CardDescription className="mt-2 inline-block bg-esports-accent/10 border border-esports-accent/20 text-esports-accent uppercase text-sm font-black tracking-widest px-2.5 py-0.5 rounded">
-                        {player.game.name}
-                      </CardDescription>
-                    </div>
-
-                    {/* Контейнер для ролі та кнопки налаштувань */}
-                    <div className="flex items-center gap-2">
-                      {player.inGameRole && (
-                        <Badge className="bg-esports-accent text-black font-black border-none px-3 py-1 text-xs">
-                          {player.inGameRole}
-                        </Badge>
-                      )}
-
-                      {/* Показуємо кнопку редагування ТІЛЬКИ якщо це наш профіль */}
-                      {isMyProfile && (
-                        <EditPlayerModal
-                          player={player}
-                          onSuccess={refreshData}
-                        />
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="space-y-5 flex-grow flex flex-col justify-end">
-                  <div className="flex items-center justify-between p-4 bg-slate-950/80 rounded-xl border border-slate-800/50">
-                    <span className="text-slate-400 font-medium uppercase tracking-wider text-xs">
-                      Рейтинг Elo
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <Trophy
-                        size={24}
-                        className="text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]"
-                      />
-                      <span className="font-black text-3xl text-yellow-400 tracking-tight drop-shadow-[0_0_8px_rgba(250,204,21,0.3)]">
-                        {player.rating}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="p-3 bg-slate-800/40 rounded-lg border border-slate-800/60 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-2 truncate w-full">
-                      <Shield
-                        size={16}
-                        className="text-slate-500 flex-shrink-0"
-                      />
-                      {player.team ? (
-                        // ТУТ МИ РОБИМО КОМАНДУ КЛІКАБЕЛЬНОЮ З ВЛАСНИМ ХОВЕРОМ
-                        <div
-                          onClick={(e) => {
-                            e.stopPropagation(); // Зупиняємо перехід на сторінку гравця
-                            navigate(`/team/${player.team.id}`); // Переходимо на сторінку команди
-                          }}
-                          className="font-bold text-esports-light flex items-center gap-2 truncate cursor-pointer hover:text-esports-accent hover:bg-slate-800/80 px-2 py-1 -ml-2 rounded transition-colors w-full"
-                        >
-                          <span className="text-slate-500 font-normal group-hover/team:text-slate-400 transition-colors">
-                            [{player.team.tag}]
-                          </span>
-                          <span className="truncate">{player.team.name}</span>
-                        </div>
-                      ) : (
-                        <div className="text-sm italic text-esports-muted px-2 py-1 w-full">
-                          Вільний агент
-                        </div>
-                      )}
-                    </div>
-                    {/* КНОПКА СТВОРЕННЯ КОМАНДИ */}
-                    {!player.team && isMyProfile && (
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <CreateTeamModal
-                          player={player}
-                          onSuccess={refreshData}
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="pt-2 flex justify-end">
-                    <span className="text-esports-muted group-hover:text-esports-accent transition-colors text-sm font-semibold flex items-center gap-1">
-                      Повна статистика{" "}
-                      <ArrowRight
-                        size={18}
-                        className="group-hover:translate-x-1 transition-transform"
-                      />
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
+                player={player}
+                isMyProfile={isMyProfile}
+                refreshData={refreshData}
+              />
             ))}
           </div>
         )}
