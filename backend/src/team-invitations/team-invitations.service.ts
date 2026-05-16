@@ -36,36 +36,69 @@ export class TeamInvitationsService {
     // 2. Тільки капітан цієї команди або Адмін можуть надсилати запрошення
     this.accessPolicy.checkCaptainOrAdmin(team.captain.userId, user);
 
-    // 3. Перевіряємо, чи немає вже активного інвайту для цього юзера в цю команду
+    // 3. шукаємо користувача за нікнеймом, щоб отримати його ID для інвайту
+    const targetPlayer = await this.prisma.player.findFirst({
+      where: {
+        nickname: createDto.playerNickname,
+        gameId: team.gameId, // Гравець має бути з тієї ж гри!
+      },
+      include: { user: true }, // Підтягуємо юзера, щоб взяти email
+    });
+
+    if (!targetPlayer) {
+      throw new NotFoundException(
+        `Гравця з нікнеймом "${createDto.playerNickname}" не знайдено`,
+      );
+    }
+
+    // 4. Перевіряємо, чи немає вже активного інвайту для ЦЬОГО користувача
     const existingInvite = await this.prisma.teamInvitation.findUnique({
       where: {
-        teamId_userId: { teamId: createDto.teamId, userId: createDto.userId },
+        teamId_userId: {
+          teamId: createDto.teamId,
+          userId: targetPlayer.userId, // Використовуємо знайдений ID
+        },
       },
     });
 
     if (existingInvite && existingInvite.status === 'PENDING') {
       throw new BadRequestException(
-        'Запрошення вже надіслано і очікує відповіді',
+        'Запрошення вже надіслано цьому користувачу і очікує відповіді',
       );
     }
 
-    // 4. Генеруємо унікальний токен (32 символи)
-    const token = crypto.randomBytes(16).toString('hex');
-
-    // 5. Ставимо термін дії (наприклад, 7 днів від сьогодні)
+    // 5. Генеруємо безпечний токен та термін дії (7 днів)
+    const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
-    const invite = await this.prisma.teamInvitation.create({
-      data: {
-        teamId: createDto.teamId,
-        userId: createDto.userId,
+    // 6. Зберігаємо в базу (оновлюємо старий інвайт або створюємо новий)
+    // Додаємо include, щоб Prisma одразу повернула назву команди та email юзера для листа
+    const invite = await this.prisma.teamInvitation.upsert({
+      where: {
+        teamId_userId: {
+          teamId: createDto.teamId,
+          userId: targetPlayer.userId,
+        },
+      },
+      update: {
+        status: 'PENDING',
         token,
         expiresAt,
       },
-      include: { team: true, user: true },
+      create: {
+        teamId: createDto.teamId,
+        userId: targetPlayer.userId,
+        token,
+        expiresAt,
+      },
+      include: {
+        team: true,
+        user: true,
+      },
     });
-    // 6. Відправляємо листа з посиланням для прийняття запрошення
+
+    // 7. Відправляємо листа з посиланням для прийняття запрошення
     await this.mailService.sendTeamInvite(
       invite.user.email,
       invite.team.name,

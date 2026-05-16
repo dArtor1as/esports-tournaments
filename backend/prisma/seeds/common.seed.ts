@@ -14,6 +14,7 @@ export async function seedCommon(prisma: PrismaClient) {
       passwordHash,
       role: Role.ADMIN,
       birthDate: new Date('2005-05-05'),
+      countryCode: 'UA',
     },
   });
 
