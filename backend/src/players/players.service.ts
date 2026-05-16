@@ -55,6 +55,7 @@ export class PlayersService {
         game: { connect: { slug: createPlayerDto.gameSlug } },
         nickname: createPlayerDto.nickname,
         rating: initialRating, // Використовуємо згенерований рейтинг
+        inGameRole: createPlayerDto.inGameRole,
       },
     });
 
@@ -86,7 +87,13 @@ export class PlayersService {
   findOne(id: string) {
     return this.prisma.player.findUnique({
       where: { id },
-      include: { team: true },
+      include: {
+        team: true,
+        user: {
+          select: { countryCode: true, birthDate: true, username: true },
+        },
+        game: true,
+      },
     });
   }
 
