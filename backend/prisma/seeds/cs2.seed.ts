@@ -42,7 +42,7 @@ const cs2TeamsData = [
   { name: 'Fnatic', tag: 'FN', region: Region.EU, countryCode: 'UA' },
   { name: 'Complexity', tag: 'COL', region: Region.NA, countryCode: 'US' },
   { name: 'Team Liquid', tag: 'TL', region: Region.NA, countryCode: 'US' },
-  { name: 'Cloud9', tag: 'C9', region: Region.CIS, countryCode: 'RU' },
+  { name: 'Cloud9', tag: 'C9', region: Region.NA, countryCode: 'US' },
   { name: 'Astralis', tag: 'AST', region: Region.EU, countryCode: 'DK' },
   { name: 'HEROIC', tag: 'HER', region: Region.EU, countryCode: 'NO' },
   { name: 'ENCE', tag: 'ENCE', region: Region.EU, countryCode: 'FR' },

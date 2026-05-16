@@ -138,7 +138,13 @@ export class TeamsService {
   findOne(id: string) {
     return this.prisma.team.findUnique({
       where: { id },
-      include: { players: true, game: true },
+      include: {
+        game: true,
+        captain: { include: { user: true } },
+        players: {
+          include: { user: true },
+        },
+      },
     });
   }
 

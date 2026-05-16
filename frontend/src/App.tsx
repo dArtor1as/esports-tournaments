@@ -6,6 +6,7 @@ import Profile from "./pages/Profile";
 import PlayerStats from "./pages/PlayerStats";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Teams from "./pages/Teams";
+import TeamProfile from "./pages/TeamProfile";
 
 const Home = () => (
   <div>
@@ -26,6 +27,7 @@ function App() {
             <Route path="login" element={<Login />} />
             <Route path="player/:id" element={<PlayerStats />} />
             <Route path="teams" element={<Teams />} />
+            <Route path="team/:id" element={<TeamProfile />} />
 
             {/* Тільки для залогінених користувачів */}
             <Route element={<ProtectedRoute />}>
