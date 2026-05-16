@@ -6,6 +6,8 @@ import {
   MinLength,
   IsString,
   IsOptional,
+  IsDateString,
+  Length,
 } from 'class-validator';
 import { Role } from '@prisma/client';
 
@@ -32,4 +34,18 @@ export class CreateUserDto {
   @IsOptional()
   @IsEnum(Role)
   role?: Role;
+
+  @ApiPropertyOptional({ example: 'UA', description: 'Код країни' })
+  @IsOptional()
+  @IsString()
+  @Length(2, 2)
+  countryCode?: string;
+
+  @ApiPropertyOptional({
+    example: '2000-11-09',
+    description: 'Дата народження',
+  })
+  @IsOptional()
+  @IsDateString()
+  birthDate?: string;
 }
