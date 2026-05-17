@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  Inject,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GenerateBracketDto } from './dto/generate-bracket.dto';
@@ -11,6 +12,8 @@ import { DoubleEliminationGenerator } from './generators/double-elimination.gene
 import { GroupStageGenerator } from './generators/group-stage.generator';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 
 @Injectable()
 export class MatchesGeneratorService {
@@ -20,6 +23,7 @@ export class MatchesGeneratorService {
     private doubleEliminationGenerator: DoubleEliminationGenerator,
     private groupStageGenerator: GroupStageGenerator,
     private accessPolicy: AccessPolicyService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   // Маршрутизатор для генерації сітки Плей-оф.
@@ -68,6 +72,11 @@ export class MatchesGeneratorService {
       requestedTeamCount && requestedTeamCount < participants.length
         ? participants.slice(0, requestedTeamCount)
         : participants;
+
+    await this.cacheManager.del(`/matches/tournament/${tournamentId}`);
+    await this.cacheManager.del(`/tournaments/${tournamentId}`);
+    await this.cacheManager.del('/tournaments/workflow?workflow=generation');
+    await this.cacheManager.del('/tournaments/workflow?workflow=simulation');
 
     // Безпечний парсинг налаштувань турніру для визначення формату сітки
     let settingsData: any = tournament.settings || {};
@@ -134,6 +143,11 @@ export class MatchesGeneratorService {
     }
 
     const selectedParticipants = participants.slice(0, teamCount);
+
+    await this.cacheManager.del(`/matches/tournament/${tournamentId}`);
+    await this.cacheManager.del(`/tournaments/${tournamentId}`);
+    await this.cacheManager.del('/tournaments/workflow?workflow=generation');
+    await this.cacheManager.del('/tournaments/workflow?workflow=simulation');
 
     return this.groupStageGenerator.generate(
       tournamentId,

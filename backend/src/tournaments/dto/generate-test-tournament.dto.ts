@@ -1,6 +1,14 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsInt, IsOptional, IsString, IsEnum } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsEnum,
+  IsUUID,
+} from 'class-validator';
 import { BracketType } from './create-tournament.dto';
+import { Region } from '@prisma/client';
 
 export class GenerateTestTournamentDto {
   @ApiPropertyOptional({
@@ -29,5 +37,21 @@ export class GenerateTestTournamentDto {
   })
   @IsOptional()
   @IsString()
-  title?: string;
+  title: string;
+
+  @ApiPropertyOptional({ enum: Region, default: Region.GLOBAL })
+  @IsOptional()
+  @IsEnum(Region)
+  region?: Region;
+
+  @ApiPropertyOptional({ example: 3, description: 'Тір турніру (1, 2, 3)' })
+  @IsOptional()
+  @IsInt()
+  @IsIn([1, 2, 3])
+  tier?: number;
+
+  @ApiPropertyOptional({ description: 'ID гри' })
+  @IsOptional()
+  @IsUUID()
+  gameId?: string;
 }

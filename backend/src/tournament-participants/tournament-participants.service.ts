@@ -43,6 +43,14 @@ export class TournamentParticipantsService {
         'Команда та турнір належать до різних ігрових дисциплін',
       );
     }
+
+    // Валідація відповідності Tier (+/- 1 рівень)
+    const tierDiff = Math.abs(tournament.tier - team.tier);
+    if (tierDiff > 1) {
+      throw new BadRequestException(
+        `Рівень вашої команди (Tier ${team.tier}) не відповідає рівню турніру (Tier ${tournament.tier}). Максимально дозволена різниця — 1 рівень.`,
+      );
+    }
     this.accessPolicy.checkCaptainOrAdmin(team.captain.userId, user);
 
     // 2. Перевіряємо, чи не зареєстрована вже ця команда

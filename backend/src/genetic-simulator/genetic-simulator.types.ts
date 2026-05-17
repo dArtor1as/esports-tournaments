@@ -1,4 +1,4 @@
-import { Match } from '@prisma/client';
+import { Bracket, Match, Stage } from '@prisma/client';
 import {
   IMatchSimulator,
   TeamInput,
@@ -7,6 +7,9 @@ import {
 // Використовуємо універсальний Record для деталей і статів
 export interface SimulationMatch {
   id: string;
+  stage: Stage;
+  bracket: Bracket;
+  groupName?: string | null;
   round: number;
   teamAId: string | null;
   teamBId: string | null;

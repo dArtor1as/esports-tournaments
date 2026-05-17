@@ -58,6 +58,7 @@ export class GroupStageStrategy extends BaseGeneticStrategy {
         message: `Аналітичний прогноз груп завершено. Проаналізовано ${simulationContext.matchCount} матчів.`,
         bestFitnessScore: bestIndividual.fitness,
         standings: bestIndividual.standings,
+        bracket: bestIndividual.bracket,
       };
     } else {
       // Зберігаємо результати саме для Груп

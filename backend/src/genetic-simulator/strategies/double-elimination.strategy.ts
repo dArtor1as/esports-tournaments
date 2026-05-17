@@ -50,6 +50,7 @@ export class DoubleEliminationStrategy extends BaseGeneticStrategy {
       return {
         message: `Аналітичний прогноз Double Elimination завершено. Проаналізовано ${simulationContext.matchCount} матчів.`,
         bestFitnessScore: bestIndividual.fitness,
+        bracket: bestIndividual.bracket,
       };
     } else {
       await this.prisma.$transaction([

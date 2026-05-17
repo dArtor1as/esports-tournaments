@@ -9,15 +9,8 @@ import Teams from "./pages/Teams";
 import TeamProfile from "./pages/TeamProfile";
 import AcceptTeamInvite from "./pages/AcceptTeamInvite";
 import Register from "./pages/Register";
-
-const Home = () => (
-  <div>
-    <h1 className="text-3xl font-bold mb-4 text-esports-light">
-      Головна панель
-    </h1>
-    <p className="text-esports-muted">Тут скоро буде список турнірів.</p>
-  </div>
-);
+import Tournaments from "./pages/Tournaments";
+import TournamentDetails from "./pages/TournamentDetails";
 
 function App() {
   return (
@@ -25,12 +18,13 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<MainLayout />}>
-            <Route index element={<Home />} />
+            <Route index element={<Tournaments />} />
             <Route path="login" element={<Login />} />
             <Route path="register" element={<Register />} />
             <Route path="player/:id" element={<PlayerStats />} />
             <Route path="teams" element={<Teams />} />
             <Route path="team/:id" element={<TeamProfile />} />
+            <Route path="tournament/:id" element={<TournamentDetails />} />
 
             {/* Тільки для залогінених користувачів */}
             <Route element={<ProtectedRoute />}>
