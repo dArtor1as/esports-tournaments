@@ -1,11 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import {
-  Prisma,
-  Region,
-  Stage,
-  TournamentFormat,
-  RosterRole,
-} from '@prisma/client';
+import { Prisma, Stage, TournamentFormat, RosterRole } from '@prisma/client';
 import { GenerateTestTournamentDto } from './dto/generate-test-tournament.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import type { TournamentStatus, WorkflowMode } from './tournaments.types'; // Винесемо типи окремо
@@ -25,11 +19,20 @@ export class TournamentsWorkflowService {
       throw new BadRequestException('teamCount має бути 4, 8, 16 або 32');
     }
 
-    const game = await this.prisma.game.findUnique({
-      where: { slug: 'cs2' },
-    });
+    const tournamentTier = dto.tier || 3; // За замовчуванням робимо Tier 3
+    let kFactor = 1.0; // Для Tier 1
+    if (tournamentTier === 2) kFactor = 0.6;
+    if (tournamentTier === 3) kFactor = 0.3;
+
+    let game;
+    if (dto.gameId) {
+      game = await this.prisma.game.findUnique({ where: { id: dto.gameId } });
+    } else {
+      game = await this.prisma.game.findUnique({ where: { slug: 'cs2' } }); // фолбек
+    }
+
     if (!game) {
-      throw new BadRequestException('Гру CS2 не знайдено. Запустіть seed.');
+      throw new BadRequestException('Гру не знайдено.');
     }
     //  Витягуємо команди одразу з гравцями, щоб сформувати ростер
     const availableTeams = await this.prisma.team.findMany({
@@ -55,9 +58,9 @@ export class TournamentsWorkflowService {
         data: {
           title: title,
           gameId: game.id,
-          tier: 1,
-          region: Region.GLOBAL,
-          kFactor: 1.0,
+          tier: tournamentTier,
+          region: dto.region || 'GLOBAL',
+          kFactor: kFactor,
           format: TournamentFormat.TEAM,
           maxParticipants: teamCount,
           // Передаємо налаштування з фронтенду!

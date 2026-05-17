@@ -49,7 +49,7 @@ export class SingleEliminationStrategy extends BaseGeneticStrategy {
       return {
         message: `Аналітичний прогноз завершено. Пройдено ${this.generations} поколінь.`,
         bestFitnessScore: bestIndividual.fitness,
-        predictedBracket: bestIndividual.bracket,
+        bracket: bestIndividual.bracket,
       };
     } else {
       // Зберігаємо результати саме для Playoff

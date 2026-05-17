@@ -30,6 +30,10 @@ export class TournamentsService {
       throw new NotFoundException('Дисципліна (гра) не знайдена');
     }
 
+    let kFactor = 1.0; // за замовчуванням для Tier 1
+    if (createTournamentDto.tier === 2) kFactor = 0.6;
+    if (createTournamentDto.tier === 3) kFactor = 0.3;
+
     // Створюємо турнір. Статус 'planned' ставиться автоматично завдяки @default в схемі
     const createdTournament = await this.prisma.tournament.create({
       data: {
@@ -37,7 +41,7 @@ export class TournamentsService {
         gameId: createTournamentDto.gameId,
         tier: createTournamentDto.tier,
         region: createTournamentDto.region,
-        kFactor: createTournamentDto.kFactor,
+        kFactor: kFactor,
         format: createTournamentDto.format || 'TEAM',
         maxParticipants: createTournamentDto.maxParticipants || 16,
         settings: createTournamentDto.settings

@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SimulatorFactoryService } from 'src/match-simulators/simulator-factory.service';
-import { Stage } from '@prisma/client';
+import { Bracket, Stage } from '@prisma/client';
 import { SimulationContext, SimulationMatch } from './genetic-simulator.types';
 import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
@@ -98,15 +98,24 @@ export class SimulationContextBuilder {
     if (stage === Stage.PLAYOFF) {
       dbMatches.sort((a, b) => {
         // 0. Гранд-фінал ЗАВЖДИ розраховується останнім
-        if (a.bracket === 'GRAND_FINAL') return 1;
-        if (b.bracket === 'GRAND_FINAL') return -1;
+        if (a.bracket === 'GRAND_FINAL' && b.bracket !== 'GRAND_FINAL')
+          return 1;
+        if (b.bracket === 'GRAND_FINAL' && a.bracket !== 'GRAND_FINAL')
+          return -1;
 
         // 1. Спочатку сортуємо за раундами
         if (a.round !== b.round) return a.round - b.round;
 
         // 2. В межах одного раунду UPPER має йти ПЕРЕД LOWER
-        const bracketOrder = { UPPER: 1, LOWER: 2, NONE: 3 };
-        return bracketOrder[a.bracket] - bracketOrder[b.bracket];
+        const bracketOrder: Record<string, number> = {
+          UPPER: 1,
+          LOWER: 2,
+          NONE: 3,
+          GRAND_FINAL: 4,
+        };
+        return (
+          (bracketOrder[a.bracket] || 99) - (bracketOrder[b.bracket] || 99)
+        );
       });
     } else {
       dbMatches.sort((a, b) => a.id.localeCompare(b.id));
@@ -114,6 +123,9 @@ export class SimulationContextBuilder {
 
     const baseSkeleton: SimulationMatch[] = dbMatches.map((m) => ({
       id: m.id,
+      stage: m.stage,
+      bracket: m.bracket,
+      groupName: m.groupName,
       round: m.round,
       teamAId: m.teamAId,
       teamBId: m.teamBId,

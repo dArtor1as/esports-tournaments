@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  Inject,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SimulateTournamentDto } from './dto/simulate-tournament.dto';
@@ -14,6 +15,8 @@ import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { StatsService } from 'src/stats/stats.service';
 import { SimulationContextBuilder } from './simulation-context.builder';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 
 @Injectable()
 export class GeneticSimulatorService {
@@ -27,6 +30,7 @@ export class GeneticSimulatorService {
     private singleEliminationStrategy: SingleEliminationStrategy,
     private groupStageStrategy: GroupStageStrategy,
     private doubleEliminationStrategy: DoubleEliminationStrategy,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   // Головні методи запуску
@@ -39,10 +43,26 @@ export class GeneticSimulatorService {
         user,
       );
 
+    const tournament = await this.prisma.tournament.findUnique({
+      where: { id: dto.tournamentId },
+    });
+
+    if (!tournament) throw new NotFoundException('Турнір не знайдено');
+
     const isDryRun = dto.isDryRun ?? true;
 
     // Блокуємо COMMIT-симуляцію, якщо турнір вже грається людьми
     if (!isDryRun) {
+      await this.accessPolicy.checkTournamentCreatorOrAdmin(
+        tournament.creatorId,
+        user,
+      );
+
+      await this.cacheManager.del(`/matches/tournament/${dto.tournamentId}`);
+      await this.cacheManager.del(`/tournaments/${dto.tournamentId}`);
+      await this.cacheManager.del('/tournaments/workflow?workflow=generation');
+      await this.cacheManager.del('/tournaments/workflow?workflow=simulation');
+
       const hasManualMatches = await this.prisma.match.findFirst({
         where: {
           tournamentId: dto.tournamentId,
@@ -97,9 +117,20 @@ export class GeneticSimulatorService {
         user,
       );
 
+    const tournament = await this.prisma.tournament.findUnique({
+      where: { id: dto.tournamentId },
+    });
+
+    if (!tournament) throw new NotFoundException('Турнір не знайдено');
+
     const isDryRun = dto.isDryRun ?? true;
 
     if (!isDryRun) {
+      await this.accessPolicy.checkTournamentCreatorOrAdmin(
+        tournament.creatorId,
+        user,
+      );
+
       const hasManualMatches = await this.prisma.match.findFirst({
         where: {
           tournamentId: dto.tournamentId,
@@ -113,6 +144,11 @@ export class GeneticSimulatorService {
         );
       }
     }
+
+    await this.cacheManager.del(`/matches/tournament/${dto.tournamentId}`);
+    await this.cacheManager.del(`/tournaments/${dto.tournamentId}`);
+    await this.cacheManager.del('/tournaments/workflow?workflow=generation');
+    await this.cacheManager.del('/tournaments/workflow?workflow=simulation');
 
     const result = await this.groupStageStrategy.execute(
       context,
