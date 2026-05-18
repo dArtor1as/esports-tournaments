@@ -11,6 +11,7 @@ import AcceptTeamInvite from "./pages/AcceptTeamInvite";
 import Register from "./pages/Register";
 import Tournaments from "./pages/Tournaments";
 import TournamentDetails from "./pages/TournamentDetails";
+import MatchRoom from "./pages/MatchRoom";
 
 function App() {
   return (
@@ -24,6 +25,8 @@ function App() {
             <Route path="player/:id" element={<PlayerStats />} />
             <Route path="teams" element={<Teams />} />
             <Route path="team/:id" element={<TeamProfile />} />
+            <Route path="match/:id" element={<MatchRoom />} />
+            <Route path="matches/:id" element={<MatchRoom />} />
             <Route path="tournament/:id" element={<TournamentDetails />} />
 
             {/* Тільки для залогінених користувачів */}

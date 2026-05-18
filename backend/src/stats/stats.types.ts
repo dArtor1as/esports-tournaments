@@ -9,6 +9,7 @@ export interface Cs2PlayerStat extends BasePlayerStat {
   deaths: number;
   assists: number;
   adr: number;
+  damage: number;
   headshots: number;
   roundsPlayed: number;
 }
@@ -17,6 +18,7 @@ export interface Dota2PlayerStat extends BasePlayerStat {
   kills: number;
   deaths: number;
   assists: number;
+  damage: number;
   gpm: number;
   xpm: number;
   netWorth: number;

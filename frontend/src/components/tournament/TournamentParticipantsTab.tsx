@@ -1,4 +1,5 @@
 import { Users } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface TournamentParticipantsTabProps {
   participants: any[];
@@ -18,12 +19,13 @@ export default function TournamentParticipantsTab({
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {participants.map((p: any) => (
-            <div
+            <Link
               key={p.id}
-              className="bg-slate-950 border border-slate-800 p-4 rounded-xl flex items-center justify-between group hover:border-esports-primary transition-all"
+              to={`/team/${p.teamId}`}
+              className="bg-slate-950 border border-slate-800 p-4 rounded-xl flex items-center justify-between group hover:border-esports-primary hover:shadow-[0_0_15px_rgba(242,167,27,0.15)] transition-all cursor-pointer"
             >
-              <span className="font-bold text-white text-lg">
-                <span className="text-slate-500 font-normal">
+              <span className="font-bold text-white text-lg transition-colors group-hover:text-esports-light">
+                <span className="text-slate-500 font-normal group-hover:text-slate-400">
                   [{p.team?.tag}]
                 </span>{" "}
                 {p.team?.name}
@@ -31,7 +33,7 @@ export default function TournamentParticipantsTab({
               <span className="text-xs font-black text-yellow-500 bg-slate-900 border border-slate-800 px-2 py-1 rounded">
                 {p.team?.averageRating} ELO
               </span>
-            </div>
+            </Link>
           ))}
         </div>
       )}

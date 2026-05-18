@@ -111,6 +111,7 @@ export class Cs2SimulatorService implements IMatchSimulator {
       rating: participant.rating,
       kills: 0,
       deaths: 0,
+      damage: 0,
       assists: 0,
       headshots: 0,
       adr: 0,
@@ -173,6 +174,7 @@ export class Cs2SimulatorService implements IMatchSimulator {
       // Рахуємо ADR (Average Damage per Round)
       // 1 кіл ~ 100 урону. 1 асист ~ 45 урону. Додаємо рандомний урон без вбивств.
       const totalDamage = kills * 105 + assists * 45 + Math.random() * 250;
+
       const totalRounds = roundsWon + roundsLost;
       const adr = Math.floor(totalDamage / totalRounds);
 
@@ -183,6 +185,7 @@ export class Cs2SimulatorService implements IMatchSimulator {
       teamStats[statIndex].kills = kills;
       teamStats[statIndex].deaths = deaths;
       teamStats[statIndex].assists = assists;
+      teamStats[statIndex].damage = Math.round(totalDamage);
       teamStats[statIndex].headshots = headshots;
       teamStats[statIndex].adr = adr;
       teamStats[statIndex].roundsPlayed = totalRounds;

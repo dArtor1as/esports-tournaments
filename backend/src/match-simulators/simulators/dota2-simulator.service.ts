@@ -102,6 +102,7 @@ export class Dota2SimulatorService implements IMatchSimulator {
       kills: 0,
       deaths: 0,
       assists: 0,
+      damage: 0,
       gpm: 0,
       xpm: 0,
       netWorth: 0,
@@ -164,6 +165,9 @@ export class Dota2SimulatorService implements IMatchSimulator {
       // АСИСТИ: Сапорти отримують буст
       const baseAssists = Math.floor(totalKills * 0.4 * Math.random()) + 4;
       const assists = Math.floor(baseAssists * multipliers.assists);
+      // Шкода: Кіли + Асисти + Рандом
+      const baseDamage = kills * 1200 + assists * 700 + Math.random() * 5000;
+      const damage = Math.floor(baseDamage * multipliers.kills);
 
       // GPM / XPM: Жорстка прив'язка до ролі
       const baseGpm = isWinner ? 550 : 350;
@@ -175,6 +179,7 @@ export class Dota2SimulatorService implements IMatchSimulator {
       teamStats[statIndex].kills += kills;
       teamStats[statIndex].deaths += deaths;
       teamStats[statIndex].assists += assists;
+      teamStats[statIndex].damage += damage;
       teamStats[statIndex].gpm = gpm;
       teamStats[statIndex].xpm = Math.floor(gpm * 1.1);
       teamStats[statIndex].netWorth = netWorth;

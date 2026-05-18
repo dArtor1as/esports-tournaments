@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Inject,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatsService } from '../stats/stats.service';
@@ -12,6 +13,8 @@ import { ForfeitMatchDto } from './dto/forfeit-match.dto';
 import { DisputeMatchDto, ReportScoreDto } from './dto/consensus.dto';
 import { AccessPolicyService } from '../auth/access-policy.service';
 import { MailService } from 'src/mail/mail.service';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 
 @Injectable()
 export class MatchesConsensusService {
@@ -21,7 +24,14 @@ export class MatchesConsensusService {
     private progressionService: MatchesProgressionService,
     private accessPolicy: AccessPolicyService,
     private mailService: MailService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
+
+  private async clearMatchCaches(matchId: string, tournamentId: string) {
+    await this.cacheManager.del(`/matches/${matchId}`);
+    await this.cacheManager.del(`/matches/tournament/${tournamentId}`);
+    await this.cacheManager.del(`/tournaments/${tournamentId}`);
+  }
 
   async forfeitMatch(matchId: string, dto: ForfeitMatchDto, user: JwtPayload) {
     const match = await this.prisma.match.findUnique({
@@ -95,6 +105,8 @@ export class MatchesConsensusService {
     });
 
     await this.statsService.processTournamentStats(match.tournamentId);
+
+    await this.clearMatchCaches(match.id, match.tournamentId);
     return { message: 'Технічна поразка зарахована. Elo оновлено.' };
   }
 
@@ -117,7 +129,7 @@ export class MatchesConsensusService {
     if (!isCaptainA && !isCaptainB)
       throw new ForbiddenException('Тільки капітани можуть вносити рахунок');
 
-    return this.prisma.match.update({
+    const updatedMatch = await this.prisma.match.update({
       where: { id: matchId },
       data: {
         reportedScoreA: dto.scoreA,
@@ -126,6 +138,9 @@ export class MatchesConsensusService {
         matchStatus: 'REPORTED',
       },
     });
+
+    await this.clearMatchCaches(match.id, match.tournamentId);
+    return updatedMatch;
   }
 
   async confirmMatch(matchId: string, user: JwtPayload) {
@@ -161,6 +176,8 @@ export class MatchesConsensusService {
     });
 
     await this.statsService.processTournamentStats(match.tournamentId);
+
+    await this.clearMatchCaches(match.id, match.tournamentId);
     return { message: 'Рахунок підтверджено. Elo нараховано.' };
   }
 
@@ -188,7 +205,6 @@ export class MatchesConsensusService {
       },
     });
 
-    // --- ВІДПРАВЛЯЄМО ЛИСТ ТВОРЦЮ ---
     if (match.tournament.creator?.email) {
       // Відправляємо асинхронно, щоб не блокувати відповідь клієнту
       this.mailService
@@ -202,6 +218,8 @@ export class MatchesConsensusService {
           console.error('Помилка відправки листа про диспут:', err),
         );
     }
+
+    await this.clearMatchCaches(match.id, match.tournamentId);
     return updatedMatch;
   }
 
@@ -238,6 +256,8 @@ export class MatchesConsensusService {
     });
 
     await this.statsService.processTournamentStats(match.tournamentId);
+
+    await this.clearMatchCaches(match.id, match.tournamentId);
     return { message: 'Матч примусово закрито. Elo нараховано.' };
   }
 }
