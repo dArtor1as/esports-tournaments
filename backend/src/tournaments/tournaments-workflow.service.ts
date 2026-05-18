@@ -68,6 +68,9 @@ export class TournamentsWorkflowService {
             pointsForWin: 3,
             tiebreakers: ['h2h', 'mapDiff'],
             bracketType: bracketType,
+            ...(bracketType === 'ROUND_ROBIN' && {
+              groupCount: dto.groupCount || 2,
+            }),
           },
           status: 'planned',
           creatorId: userId,

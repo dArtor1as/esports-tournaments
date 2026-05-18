@@ -28,7 +28,7 @@ export class SimulateTournamentDto {
   @Max(1000)
   populations: number;
 
-  @ApiPropertyOptional({ enum: Stage, default: Stage.PLAYOFF })
+  @ApiPropertyOptional({ enum: Stage })
   @IsOptional()
   @IsEnum(Stage)
   stage?: Stage = Stage.PLAYOFF;
