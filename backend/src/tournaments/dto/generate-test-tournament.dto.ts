@@ -54,4 +54,9 @@ export class GenerateTestTournamentDto {
   @IsOptional()
   @IsUUID()
   gameId?: string;
+
+  @ApiPropertyOptional({ description: 'Кількість груп (для Round Robin)' })
+  @IsOptional()
+  @IsInt()
+  groupCount?: number;
 }

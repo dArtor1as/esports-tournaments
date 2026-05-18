@@ -28,6 +28,13 @@ export class GroupStageGenerator implements IBracketGenerator {
       );
     }
 
+    const teamsPerGroup = teamCount / groupCount;
+    if (teamsPerGroup % 2 !== 0) {
+      throw new BadRequestException(
+        `У кожній групі має бути парна кількість команд. Зараз виходить по ${teamsPerGroup} команд у групі. Будь ласка, оберіть іншу кількість груп.`,
+      );
+    }
+
     const teamsForSeeding: TeamForSeeding[] = participants.map((p) => ({
       id: p.teamId,
       name: p.team.name,
@@ -41,7 +48,7 @@ export class GroupStageGenerator implements IBracketGenerator {
     );
 
     const matchesToCreate: MatchPayload[] = [];
-    const bestOf = format === 'TEAM' ? 1 : 1;
+    const bestOf = format === 'TEAM' ? 3 : 3;
 
     for (let gIndex = 0; gIndex < optimizedGroups.length; gIndex++) {
       const groupName = `Group ${String.fromCharCode(65 + gIndex)}`;

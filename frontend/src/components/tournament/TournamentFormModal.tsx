@@ -40,6 +40,7 @@ export default function TournamentFormModal({
   const [gameId, setGameId] = useState("");
   const [teamCount, setTeamCount] = useState("16");
   const [bracketType, setBracketType] = useState("SINGLE_ELIMINATION");
+  const [groupCount, setGroupCount] = useState("2");
   const [tier, setTier] = useState("3");
   const [region, setRegion] = useState("GLOBAL");
   const [isPublic, setIsPublic] = useState("true");
@@ -65,8 +66,8 @@ export default function TournamentFormModal({
 
     setLoading(true);
     try {
-      // Динамічний вибір ендпоінту та структури payload
       const endpoint = isTest ? "/tournaments/generate-test" : "/tournaments";
+      // Формуємо payload залежно від режиму
       const payload = isTest
         ? {
             title: title.trim() || undefined,
@@ -76,6 +77,9 @@ export default function TournamentFormModal({
             tier: parseInt(tier),
             region,
             isPublic: isPublic === "true",
+            ...(bracketType === "ROUND_ROBIN" && {
+              groupCount: parseInt(groupCount),
+            }),
           }
         : {
             title,
@@ -86,7 +90,12 @@ export default function TournamentFormModal({
             maxParticipants: parseInt(teamCount),
             format: "TEAM",
             isPublic: isPublic === "true",
-            settings: { bracketType },
+            settings: {
+              bracketType,
+              ...(bracketType === "ROUND_ROBIN" && {
+                groupCount: parseInt(groupCount),
+              }),
+            },
           };
 
       await api.post(endpoint, payload);
@@ -204,6 +213,28 @@ export default function TournamentFormModal({
                 </SelectContent>
               </Select>
             </div>
+
+            {/* ДИНАМІЧНЕ ПОЛЕ: Кількість груп */}
+            {bracketType === "ROUND_ROBIN" && (
+              <div className="space-y-2 col-span-2 p-3 bg-slate-900/50 border border-slate-700/50 rounded-lg animate-in fade-in zoom-in-95">
+                <Label className="text-esports-accent">Кількість груп</Label>
+                <Select value={groupCount} onValueChange={setGroupCount}>
+                  <SelectTrigger className="bg-slate-950 border-slate-800 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-800 border-slate-700 text-white">
+                    <SelectItem value="1">1 група</SelectItem>
+                    <SelectItem value="2">2 групи</SelectItem>
+                    <SelectItem value="4">4 групи</SelectItem>
+                    <SelectItem value="8">8 груп</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Увага: кількість команд ({teamCount}) має ділитися на
+                  кількість груп порівну.
+                </p>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>Тип доступу</Label>

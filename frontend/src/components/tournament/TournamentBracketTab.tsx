@@ -2,6 +2,7 @@ import { Calendar, GitBranch } from "lucide-react";
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import TournamentBracket from "@/components/TournamentBracket";
+import GroupStageStandings from "@/components/tournament/GroupStageStandings";
 
 interface TournamentBracketTabProps {
   matches: any[];
@@ -52,11 +53,16 @@ export default function TournamentBracketTab({
           </Button>
         )}
       </div>
-      {/* ПЕРЕДАЄМО ВІДСОРТОВАНИЙ МАСИВ */}
-      <TournamentBracket
-        matches={sortedMatches}
-        bracketType={tournament.settings?.bracketType || "SINGLE_ELIMINATION"}
-      />
+
+      {/* ПЕРЕХОПЛЮВАЧ ДЛЯ ГРУПОВОЇ СТАДІЇ */}
+      {tournament.settings?.bracketType === "ROUND_ROBIN" ? (
+        <GroupStageStandings matches={sortedMatches} pointsPerWin={3} />
+      ) : (
+        <TournamentBracket
+          matches={sortedMatches}
+          bracketType={tournament.settings?.bracketType || "SINGLE_ELIMINATION"}
+        />
+      )}
     </div>
   );
 }

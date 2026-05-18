@@ -95,4 +95,9 @@ export class CreateTournamentDto {
   @IsBoolean()
   @IsNotEmpty()
   isPublic: boolean;
+
+  @ApiPropertyOptional({ description: 'Кількість груп (для Round Robin)' })
+  @IsOptional()
+  @IsInt()
+  groupCount?: number;
 }

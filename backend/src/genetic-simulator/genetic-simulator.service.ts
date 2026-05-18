@@ -49,6 +49,14 @@ export class GeneticSimulatorService {
 
     if (!tournament) throw new NotFoundException('Турнір не знайдено');
 
+    // Блокування запуску основного алгоритму для групового етапу
+    const bracketType = context.tournament.settings?.bracketType;
+    if (bracketType === 'ROUND_ROBIN') {
+      throw new BadRequestException(
+        'Для групового етапу використовуйте ендпоінт /run-groups',
+      );
+    }
+
     const isDryRun = dto.isDryRun ?? true;
 
     // Блокуємо COMMIT-симуляцію, якщо турнір вже грається людьми
@@ -78,7 +86,6 @@ export class GeneticSimulatorService {
     }
 
     // Логіка вибору стратегії на основі налаштувань турніру
-    const bracketType = context.tournament.settings?.bracketType;
     let result;
     if (bracketType === 'DOUBLE_ELIMINATION') {
       result = await this.doubleEliminationStrategy.execute(

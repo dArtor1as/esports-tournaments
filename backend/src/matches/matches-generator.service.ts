@@ -107,7 +107,7 @@ export class MatchesGeneratorService {
 
   // Делегує генерацію кругової системи (Round Robin) для групового етапу
   async generateGroupStage(dto: GenerateBracketDto, user: JwtPayload) {
-    const { tournamentId, groupCount = 4 } = dto;
+    const { tournamentId } = dto;
 
     const tournament = await this.prisma.tournament.findUnique({
       where: { id: tournamentId },
@@ -142,6 +142,36 @@ export class MatchesGeneratorService {
       );
     }
 
+    // парсинг налаштувань турніру
+    let settingsData: any = tournament.settings || {};
+    if (typeof settingsData === 'string') {
+      try {
+        settingsData = JSON.parse(settingsData);
+      } catch (e) {}
+    }
+
+    //  визначаємо кількість груп
+    const effectiveGroupCount = dto.groupCount ?? settingsData?.groupCount ?? 2;
+
+    //  перевірка на ділимість та парність у групах
+    if (
+      teamCount % effectiveGroupCount !== 0 ||
+      (teamCount / effectiveGroupCount) % 2 !== 0
+    ) {
+      const validGroups: number[] = [];
+      for (let i = 1; i <= teamCount / 2; i++) {
+        if (teamCount % i === 0 && (teamCount / i) % 2 === 0) {
+          validGroups.push(i);
+        }
+      }
+
+      throw new BadRequestException(
+        `Неможливо розбити ${teamCount} команд на ${effectiveGroupCount} груп так, щоб у кожній була ПАРНА кількість. Допустимі варіанти кількості груп: ${
+          validGroups.length > 0 ? validGroups.join(', ') : 'немає'
+        }.`,
+      );
+    }
+
     const selectedParticipants = participants.slice(0, teamCount);
 
     await this.cacheManager.del(`/matches/tournament/${tournamentId}`);
@@ -154,7 +184,7 @@ export class MatchesGeneratorService {
       teamCount,
       selectedParticipants,
       tournament.format,
-      groupCount,
+      effectiveGroupCount,
     );
   }
 }

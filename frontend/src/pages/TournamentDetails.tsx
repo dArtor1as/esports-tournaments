@@ -81,10 +81,14 @@ export default function TournamentDetails() {
         ? "/matches/generate-groups"
         : "/matches/generate-bracket";
 
+      // Читаємо кількість груп з налаштувань, або ставимо фолбек (2 групи)
+      const groupCount = tournament.settings?.groupCount || 2;
+
       await api.post(endpoint, {
         tournamentId: id,
         teamCount: participants.length,
-        ...(isGroupStage && { groupCount: participants.length >= 8 ? 2 : 1 }),
+        // Передаємо кількість груп лише для групового етапу
+        ...(isGroupStage && { groupCount }),
       });
 
       await refetchMatches();
@@ -110,6 +114,7 @@ export default function TournamentDetails() {
         tournamentId: id,
         populations: parseInt(populations),
         isDryRun,
+        stage: isGroupStage ? "GROUP" : "PLAYOFF",
       });
 
       // Зберігаємо результат для обох режимів, помічаючи isLive!
@@ -136,7 +141,6 @@ export default function TournamentDetails() {
     setActiveTab("ga-simulator");
   };
 
-  // Збагачення сітки для DryRun
   const enrichedPredictionBracket = predictionResult
     ? matches.map((originalMatch: any) => {
         const predictedMatch = predictionResult.bracket?.find(
