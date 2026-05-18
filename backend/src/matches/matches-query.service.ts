@@ -18,10 +18,17 @@ export class MatchesQueryService {
     const match = await this.prisma.match.findUnique({
       where: { id },
       include: {
-        tournament: { select: { title: true, gameId: true } },
+        tournament: {
+          select: {
+            title: true,
+            gameId: true,
+            creatorId: true,
+            game: { select: { slug: true, name: true } },
+          },
+        },
         teamA: { include: { players: true } },
         teamB: { include: { players: true } },
-        ratingHistories: true, // Історія змін ело після цього матчу
+        ratingHistories: true,
       },
     });
 

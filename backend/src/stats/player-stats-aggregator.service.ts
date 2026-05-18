@@ -27,6 +27,7 @@ export class PlayerStatsAggregatorService {
     adr: { avg: true },
     gpm: { avg: true },
     xpm: { avg: true },
+    damage: { avg: true },
   };
 
   private readonly DERIVED_STATS = [
