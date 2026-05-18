@@ -2,14 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Swords,
-  ShieldAlert,
-  CheckCircle2,
-  Gavel,
-  AlertTriangle,
-  Clock,
-} from "lucide-react";
+import { Swords, ShieldAlert, CheckCircle2, Gavel, Clock } from "lucide-react";
 import ConfirmModal from "@/components/ConfirmModal";
 
 interface MatchConsensusPanelProps {

@@ -1,4 +1,5 @@
 import { Calendar, GitBranch } from "lucide-react";
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import TournamentBracket from "@/components/TournamentBracket";
 
@@ -21,6 +22,18 @@ export default function TournamentBracketTab({
   isAdmin,
   onGenerateBracket,
 }: TournamentBracketTabProps) {
+  const sortedMatches = useMemo(() => {
+    if (!matches) return [];
+    return [...matches].sort((a, b) => {
+      if (a.stage !== b.stage) return a.stage.localeCompare(b.stage);
+      if (a.bracket !== b.bracket)
+        return (a.bracket || "").localeCompare(b.bracket || "");
+      if (a.round !== b.round) return a.round - b.round;
+      // Якщо це матчі одного раунду — сортуємо за ID
+      return a.id.localeCompare(b.id);
+    });
+  }, [matches]);
+
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl overflow-hidden min-h-[400px]">
       <div className="flex items-center justify-between mb-6 border-b border-slate-800 pb-4">
@@ -39,8 +52,9 @@ export default function TournamentBracketTab({
           </Button>
         )}
       </div>
+      {/* ПЕРЕДАЄМО ВІДСОРТОВАНИЙ МАСИВ */}
       <TournamentBracket
-        matches={matches}
+        matches={sortedMatches}
         bracketType={tournament.settings?.bracketType || "SINGLE_ELIMINATION"}
       />
     </div>
