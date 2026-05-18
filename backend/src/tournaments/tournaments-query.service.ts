@@ -15,6 +15,9 @@ export class TournamentsQueryService {
       ...(query.region && { region: query.region }),
       ...(query.status && { status: query.status }),
       ...(query.tier && { tier: query.tier }),
+      ...(query.isPublic !== undefined && {
+        isPublic: query.isPublic === 'true',
+      }),
     };
     // Пошук за назвою (частковий збіг, case-insensitive)
     if (query.title) {

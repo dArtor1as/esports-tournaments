@@ -29,4 +29,11 @@ export class TournamentQueryDto extends PaginationQueryDto {
   @Type(() => Number)
   @IsInt()
   tier?: number;
+
+  @ApiPropertyOptional({
+    description: 'Фільтр за типом (true = відкритий, false = закритий)',
+  })
+  @IsOptional()
+  @IsString()
+  isPublic?: string;
 }
