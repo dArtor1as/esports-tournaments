@@ -1,4 +1,5 @@
 import { Calendar, History } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface TeamMatchesTabProps {
   upcomingMatches: any[];
@@ -28,9 +29,10 @@ export default function TeamMatchesTab({
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {upcomingMatches.map((match) => (
-              <div
+              <Link
                 key={match.id}
-                className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center justify-between gap-4"
+                to={`/match/${match.id}`}
+                className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center justify-between gap-4 cursor-pointer group hover:border-esports-primary hover:scale-[1.02] transition-all duration-300 shadow-sm hover:shadow-md"
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1 justify-center font-mono">
                   <span className="font-black text-white truncate text-right flex-1 text-sm">
@@ -51,7 +53,7 @@ export default function TeamMatchesTab({
                     {new Date(match.createdAt).toLocaleDateString()}
                   </p>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}
@@ -76,9 +78,10 @@ export default function TeamMatchesTab({
               const oppTag = isTeamA ? match.teamB?.tag : match.teamA?.tag;
 
               return (
-                <div
+                <Link
                   key={match.id}
-                  className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center justify-between gap-4"
+                  to={`/match/${match.id}`}
+                  className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center justify-between gap-4 cursor-pointer group hover:border-esports-primary hover:bg-slate-900/80 transition-all duration-300 shadow-sm hover:shadow-md"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span
@@ -105,7 +108,7 @@ export default function TeamMatchesTab({
                       {match.tournament?.title}
                     </span>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>
