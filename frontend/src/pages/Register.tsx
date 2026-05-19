@@ -1,37 +1,37 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { api } from "../lib/api";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { api } from '../lib/api';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Eye, EyeOff } from "lucide-react";
-import { toast } from "sonner";
+} from '@/components/ui/card';
+import { Eye, EyeOff } from 'lucide-react';
+import { toast } from 'sonner';
 
 // 1. ІМПОРТУЄМО БІБЛІОТЕКУ КРАЇН
-import countries from "i18n-iso-countries";
+import countries from 'i18n-iso-countries';
 // 2. ІМПОРТУЄМО УКРАЇНСЬКУ МОВУ (обов'язково вказуємо type-only або звичайний залежно від налаштувань, тут звичайний)
-import ukLocale from "i18n-iso-countries/langs/uk.json";
+import ukLocale from 'i18n-iso-countries/langs/uk.json';
 
 // 3. РЕЄСТРУЄМО МОВУ В БІБЛІОТЕЦІ
 countries.registerLocale(ukLocale);
 
 // 4. ГЕНЕРУЄМО ПОВНИЙ СПИСОК КРАЇН УКРАЇНСЬКОЮ
 const REGIONS_COUNTRIES = Object.entries(
-  countries.getNames("uk", { select: "official" }),
+  countries.getNames('uk', { select: 'official' }),
 )
   .map(([code, name]) => ({
     code: code.toUpperCase(),
@@ -40,24 +40,24 @@ const REGIONS_COUNTRIES = Object.entries(
   .sort((a, b) => a.name.localeCompare(b.name)); // Сортуємо за алфавітом від А до Я
 
 // Додамо кастомний пункт "Міжнародний" на початок, якщо він тобі потрібен для кіберспорту
-REGIONS_COUNTRIES.unshift({ code: "INT", name: "Міжнародний" });
+REGIONS_COUNTRIES.unshift({ code: 'INT', name: 'Міжнародний' });
 
 export default function Register() {
   // Весь твій код стану (useState) та функція handleRegister залишаються АБСОЛЮТНО без змін!
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [countryCode, setCountryCode] = useState("");
-  const [birthDate, setBirthDate] = useState("");
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [countryCode, setCountryCode] = useState('');
+  const [birthDate, setBirthDate] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
+    setError('');
 
     try {
       const payload: any = {
@@ -69,11 +69,11 @@ export default function Register() {
       if (countryCode) payload.countryCode = countryCode;
       if (birthDate) payload.birthDate = new Date(birthDate).toISOString();
 
-      await api.post("/users", payload);
-      toast.success("Акаунт успішно створено! Тепер ви можете увійти.");
-      navigate("/login");
+      await api.post('/users', payload);
+      toast.success('Акаунт успішно створено! Тепер ви можете увійти.');
+      navigate('/login');
     } catch (err: any) {
-      setError(err.response?.data?.message || "Помилка при створенні акаунта");
+      setError(err.response?.data?.message || 'Помилка при створенні акаунта');
     } finally {
       setLoading(false);
     }
@@ -84,7 +84,7 @@ export default function Register() {
       <Card className="w-full max-w-md bg-slate-900 border-slate-800 text-white shadow-2xl">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-black text-esports-accent tracking-wide">
-            Приєднатися до CyberApp
+            Приєднатися до CyberBracket
           </CardTitle>
           <CardDescription className="text-slate-400">
             Заповніть профіль, щоб брати участь у турнірах.
@@ -154,7 +154,7 @@ export default function Register() {
               <div className="relative">
                 <Input
                   id="password"
-                  type={showPassword ? "text" : "password"}
+                  type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -180,12 +180,12 @@ export default function Register() {
               disabled={loading}
               className="w-full bg-esports-primary hover:bg-esports-primary/90 text-white font-bold tracking-wider mt-4"
             >
-              {loading ? "Створення..." : "Створити акаунт"}
+              {loading ? 'Створення...' : 'Створити акаунт'}
             </Button>
           </form>
 
           <div className="mt-6 text-center text-sm text-slate-400">
-            Вже є акаунт?{" "}
+            Вже є акаунт?{' '}
             <Link
               to="/login"
               className="text-esports-accent hover:underline font-bold"

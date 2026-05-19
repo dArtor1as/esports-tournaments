@@ -12,7 +12,6 @@ import TournamentBracketTab from "@/components/tournament/TournamentBracketTab";
 import TournamentParticipantsTab from "@/components/tournament/TournamentParticipantsTab";
 import TournamentGaSimulatorTab from "@/components/tournament/TournamentGaSimulatorTab";
 import GaResultsTab from "@/components/tournament/GaResultsTab";
-import { useQuery } from "@tanstack/react-query";
 import { useMyProfilesData } from "@/hooks/useProfileData";
 
 export default function TournamentDetails() {
@@ -61,20 +60,6 @@ export default function TournamentDetails() {
   const isAdmin = currentUser?.role === "ADMIN";
   const isTournamentOver =
     tournament.status === "finished" || tournament.status === "cancelled";
-
-  const handleGenerateTest = async () => {
-    try {
-      await api.post("/tournaments/generate-test", {
-        tournamentId: id,
-        teamCount: tournament.maxParticipants,
-        bracketType: tournament.settings?.bracketType,
-      });
-      toast.success("Тестові команди успішно згенеровано!");
-      window.location.reload();
-    } catch (err) {
-      toast.error("Помилка авто-заповнення.");
-    }
-  };
 
   const handleGenerateBracket = async () => {
     setBracketLoading(true);

@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { User, Crown, Trash2, LogOut, Edit2 } from "lucide-react";
+import { User, Crown, Trash2, LogOut } from "lucide-react";
 import ConfirmModal from "./ConfirmModal";
 import {
   Select,

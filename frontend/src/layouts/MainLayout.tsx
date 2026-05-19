@@ -1,8 +1,8 @@
-import { Outlet, Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { Button } from "@/components/ui/button";
-import { UserCircle } from "lucide-react";
-import { Toaster } from "@/components/ui/sonner";
+import { Outlet, Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { Button } from '@/components/ui/button';
+import { UserCircle } from 'lucide-react';
+import { Toaster } from '@/components/ui/sonner';
 
 export default function MainLayout() {
   const { user, logout } = useAuth();
@@ -10,19 +10,19 @@ export default function MainLayout() {
 
   const handleLogout = () => {
     logout();
-    navigate("/"); // Примусово викидаємо на головну
+    navigate('/'); // Примусово викидаємо на головну
   };
 
   return (
     <div className="min-h-screen bg-esports-dark text-white">
       <header className="border-b border-slate-800 bg-esports-dark/80 backdrop-blur-md sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          {/* Клік на CyberApp повертає на головну */}
+          {/* Клік на CyberBracket повертає на головну */}
           <Link
             to="/"
             className="text-2xl font-bold text-esports-accent hover:opacity-80 transition-opacity"
           >
-            CyberApp
+            CyberBracket
           </Link>
 
           <nav className="flex gap-6 items-center font-medium">
@@ -54,7 +54,7 @@ export default function MainLayout() {
                 >
                   <UserCircle size={20} />
                   <span>{user.username}</span>
-                  {user.role === "ADMIN" && (
+                  {user.role === 'ADMIN' && (
                     <span className="text-[10px] bg-esports-accent text-black px-1 rounded font-black">
                       ADM
                     </span>

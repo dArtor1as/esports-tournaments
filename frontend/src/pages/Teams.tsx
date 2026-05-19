@@ -1,17 +1,17 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { Trophy, Users, Globe, ChevronRight } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import { Trophy, Users, Globe, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function Teams() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<"cs2" | "dota2">("cs2");
+  const [activeTab, setActiveTab] = useState<'cs2' | 'dota2'>('cs2');
 
   const { data: teamsData, isLoading } = useQuery({
-    queryKey: ["allTeams"],
+    queryKey: ['allTeams'],
     queryFn: async () => {
-      const { data } = await api.get("/leaderboards/teams?limit=100");
+      const { data } = await api.get('/leaderboards/teams?limit=100');
       return data;
     },
   });
@@ -20,7 +20,7 @@ export default function Teams() {
 
   // Фільтруємо команди за обраною дисципліною
   const filteredTeams = activeTab
-    ? typeof allTeams[0]?.game === "object"
+    ? typeof allTeams[0]?.game === 'object'
       ? allTeams.filter((t: any) => t.game?.slug === activeTab)
       : allTeams
     : allTeams;
@@ -41,21 +41,21 @@ export default function Teams() {
 
         <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-800 w-full md:w-auto">
           <button
-            onClick={() => setActiveTab("cs2")}
+            onClick={() => setActiveTab('cs2')}
             className={`flex-1 md:flex-none px-5 py-2 text-xs font-black uppercase tracking-wider rounded-md transition-all ${
-              activeTab === "cs2"
-                ? "bg-esports-accent text-black shadow-md"
-                : "text-slate-400 hover:text-white"
+              activeTab === 'cs2'
+                ? 'bg-esports-accent text-black shadow-md'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             Counter-Strike 2
           </button>
           <button
-            onClick={() => setActiveTab("dota2")}
+            onClick={() => setActiveTab('dota2')}
             className={`flex-1 md:flex-none px-5 py-2 text-xs font-black uppercase tracking-wider rounded-md transition-all ${
-              activeTab === "dota2"
-                ? "bg-esports-accent text-black shadow-md"
-                : "text-slate-400 hover:text-white"
+              activeTab === 'dota2'
+                ? 'bg-esports-accent text-black shadow-md'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             Dota 2
@@ -80,10 +80,10 @@ export default function Teams() {
             // Кастомні стилі кольору для призової трійки (Подіум)
             const getRankColor = (r: number) => {
               if (r === 1)
-                return "text-yellow-400 drop-shadow-[0_0_6px_rgba(250,204,21,0.4)]";
-              if (r === 2) return "text-slate-300";
-              if (r === 3) return "text-amber-600";
-              return "text-slate-500";
+                return 'text-yellow-400 drop-shadow-[0_0_6px_rgba(250,204,21,0.4)]';
+              if (r === 2) return 'text-slate-300';
+              if (r === 3) return 'text-amber-600';
+              return 'text-slate-500';
             };
 
             return (
@@ -136,10 +136,10 @@ export default function Teams() {
                       Склад ростера
                     </span>
                     <span
-                      className={`text-xs font-bold flex items-center gap-1 mt-0.5 ${team.isComplete ? "text-green-500" : "text-yellow-500"}`}
+                      className={`text-xs font-bold flex items-center gap-1 mt-0.5 ${team.isComplete ? 'text-green-500' : 'text-yellow-500'}`}
                     >
                       <Users size={12} />
-                      {team.isComplete ? "Повний" : "Шукають +"}
+                      {team.isComplete ? 'Повний' : 'Шукають +'}
                     </span>
                   </div>
 
@@ -148,11 +148,11 @@ export default function Teams() {
                     <Trophy
                       size={15}
                       className={
-                        rank === 1 ? "text-yellow-400" : "text-slate-500"
+                        rank === 1 ? 'text-yellow-400' : 'text-slate-500'
                       }
                     />
                     <span
-                      className={`font-black text-base tracking-tight ${rank === 1 ? "text-yellow-400" : "text-white"}`}
+                      className={`font-black text-base tracking-tight ${rank === 1 ? 'text-yellow-400' : 'text-white'}`}
                     >
                       {team.averageRating}
                     </span>
