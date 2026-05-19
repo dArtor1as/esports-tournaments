@@ -182,17 +182,41 @@ export class TournamentsService {
 
     this.accessPolicy.checkTournamentCreatorOrAdmin(tournament.creatorId, user);
 
-    // Безпечне видалення: дозволяємо видаляти тільки якщо немає згенерованих матчів
+    // Якщо матчі вже згенеровані — hard delete ЗАБОРОНЕНИЙ
     if (tournament.matches.length > 0) {
       throw new BadRequestException(
-        'Неможливо видалити турнір, в якому вже є матчі. Змініть статус на cancelled.',
+        'Неможливо видалити турнір, в якому вже створено матчі. Використовуйте скасування (Cancel).',
       );
     }
 
-    const deletedTournament = await this.prisma.tournament.delete({
-      where: { id },
-    });
+    // Ручне послідовне очищення пов'язаних таблиць в транзакції
+    return this.prisma.$transaction(async (prismaTx) => {
+      // 1. Видаляємо турнірні склади гравців (Roster) через зв'язок з учасником
+      await prismaTx.tournamentRoster.deleteMany({
+        where: {
+          participant: { tournamentId: id },
+        },
+      });
 
-    return deletedTournament;
+      // 2. Видаляємо учасників (TournamentParticipant)
+      await prismaTx.tournamentParticipant.deleteMany({
+        where: { tournamentId: id },
+      });
+
+      // 3. Видаляємо надіслані запрошення (TournamentInvitation)
+      await prismaTx.tournamentInvitation.deleteMany({
+        where: { tournamentId: id },
+      });
+
+      // 4. Видаляємо лог симуляцій ШІ (SimulationRun)
+      await prismaTx.simulationRun.deleteMany({
+        where: { tournamentId: id },
+      });
+
+      // 5. Видаляємо сам турнір
+      return prismaTx.tournament.delete({
+        where: { id },
+      });
+    });
   }
 }

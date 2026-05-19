@@ -18,7 +18,13 @@ export function usePlayerStatsData(playerId?: string) {
 
   return { player, eloHistory, isLoading: isPlayerLoading || isHistoryLoading };
 }
-
+export function useMyProfilesData(enabled: boolean = true) {
+  return useQuery({
+    queryKey: ["myProfiles"],
+    queryFn: async () => (await api.get("/players/me")).data,
+    enabled,
+  });
+}
 // Хук для сторінки команди
 export function useTeamProfileData(teamId?: string) {
   const { data: team, isLoading: isTeamLoading } = useQuery({

@@ -6,10 +6,10 @@ export class InvitationPolicyService {
   // ПРАВИЛО 1: Блокування нелогічних інвайтів (Tier різниця)
   // Тобто, якщо team.tier (3) - tournament.tier (1) > 1 -> це порушення.
   checkTierDifference(teamTier: number, tournamentTier: number) {
-    const tierDifference = teamTier - tournamentTier;
-    if (tierDifference > 1) {
+    const tierDiff = Math.abs(teamTier - tournamentTier);
+    if (tierDiff > 1) {
       throw new BadRequestException(
-        `Команда Tier ${teamTier} занадто слабка для отримання прямого запрошення на турнір Tier ${tournamentTier}. Вони мають проходити Відкриті Кваліфікації.`,
+        `Рівень команди (Tier ${teamTier}) не відповідає турніру (Tier ${tournamentTier}). Максимально дозволена різниця — 1 рівень.`,
       );
     }
   }
@@ -39,8 +39,16 @@ export class InvitationPolicyService {
       throw new BadRequestException('Запрошення вже надіслано');
     }
   }
+  // ПРАВИЛО 4: Регіональне обмеження турніру
+  checkRegionRestriction(teamRegion: string, tournamentRegion: string) {
+    if (tournamentRegion !== 'GLOBAL' && teamRegion !== tournamentRegion) {
+      throw new BadRequestException(
+        `Регіональний конфлікт: цей турнір обмежений регіоном ${tournamentRegion}, а ваша команда зареєстрована в регіоні ${teamRegion}.`,
+      );
+    }
+  }
 
-  // ПРАВИЛО 4: Розумна маршрутизація по стадіях
+  // ПРАВИЛО 5: Розумна маршрутизація по стадіях
   determineAssignedStage(
     teamTier: number,
     tournamentTier: number,

@@ -43,7 +43,12 @@ export class TournamentInvitationsService {
     this.accessPolicy.checkTournamentCreatorOrAdmin(tournament.creatorId, user);
 
     // перевірки перед створенням інвайту
-    // ПРАВИЛО 1: Блокування нелогічних інвайтів (Tier різниця)
+    //  Перевірка регіонального обмеження для прямих інвайтів
+    this.invitationPolicyService.checkRegionRestriction(
+      team.region,
+      tournament.region,
+    );
+    // Блокування нелогічних інвайтів (Tier різниця)
     this.invitationPolicyService.checkTierDifference(
       team.tier,
       tournament.tier,
