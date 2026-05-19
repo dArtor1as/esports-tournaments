@@ -36,7 +36,7 @@ export default function MainLayout() {
               to="/leaderboards"
               className="text-esports-light hover:text-esports-accent transition"
             >
-              Рейтинги
+              Рейтинги гравців
             </Link>
             <Link
               to="/teams"
