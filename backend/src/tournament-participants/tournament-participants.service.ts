@@ -8,12 +8,14 @@ import { CreateTournamentParticipantDto } from './dto/create-tournament-particip
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
+import { InvitationPolicyService } from 'src/tournament-invitations/invitation-policy.service';
 
 @Injectable()
 export class TournamentParticipantsService {
   constructor(
     private prisma: PrismaService,
     private accessPolicy: AccessPolicyService,
+    private invitationPolicyService: InvitationPolicyService,
   ) {}
 
   async create(dto: CreateTournamentParticipantDto, user: JwtPayload) {
@@ -44,13 +46,17 @@ export class TournamentParticipantsService {
       );
     }
 
-    // Валідація відповідності Tier (+/- 1 рівень)
-    const tierDiff = Math.abs(tournament.tier - team.tier);
-    if (tierDiff > 1) {
+    if (tournament.region !== 'GLOBAL' && team.region !== tournament.region) {
       throw new BadRequestException(
-        `Рівень вашої команди (Tier ${team.tier}) не відповідає рівню турніру (Tier ${tournament.tier}). Максимально дозволена різниця — 1 рівень.`,
+        `Неможливо зареєструватися: цей турнір призначений виключно для регіону ${tournament.region}. Регіон вашої команди: ${team.region}.`,
       );
     }
+
+    // Валідація відповідності Tier (+/- 1 рівень)
+    this.invitationPolicyService.checkTierDifference(
+      team.tier,
+      tournament.tier,
+    );
     this.accessPolicy.checkCaptainOrAdmin(team.captain.userId, user);
 
     // 2. Перевіряємо, чи не зареєстрована вже ця команда
