@@ -12,6 +12,7 @@ import Register from "./pages/Register";
 import Tournaments from "./pages/Tournaments";
 import TournamentDetails from "./pages/TournamentDetails";
 import MatchRoom from "./pages/MatchRoom";
+import Inbox from "./pages/Inbox";
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
             <Route element={<ProtectedRoute />}>
               <Route path="profile/:id" element={<Profile />} />
               <Route path="invite/team" element={<AcceptTeamInvite />} />
+              <Route path="invite/tournament" element={<Inbox />} />
             </Route>
           </Route>
         </Routes>
