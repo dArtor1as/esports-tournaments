@@ -10,6 +10,8 @@ import { MailService } from 'src/mail/mail.service';
 import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { InvitationPolicyService } from './invitation-policy.service';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
+import { AcceptTournamentInvitationDto } from './dto/accept-tournament-invitation.dto';
+import { Stage } from '@prisma/client';
 
 @Injectable()
 export class TournamentInvitationsService {
@@ -123,67 +125,89 @@ export class TournamentInvitationsService {
     };
   }
 
-  async accept(token: string, rosterPlayerIds: string[], user: JwtPayload) {
-    return this.prisma.$transaction(async (prisma) => {
-      // 1. Валідація інвайту
-      const invite = await prisma.tournamentInvitation.findUnique({
-        where: { token },
-        include: {
-          tournament: true,
-          team: {
-            include: {
-              captain: true,
-            },
-          },
-        },
-      });
-      if (!invite) throw new NotFoundException('Запрошення не знайдено');
+  async accept(
+    token: string,
+    dto: AcceptTournamentInvitationDto,
+    user: JwtPayload,
+  ) {
+    const invite = await this.prisma.tournamentInvitation.findUnique({
+      where: { token },
+      include: { tournament: true, team: { include: { captain: true } } },
+    });
 
-      if (invite.status !== 'PENDING')
-        throw new BadRequestException('Запрошення вже оброблено');
+    if (!invite || invite.status !== 'PENDING') {
+      throw new BadRequestException('Запрошення недійсне або вже оброблене');
+    }
 
-      if (invite.expiresAt < new Date())
-        throw new BadRequestException('Термін дії запрошення минув');
+    this.accessPolicy.checkCaptainOrAdmin(invite.team.captain.userId, user);
 
-      this.accessPolicy.checkCaptainOrAdmin(invite.team.captain.userId, user);
+    // 1. Формуємо єдиний формат ростера з урахуванням зворотньої сумісності (fallback)
+    let finalRoster: Array<{ playerId: string; role: any }> = [];
 
-      // 2. Валідація гравців
-      const players = await prisma.player.findMany({
-        where: { id: { in: rosterPlayerIds }, teamId: invite.teamId },
-      });
-      if (players.length !== rosterPlayerIds.length) {
-        throw new BadRequestException(
-          'Деякі гравці не знайдені або не належать цій команді',
-        );
-      }
+    if (dto.rosterPlayers && dto.rosterPlayers.length > 0) {
+      finalRoster = dto.rosterPlayers;
+    } else if (dto.rosterPlayerIds && dto.rosterPlayerIds.length > 0) {
+      finalRoster = dto.rosterPlayerIds.map((id) => ({
+        playerId: id,
+        role: id === invite.team.captainId ? 'CAPTAIN' : 'PLAYER',
+      }));
+    } else {
+      throw new BadRequestException('Необхідно надати список гравців ростера.');
+    }
 
-      // 3. Визначаємо стадію, на яку потрапляє команда (CQ або GROUP) та створюємо учасника турніру
-      const assignedStage = this.invitationPolicyService.determineAssignedStage(
-        invite.team.tier,
-        invite.tournament.tier,
+    // 2. БІЗНЕС-ВАЛІДАЦІЯ РОСТЕРУ (Правила 5v5)
+    const activeCount = finalRoster.filter(
+      (r) => r.role === 'PLAYER' || r.role === 'CAPTAIN',
+    ).length;
+    const coachCount = finalRoster.filter((r) => r.role === 'COACH').length;
+    const substituteCount = finalRoster.filter(
+      (r) => r.role === 'SUBSTITUTE',
+    ).length;
+
+    if (activeCount !== 5) {
+      throw new BadRequestException(
+        `Для участі потрібно рівно 5 активних гравців (зараз обрано: ${activeCount}).`,
+      );
+    }
+    if (coachCount > 1)
+      throw new BadRequestException('У ростері може бути не більше 1 тренера.');
+    if (substituteCount > 1)
+      throw new BadRequestException(
+        'У ростері може бути не більше 1 запасного гравця (Substitute).',
       );
 
-      const participantCount = await prisma.tournamentParticipant.count({
-        where: { tournamentId: invite.tournamentId },
-      });
+    let settingsData: any = invite.tournament.settings || {};
+    if (typeof settingsData === 'string') {
+      try {
+        settingsData = JSON.parse(settingsData);
+      } catch (e) {}
+    }
+    const initialStage =
+      settingsData.bracketType === 'ROUND_ROBIN' ? 'GROUP' : 'PLAYOFF';
 
-      const participant = await prisma.tournamentParticipant.create({
+    // 3. Збереження в базі через транзакцію
+    return this.prisma.$transaction(async (prismaTx) => {
+      // Створюємо запис учасника турніру
+      const participant = await prismaTx.tournamentParticipant.create({
         data: {
           tournamentId: invite.tournamentId,
           teamId: invite.teamId,
-          joinedStage: assignedStage as any,
-          seed: participantCount + 1,
+          seed: 99,
+          joinedStage: initialStage,
         },
       });
 
-      const rosterData = rosterPlayerIds.map((playerId) => ({
+      // Записуємо ростер із правильними ролями у БД
+      const rosterData = finalRoster.map((p) => ({
         participantId: participant.id,
-        playerId: playerId,
-        role: 'PLAYER' as const,
+        playerId: p.playerId,
+        role: p.role,
       }));
-      await prisma.tournamentRoster.createMany({ data: rosterData });
 
-      await prisma.tournamentInvitation.update({
+      await prismaTx.tournamentRoster.createMany({ data: rosterData });
+
+      // Оновлюємо статус інвайту
+      await prismaTx.tournamentInvitation.update({
         where: { id: invite.id },
         data: { status: 'ACCEPTED' },
       });

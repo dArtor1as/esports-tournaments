@@ -288,7 +288,13 @@ export default function TournamentDetails() {
         </TabsContent>
 
         <TabsContent value="teams">
-          <TournamentParticipantsTab participants={participants} />
+          <TournamentParticipantsTab
+            participants={participants}
+            tournamentId={tournament.id}
+            tournamentTier={tournament.tier}
+            tournamentGameId={tournament.gameId || tournament.game?.id}
+            isCreatorOrAdmin={isCreator || isAdmin}
+          />
         </TabsContent>
 
         <TabsContent value="ga-simulator">

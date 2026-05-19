@@ -175,7 +175,7 @@ export class StatsService {
         });
 
         for (const roster of rosters) {
-          if (roster.role === 'COACH') continue;
+          if (roster.role === 'COACH' || roster.role === 'SUBSTITUTE') continue;
           const isTeamA = roster.participant.teamId === match.teamAId;
           const eloChange = isTeamA ? changeA : changeB;
           const isWinner = isTeamA ? isAWinner : !isAWinner;
