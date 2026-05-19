@@ -7,12 +7,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Cpu, Sparkles, X, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-
 import TournamentHeader from "@/components/tournament/TournamentHeader";
 import TournamentBracketTab from "@/components/tournament/TournamentBracketTab";
 import TournamentParticipantsTab from "@/components/tournament/TournamentParticipantsTab";
 import TournamentGaSimulatorTab from "@/components/tournament/TournamentGaSimulatorTab";
 import GaResultsTab from "@/components/tournament/GaResultsTab";
+import { useQuery } from "@tanstack/react-query";
+import { useMyProfilesData } from "@/hooks/useProfileData";
 
 export default function TournamentDetails() {
   const { id } = useParams<{ id: string }>();
@@ -32,6 +33,8 @@ export default function TournamentDetails() {
     const saved = localStorage.getItem(`forecast_${id}`);
     return saved ? JSON.parse(saved) : null;
   });
+
+  const { data: myProfiles = [] } = useMyProfilesData(!!currentUser);
 
   useEffect(() => {
     if (predictionResult) {
@@ -216,6 +219,46 @@ export default function TournamentDetails() {
     }
   };
 
+  const isFull = participants.length >= (tournament?.maxParticipants || 0);
+  const isCreatorOrAdmin = isCreator || isAdmin;
+
+  // Збираємо всі teamId, в яких перебуває поточний юзер
+  const myTeamIds = myProfiles.map((p: any) => p.teamId).filter(Boolean);
+  // Перевіряємо, чи є хоча б одна його команда у списку учасників турніру
+  const isAlreadyRegistered = participants.some((p: any) =>
+    myTeamIds.includes(p.teamId),
+  );
+
+  // 1. МЕТОД ДЛЯ СКАСУВАННЯ (SOFT DELETE)
+  const handleCancelTournament = async () => {
+    try {
+      await api.patch(`/tournaments/${tournament.id}/cancel`);
+
+      toast.success("Турнір успішно скасовано. Незіграні матчі анульовано.");
+      navigate("/"); // Редирект на головну сторінку
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || "Помилка при скасуванні турніру",
+      );
+    }
+  };
+
+  // 2. МЕТОД ДЛЯ ПОВНОГО ВИДАЛЕННЯ (HARD DELETE)
+  const handleDeleteTournament = async () => {
+    try {
+      await api.delete(`/tournaments/${tournament.id}`);
+
+      toast.success(
+        "Турнір та всі пов'язані заявки успішно видалені з бази даних",
+      );
+      navigate("/");
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || "Помилка при спробі видалити турнір",
+      );
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500">
       <Button
@@ -226,8 +269,15 @@ export default function TournamentDetails() {
         <ArrowLeft size={16} className="mr-2" /> Назад
       </Button>
 
-      <TournamentHeader tournament={tournament} isAdmin={isAdmin} />
-
+      <TournamentHeader
+        tournament={tournament}
+        isAdminOrCreator={isCreatorOrAdmin}
+        isFull={isFull}
+        isAlreadyRegistered={isAlreadyRegistered}
+        hasMatches={matches.length > 0}
+        onCancel={handleCancelTournament}
+        onDelete={handleDeleteTournament}
+      />
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-slate-900 border border-slate-800 p-1 rounded-xl flex flex-wrap w-full md:w-max mb-4">
           <TabsTrigger
