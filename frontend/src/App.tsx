@@ -13,6 +13,7 @@ import Tournaments from "./pages/Tournaments";
 import TournamentDetails from "./pages/TournamentDetails";
 import MatchRoom from "./pages/MatchRoom";
 import Inbox from "./pages/Inbox";
+import Leaderboard from "./pages/Leaderboard";
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
             <Route path="match/:id" element={<MatchRoom />} />
             <Route path="matches/:id" element={<MatchRoom />} />
             <Route path="tournament/:id" element={<TournamentDetails />} />
+            <Route path="/leaderboards" element={<Leaderboard />} />
 
             {/* Тільки для залогінених користувачів */}
             <Route element={<ProtectedRoute />}>

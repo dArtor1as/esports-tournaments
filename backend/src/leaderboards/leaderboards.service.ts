@@ -12,6 +12,7 @@ export class LeaderboardsService {
     const whereCondition = {
       status: 'ACTIVE',
       ...(query.region && { region: query.region }),
+      ...(query.gameSlug && { game: { slug: query.gameSlug } }),
     };
 
     return paginate<Team>(
@@ -29,6 +30,9 @@ export class LeaderboardsService {
     const whereCondition: any = {};
     if (query.region) {
       whereCondition.team = { region: query.region };
+    }
+    if (query.gameSlug) {
+      whereCondition.game = { slug: query.gameSlug };
     }
 
     return paginate<Player>(
