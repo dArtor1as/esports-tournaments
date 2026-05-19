@@ -1,15 +1,15 @@
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Mail, Target } from "lucide-react";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import EloRatingChart from "@/components/EloRatingChart";
-import PlayerSummaryCard from "@/components/PlayerSummaryCard";
-import PlayerStatsPanel from "@/components/PlayerStatsPanel";
-import { usePlayerStatsData } from "@/hooks/useProfileData";
-import { useAuth } from "@/context/AuthContext";
-import { calculateAge, getFlagUrl, calculateKd } from "@/lib/helpers";
-import Inbox from "@/pages/Inbox";
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Mail, Target } from 'lucide-react';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import EloRatingChart from '@/components/EloRatingChart';
+import PlayerSummaryCard from '@/components/PlayerSummaryCard';
+import PlayerStatsPanel from '@/components/PlayerStatsPanel';
+import { usePlayerStatsData } from '@/hooks/useProfileData';
+import { useAuth } from '@/context/AuthContext';
+import { calculateAge, getFlagUrl, calculateKd } from '@/lib/helpers';
+import Inbox from '@/pages/Inbox';
 
 export default function PlayerStats() {
   const { id } = useParams<{ id: string }>();
@@ -18,12 +18,12 @@ export default function PlayerStats() {
   const [searchParams] = useSearchParams();
 
   // Перевіряємо, чи є в URL токен з листа Mailtrap
-  const urlToken = searchParams.get("token");
+  const urlToken = searchParams.get('token');
 
   const { player, eloHistory, isLoading } = usePlayerStatsData(id);
 
   // Автоматично відкриваємо потрібну вкладку, якщо користувач перейшов за посиланням з пошти
-  const [activeTab, setActiveTab] = useState(urlToken ? "inbox" : "analytics");
+  const [activeTab, setActiveTab] = useState(urlToken ? 'inbox' : 'analytics');
 
   if (isLoading)
     return (
@@ -39,7 +39,7 @@ export default function PlayerStats() {
   const stats = player.stats || {};
   const age = calculateAge(player.user?.birthDate);
   const kd = calculateKd(stats.total_kills, stats.total_deaths);
-  const flagUrl = getFlagUrl(player.user?.countryCode, "w40");
+  const flagUrl = getFlagUrl(player.user?.countryCode, 'w40');
 
   // Перевірка чи це профіль поточного юзера і чи він є капітаном своєї команди
   const isMyProfile = player.userId === currentUser?.id;
@@ -96,7 +96,7 @@ export default function PlayerStats() {
               <PlayerStatsPanel
                 stats={stats}
                 hasStats={Object.keys(stats).length > 0}
-                isCS2={player.game?.slug === "cs2"}
+                isCS2={player.game?.slug === 'cs2'}
               />
               <EloRatingChart
                 historyData={eloHistory}

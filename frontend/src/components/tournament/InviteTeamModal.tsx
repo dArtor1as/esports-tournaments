@@ -1,25 +1,25 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { MailPlus, Search, ShieldAlert, SlidersHorizontal } from "lucide-react";
-import { toast } from "sonner";
-import { Input } from "@/components/ui/input";
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { MailPlus, Search, ShieldAlert, SlidersHorizontal } from 'lucide-react';
+import { toast } from 'sonner';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+} from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 
 interface InviteTeamModalProps {
   tournamentId: string;
@@ -33,15 +33,15 @@ export default function InviteTeamModal({
   tournamentGameId,
 }: InviteTeamModalProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [tierFilter, setTierFilter] = useState<string>("all");
-  const [selectedTeamId, setSelectedTeamId] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [tierFilter, setTierFilter] = useState<string>('all');
+  const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
   const { data: teamsData, isLoading: isLoadingTeams } = useQuery({
-    queryKey: ["availableTeamsForInvite"],
+    queryKey: ['availableTeamsForInvite'],
     queryFn: async () => {
-      const { data } = await api.get("/leaderboards/teams?limit=100");
+      const { data } = await api.get('/leaderboards/teams?limit=100');
       return data.data || [];
     },
     enabled: isOpen,
@@ -57,7 +57,7 @@ export default function InviteTeamModal({
 
       // 2. ФІЛЬТР ПО ТІРУ: Якщо обрано конкретний тір
       const matchesTier =
-        tierFilter === "all" || team.tier === parseInt(tierFilter);
+        tierFilter === 'all' || team.tier === parseInt(tierFilter);
       if (!matchesTier) return false;
 
       // 3. ТЕКСТОВИЙ ПОШУК: За назвою або тегом
@@ -72,18 +72,18 @@ export default function InviteTeamModal({
     if (!selectedTeamId) return;
     setIsLoading(true);
     try {
-      await api.post("/tournament-invitations", {
+      await api.post('/tournament-invitations', {
         tournamentId,
         teamId: selectedTeamId,
       });
-      toast.success("Офіційне запрошення успішно надіслано капітану команди!");
+      toast.success('Офіційне запрошення успішно надіслано капітану команди!');
       setIsOpen(false);
-      setSelectedTeamId("");
-      setSearchTerm("");
-      setTierFilter("all");
+      setSelectedTeamId('');
+      setSearchTerm('');
+      setTierFilter('all');
     } catch (err: any) {
       toast.error(
-        err.response?.data?.message || "Не вдалося надіслати запрошення",
+        err.response?.data?.message || 'Не вдалося надіслати запрошення',
       );
     } finally {
       setIsLoading(false);
@@ -169,7 +169,7 @@ export default function InviteTeamModal({
                   <div
                     key={team.id}
                     onClick={() => setSelectedTeamId(team.id)}
-                    className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer border transition-colors ${selectedTeamId === team.id ? "bg-purple-600/20 border-purple-500 shadow-[0_0_10px_rgba(147,51,234,0.15)]" : "bg-slate-950 border-slate-800/60 hover:border-slate-600"}`}
+                    className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer border transition-colors ${selectedTeamId === team.id ? 'bg-purple-600/20 border-purple-500 shadow-[0_0_10px_rgba(147,51,234,0.15)]' : 'bg-slate-950 border-slate-800/60 hover:border-slate-600'}`}
                   >
                     <div className="flex items-center gap-2">
                       <span className="text-amber-500 font-mono font-black text-[10px] bg-slate-900 border border-slate-800 px-1.5 py-0.5 rounded">
@@ -205,7 +205,7 @@ export default function InviteTeamModal({
             disabled={!selectedTeamId || isLoading}
             className="bg-purple-600 hover:bg-purple-500 text-white text-xs font-black uppercase px-4"
           >
-            {isLoading ? "Надсилання..." : "Надіслати інвайт"}
+            {isLoading ? 'Надсилання...' : 'Надіслати інвайт'}
           </Button>
         </div>
       </DialogContent>

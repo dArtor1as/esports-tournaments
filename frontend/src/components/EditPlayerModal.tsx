@@ -1,27 +1,27 @@
-import { useState } from "react";
-import { api } from "@/lib/api";
+import { useState } from 'react';
+import { api } from '@/lib/api';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Settings } from "lucide-react";
+} from '@/components/ui/select';
+import { Settings } from 'lucide-react';
 
 const ROLES: Record<string, string[]> = {
-  cs2: ["SNIPER", "RIFLER", "ENTRY", "SUPPORT", "IGL"],
-  dota2: ["POS_1", "POS_2", "POS_3", "POS_4", "POS_5"],
+  cs2: ['SNIPER', 'RIFLER', 'ENTRY', 'SUPPORT', 'IGL'],
+  dota2: ['POS_1', 'POS_2', 'POS_3', 'POS_4', 'POS_5'],
 };
 
 interface EditPlayerModalProps {
@@ -42,13 +42,13 @@ export default function EditPlayerModal({
   const [loading, setLoading] = useState(false);
 
   const [nickname, setNickname] = useState(player.nickname);
-  const [inGameRole, setInGameRole] = useState(player.inGameRole || "");
-  const [error, setError] = useState("");
+  const [inGameRole, setInGameRole] = useState(player.inGameRole || '');
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
+    setError('');
 
     try {
       await api.patch(`/players/${player.id}`, {
@@ -60,7 +60,7 @@ export default function EditPlayerModal({
       onSuccess();
     } catch (err: any) {
       setError(
-        err.response?.data?.message || "Помилка оновлення ігрового профілю",
+        err.response?.data?.message || 'Помилка оновлення ігрового профілю',
       );
     } finally {
       setLoading(false);
@@ -130,7 +130,7 @@ export default function EditPlayerModal({
             type="submit"
             className="w-full bg-esports-primary hover:bg-esports-primary/90 text-white"
           >
-            {loading ? "Збереження..." : "Зберегти зміни"}
+            {loading ? 'Збереження...' : 'Зберегти зміни'}
           </Button>
         </form>
       </DialogContent>

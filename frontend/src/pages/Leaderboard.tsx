@@ -1,31 +1,31 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { Trophy, Medal, Search, Globe } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { Input } from "@/components/ui/input";
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import { Trophy, Medal, Search, Globe } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { getFlagUrl } from "@/lib/helpers";
+} from '@/components/ui/select';
+import { getFlagUrl } from '@/lib/helpers';
 
-const REGIONS = ["EU", "NA", "CIS", "ASIA", "SA", "GLOBAL"];
+const REGIONS = ['EU', 'NA', 'CIS', 'ASIA', 'SA', 'GLOBAL'];
 
 export default function Leaderboard() {
   const navigate = useNavigate();
-  const [regionFilter, setRegionFilter] = useState("GLOBAL");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [activeGame, setActiveGame] = useState<"cs2" | "dota2">("cs2");
+  const [regionFilter, setRegionFilter] = useState('GLOBAL');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeGame, setActiveGame] = useState<'cs2' | 'dota2'>('cs2');
 
   const { data: playersData, isLoading } = useQuery({
-    queryKey: ["playersLeaderboard", regionFilter, activeGame],
+    queryKey: ['playersLeaderboard', regionFilter, activeGame],
     queryFn: async () => {
       const regionQuery =
-        regionFilter !== "GLOBAL" ? `&region=${regionFilter}` : "";
+        regionFilter !== 'GLOBAL' ? `&region=${regionFilter}` : '';
       const gameQuery = `&gameSlug=${activeGame}`; // Передаємо гру
       const { data } = await api.get(
         `/leaderboards/players?limit=100${regionQuery}${gameQuery}`,
@@ -56,21 +56,21 @@ export default function Leaderboard() {
         {/* ПЕРЕМИКАЧ ІГОР  */}
         <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-800 w-full md:w-auto">
           <button
-            onClick={() => setActiveGame("cs2")}
+            onClick={() => setActiveGame('cs2')}
             className={`flex-1 md:flex-none px-5 py-2 text-xs font-black uppercase tracking-wider rounded-md transition-all ${
-              activeGame === "cs2"
-                ? "bg-esports-accent text-black shadow-md"
-                : "text-slate-400 hover:text-white"
+              activeGame === 'cs2'
+                ? 'bg-esports-accent text-black shadow-md'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             Counter-Strike 2
           </button>
           <button
-            onClick={() => setActiveGame("dota2")}
+            onClick={() => setActiveGame('dota2')}
             className={`flex-1 md:flex-none px-5 py-2 text-xs font-black uppercase tracking-wider rounded-md transition-all ${
-              activeGame === "dota2"
-                ? "bg-esports-accent text-black shadow-md"
-                : "text-slate-400 hover:text-white"
+              activeGame === 'dota2'
+                ? 'bg-esports-accent text-black shadow-md'
+                : 'text-slate-400 hover:text-white'
             }`}
           >
             Dota 2
@@ -178,7 +178,7 @@ export default function Leaderboard() {
                             />
                           )}
                           <span
-                            className={`font-bold text-base transition-colors ${isTop1 ? "text-yellow-400" : "text-white group-hover:text-esports-light"}`}
+                            className={`font-bold text-base transition-colors ${isTop1 ? 'text-yellow-400' : 'text-white group-hover:text-esports-light'}`}
                           >
                             {player.nickname}
                           </span>
@@ -213,11 +213,11 @@ export default function Leaderboard() {
                           <Trophy
                             size={14}
                             className={
-                              isTop1 ? "text-yellow-400" : "text-slate-500"
+                              isTop1 ? 'text-yellow-400' : 'text-slate-500'
                             }
                           />
                           <span
-                            className={`font-black text-lg ${isTop1 ? "text-yellow-400" : "text-white"}`}
+                            className={`font-black text-lg ${isTop1 ? 'text-yellow-400' : 'text-white'}`}
                           >
                             {player.rating}
                           </span>

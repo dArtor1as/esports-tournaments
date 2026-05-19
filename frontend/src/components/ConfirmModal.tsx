@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { type ReactNode } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -9,7 +9,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog';
 
 interface ConfirmModalProps {
   children: ReactNode; // Кнопка, на яку будуть натискати
@@ -18,7 +18,7 @@ interface ConfirmModalProps {
   onConfirm: () => void;
   confirmText?: string;
   cancelText?: string;
-  variant?: "danger" | "default";
+  variant?: 'danger' | 'default';
 }
 
 export default function ConfirmModal({
@@ -26,9 +26,9 @@ export default function ConfirmModal({
   title,
   description,
   onConfirm,
-  confirmText = "Підтвердити",
-  cancelText = "Скасувати",
-  variant = "danger",
+  confirmText = 'Підтвердити',
+  cancelText = 'Скасувати',
+  variant = 'danger',
 }: ConfirmModalProps) {
   return (
     <AlertDialog>
@@ -37,7 +37,7 @@ export default function ConfirmModal({
         <AlertDialogHeader>
           <AlertDialogTitle
             className={
-              variant === "danger" ? "text-red-400" : "text-esports-accent"
+              variant === 'danger' ? 'text-red-400' : 'text-esports-accent'
             }
           >
             {title}
@@ -56,9 +56,9 @@ export default function ConfirmModal({
               onConfirm();
             }}
             className={
-              variant === "danger"
-                ? "bg-red-600 hover:bg-red-700 text-white"
-                : "bg-esports-primary hover:bg-esports-primary/90 text-white"
+              variant === 'danger'
+                ? 'bg-red-600 hover:bg-red-700 text-white'
+                : 'bg-esports-primary hover:bg-esports-primary/90 text-white'
             }
           >
             {confirmText}

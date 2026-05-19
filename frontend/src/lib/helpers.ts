@@ -12,9 +12,9 @@ export const calculateAge = (dateString?: string) => {
 // 2. Генерація посилання на прапор
 export const getFlagUrl = (
   countryCode?: string,
-  size: "w20" | "w40" | "w80" = "w20",
+  size: 'w20' | 'w40' | 'w80' = 'w20',
 ) => {
-  if (!countryCode || countryCode === "INT") return null;
+  if (!countryCode || countryCode === 'INT') return null;
   return `https://flagcdn.com/${size}/${countryCode.toLowerCase()}.png`;
 };
 

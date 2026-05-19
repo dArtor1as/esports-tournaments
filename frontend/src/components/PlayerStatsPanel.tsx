@@ -5,13 +5,13 @@ import {
   Skull,
   Activity,
   Crosshair,
-} from "lucide-react";
-import StatBar from "./StatBar";
+} from 'lucide-react';
+import StatBar from './StatBar';
 import {
   getWinRateStatus,
   getCS2FieldStatus,
   getDotaFieldStatus,
-} from "@/lib/stat-rules";
+} from '@/lib/stat-rules';
 
 interface PlayerStatsPanelProps {
   stats: any;
@@ -60,14 +60,14 @@ export default function PlayerStatsPanel({
                 ADR
               </span>
               <span className="text-3xl font-black text-white">
-                {stats.avg_adr || "0.0"}
+                {stats.avg_adr || '0.0'}
               </span>
               <StatBar
                 label=""
                 value={parseFloat(stats.avg_adr || 0)}
                 max={120}
                 status={getCS2FieldStatus(
-                  "adr",
+                  'adr',
                   parseFloat(stats.avg_adr || 0),
                 )}
               />
@@ -77,13 +77,13 @@ export default function PlayerStatsPanel({
                 KPR
               </span>
               <span className="text-3xl font-black text-white">
-                {stats.kpr || "0.0"}
+                {stats.kpr || '0.0'}
               </span>
               <StatBar
                 label=""
                 value={parseFloat(stats.kpr || 0)}
                 max={1.1}
-                status={getCS2FieldStatus("kpr", parseFloat(stats.kpr || 0))}
+                status={getCS2FieldStatus('kpr', parseFloat(stats.kpr || 0))}
               />
             </div>
             <div className="flex flex-col items-center justify-center bg-slate-950/40 p-4 rounded-xl border border-slate-800/50">
@@ -91,13 +91,13 @@ export default function PlayerStatsPanel({
                 DPR
               </span>
               <span className="text-3xl font-black text-white">
-                {stats.dpr || "0.0"}
+                {stats.dpr || '0.0'}
               </span>
               <StatBar
                 label=""
                 value={parseFloat(stats.dpr || 0)}
                 max={1.1}
-                status={getCS2FieldStatus("dpr", parseFloat(stats.dpr || 0))}
+                status={getCS2FieldStatus('dpr', parseFloat(stats.dpr || 0))}
               />
             </div>
           </>
@@ -115,7 +115,7 @@ export default function PlayerStatsPanel({
                 value={parseFloat(stats.avg_gpm || 0)}
                 max={1000}
                 status={getDotaFieldStatus(
-                  "gpm",
+                  'gpm',
                   parseFloat(stats.avg_gpm || 0),
                 )}
               />
@@ -132,7 +132,7 @@ export default function PlayerStatsPanel({
                 value={parseFloat(stats.avg_xpm || 0)}
                 max={1000}
                 status={getDotaFieldStatus(
-                  "xpm",
+                  'xpm',
                   parseFloat(stats.avg_xpm || 0),
                 )}
               />
@@ -149,7 +149,7 @@ export default function PlayerStatsPanel({
                 value={parseFloat(stats.avg_netWorth || 0)}
                 max={40000}
                 status={getDotaFieldStatus(
-                  "netWorth",
+                  'netWorth',
                   parseFloat(stats.avg_netWorth || 0),
                 )}
               />
@@ -209,7 +209,7 @@ export default function PlayerStatsPanel({
               Відсоток Headshots
             </span>
             <span className="font-bold text-white">
-              {stats.avg_headshots ? `${stats.avg_headshots}%` : "0%"}
+              {stats.avg_headshots ? `${stats.avg_headshots}%` : '0%'}
             </span>
           </div>
         )}

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { api } from "@/lib/api";
+import { useState } from 'react';
+import { api } from '@/lib/api';
 import {
   Dialog,
   DialogContent,
@@ -7,11 +7,11 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogDescription,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { UserPlus } from "lucide-react";
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { UserPlus } from 'lucide-react';
 
 interface InvitePlayerModalProps {
   teamId: string;
@@ -19,20 +19,20 @@ interface InvitePlayerModalProps {
 
 export default function InvitePlayerModal({ teamId }: InvitePlayerModalProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [playerNickname, setPlayerNickname] = useState("");
+  const [playerNickname, setPlayerNickname] = useState('');
   const [loading, setLoading] = useState(false);
-  const [inviteToken, setInviteToken] = useState("");
-  const [error, setError] = useState("");
+  const [inviteToken, setInviteToken] = useState('');
+  const [error, setError] = useState('');
 
   const handleGenerateInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
-    setInviteToken("");
+    setError('');
+    setInviteToken('');
 
     try {
       // Відправляємо playerNickname
-      const response = await api.post("/team-invitations", {
+      const response = await api.post('/team-invitations', {
         teamId,
         playerNickname: playerNickname.trim(),
       });
@@ -40,7 +40,7 @@ export default function InvitePlayerModal({ teamId }: InvitePlayerModalProps) {
     } catch (err: any) {
       setError(
         err.response?.data?.message ||
-          "Не вдалося створити запрошення. Перевірте логін.",
+          'Не вдалося створити запрошення. Перевірте логін.',
       );
     } finally {
       setLoading(false);
@@ -53,8 +53,8 @@ export default function InvitePlayerModal({ teamId }: InvitePlayerModalProps) {
       onOpenChange={(val) => {
         setIsOpen(val);
         if (!val) {
-          setInviteToken("");
-          setPlayerNickname("");
+          setInviteToken('');
+          setPlayerNickname('');
         }
       }}
     >
@@ -69,8 +69,8 @@ export default function InvitePlayerModal({ teamId }: InvitePlayerModalProps) {
             Запросити в команду
           </DialogTitle>
           <DialogDescription className="text-slate-400">
-            Введіть{" "}
-            <span className="text-white font-bold">логін (playerNickname)</span>{" "}
+            Введіть{' '}
+            <span className="text-white font-bold">логін (playerNickname)</span>{' '}
             користувача, щоб згенерувати для нього інвайт.
           </DialogDescription>
         </DialogHeader>
@@ -95,7 +95,7 @@ export default function InvitePlayerModal({ teamId }: InvitePlayerModalProps) {
               type="submit"
               className="w-full bg-esports-primary text-white font-bold"
             >
-              {loading ? "Пошук гравця..." : "Згенерувати інвайт"}
+              {loading ? 'Пошук гравця...' : 'Згенерувати інвайт'}
             </Button>
           )}
         </form>

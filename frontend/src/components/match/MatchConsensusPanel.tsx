@@ -1,9 +1,9 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Swords, ShieldAlert, CheckCircle2, Gavel, Clock } from "lucide-react";
-import ConfirmModal from "@/components/ConfirmModal";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Swords, ShieldAlert, CheckCircle2, Gavel, Clock } from 'lucide-react';
+import ConfirmModal from '@/components/ConfirmModal';
 
 interface MatchConsensusPanelProps {
   match: any;
@@ -18,9 +18,9 @@ export default function MatchConsensusPanel({
   loading,
   onAction,
 }: MatchConsensusPanelProps) {
-  const [scoreA, setScoreA] = useState("");
-  const [scoreB, setScoreB] = useState("");
-  const [disputeReason, setDisputeReason] = useState("");
+  const [scoreA, setScoreA] = useState('');
+  const [scoreB, setScoreB] = useState('');
+  const [disputeReason, setDisputeReason] = useState('');
   const [showDispute, setShowDispute] = useState(false);
 
   // Бізнес-логіка доступу
@@ -33,14 +33,14 @@ export default function MatchConsensusPanel({
   const isAnyCaptain = isCaptainA || isCaptainB;
   const canForceResolve =
     match.tournament?.creatorId === currentUser?.id ||
-    currentUser?.role === "ADMIN";
+    currentUser?.role === 'ADMIN';
 
   const winScoreLimit = Math.floor((match.bestOf || 3) / 2) + 1;
-  const status = match.matchStatus || "PENDING";
-  const isDisputed = status === "DISPUTED";
-  const isPending = status === "PENDING";
+  const status = match.matchStatus || 'PENDING';
+  const isDisputed = status === 'DISPUTED';
+  const isPending = status === 'PENDING';
 
-  const isReported = status === "REPORTED";
+  const isReported = status === 'REPORTED';
   const isReportedByMe = isReported && match.reportedById === currentUser?.id;
   const isReportedByOpponent =
     isReported && match.reportedById && match.reportedById !== currentUser?.id;
@@ -56,7 +56,7 @@ export default function MatchConsensusPanel({
     match.details?.scoreB ??
     match.scoreB;
 
-  if (status === "COMPLETED" || match.isProcessed) return null;
+  if (status === 'COMPLETED' || match.isProcessed) return null;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -99,7 +99,7 @@ export default function MatchConsensusPanel({
           </div>
           <div className="space-y-2 mt-auto">
             <Button
-              onClick={() => onAction("report", { scoreA, scoreB })}
+              onClick={() => onAction('report', { scoreA, scoreB })}
               disabled={loading || !scoreA || !scoreB}
               className="w-full bg-esports-accent text-black font-bold uppercase text-xs"
             >
@@ -109,7 +109,7 @@ export default function MatchConsensusPanel({
               title="Здати матч?"
               description="Технічна поразка."
               onConfirm={() =>
-                onAction("forfeit", {
+                onAction('forfeit', {
                   forfeitingTeamId: isCaptainA
                     ? match.teamA.id
                     : match.teamB.id,
@@ -149,7 +149,7 @@ export default function MatchConsensusPanel({
               опонента
             </h3>
             <p className="text-sm text-slate-300 mb-4">
-              Опонент стверджує, що рахунок:{" "}
+              Опонент стверджує, що рахунок:{' '}
               <strong className="text-esports-accent">
                 {proposedScoreA} : {proposedScoreB}
               </strong>
@@ -157,7 +157,7 @@ export default function MatchConsensusPanel({
           </div>
           <div className="space-y-3 mt-auto">
             <Button
-              onClick={() => onAction("confirm")}
+              onClick={() => onAction('confirm')}
               disabled={loading}
               className="w-full bg-emerald-600/20 text-emerald-400 font-bold uppercase text-xs"
             >
@@ -190,7 +190,7 @@ export default function MatchConsensusPanel({
                     </Button>
                     <Button
                       onClick={() =>
-                        onAction("dispute", { reason: disputeReason })
+                        onAction('dispute', { reason: disputeReason })
                       }
                       disabled={loading || !disputeReason}
                       className="bg-red-600 text-white font-bold text-xs uppercase flex-1"
@@ -208,14 +208,14 @@ export default function MatchConsensusPanel({
       {/* Панель Адміна */}
       {canForceResolve && (
         <div
-          className={`bg-slate-900 border p-6 rounded-xl shadow-xl flex flex-col justify-between ${isDisputed ? "border-red-500/50" : "border-purple-500/30"}`}
+          className={`bg-slate-900 border p-6 rounded-xl shadow-xl flex flex-col justify-between ${isDisputed ? 'border-red-500/50' : 'border-purple-500/30'}`}
         >
           <div>
             <h3
-              className={`text-lg font-black flex items-center gap-2 mb-2 border-b border-slate-800 pb-3 ${isDisputed ? "text-red-400" : "text-purple-400"}`}
+              className={`text-lg font-black flex items-center gap-2 mb-2 border-b border-slate-800 pb-3 ${isDisputed ? 'text-red-400' : 'text-purple-400'}`}
             >
-              <Gavel size={18} />{" "}
-              {isDisputed ? "Вирішення Диспуту" : "Адмін-Панель"}
+              <Gavel size={18} />{' '}
+              {isDisputed ? 'Вирішення Диспуту' : 'Адмін-Панель'}
             </h3>
             <div className="flex gap-4 mb-4">
               <Input
@@ -241,11 +241,11 @@ export default function MatchConsensusPanel({
           <ConfirmModal
             title="Примусове рішення"
             description="Закрити матч в обхід капітанів."
-            onConfirm={() => onAction("force-resolve", { scoreA, scoreB })}
+            onConfirm={() => onAction('force-resolve', { scoreA, scoreB })}
           >
             <Button
               disabled={loading || !scoreA || !scoreB}
-              className={`w-full text-white font-bold uppercase text-xs ${isDisputed ? "bg-red-600" : "bg-purple-600"}`}
+              className={`w-full text-white font-bold uppercase text-xs ${isDisputed ? 'bg-red-600' : 'bg-purple-600'}`}
             >
               Примусово закрити
             </Button>

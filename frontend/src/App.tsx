@@ -1,19 +1,19 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
-import MainLayout from "./layouts/MainLayout";
-import Login from "./pages/Login";
-import Profile from "./pages/Profile";
-import PlayerStats from "./pages/PlayerStats";
-import ProtectedRoute from "./components/ProtectedRoute";
-import Teams from "./pages/Teams";
-import TeamProfile from "./pages/TeamProfile";
-import AcceptTeamInvite from "./pages/AcceptTeamInvite";
-import Register from "./pages/Register";
-import Tournaments from "./pages/Tournaments";
-import TournamentDetails from "./pages/TournamentDetails";
-import MatchRoom from "./pages/MatchRoom";
-import Inbox from "./pages/Inbox";
-import Leaderboard from "./pages/Leaderboard";
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import MainLayout from './layouts/MainLayout';
+import Login from './pages/Login';
+import Profile from './pages/Profile';
+import PlayerStats from './pages/PlayerStats';
+import ProtectedRoute from './components/ProtectedRoute';
+import Teams from './pages/Teams';
+import TeamProfile from './pages/TeamProfile';
+import AcceptTeamInvite from './pages/AcceptTeamInvite';
+import Register from './pages/Register';
+import Tournaments from './pages/Tournaments';
+import TournamentDetails from './pages/TournamentDetails';
+import MatchRoom from './pages/MatchRoom';
+import Inbox from './pages/Inbox';
+import Leaderboard from './pages/Leaderboard';
 
 function App() {
   return (

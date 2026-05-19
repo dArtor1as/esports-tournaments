@@ -1,16 +1,16 @@
-import { useState } from "react";
-import { api } from "@/lib/api";
-import { useAuth } from "@/context/AuthContext"; // <--- Імпортуємо
+import { useState } from 'react';
+import { api } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext'; // <--- Імпортуємо
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface EditProfileModalProps {
   user: { id: string; username: string; countryCode?: string };
@@ -26,13 +26,13 @@ export default function EditProfileModal({
   const { updateUser } = useAuth(); // <--- Витягуємо функцію
 
   const [username, setUsername] = useState(user.username);
-  const [countryCode, setCountryCode] = useState(user.countryCode || "");
-  const [error, setError] = useState("");
+  const [countryCode, setCountryCode] = useState(user.countryCode || '');
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
+    setError('');
 
     try {
       const formattedCountryCode = countryCode.trim().toUpperCase();
@@ -48,7 +48,7 @@ export default function EditProfileModal({
       setIsOpen(false);
       onSuccess();
     } catch (err: any) {
-      setError(err.response?.data?.message || "Помилка оновлення профілю");
+      setError(err.response?.data?.message || 'Помилка оновлення профілю');
     } finally {
       setLoading(false);
     }
@@ -98,7 +98,7 @@ export default function EditProfileModal({
             type="submit"
             className="w-full bg-esports-primary hover:bg-esports-primary/90 text-white"
           >
-            {loading ? "Збереження..." : "Зберегти зміни"}
+            {loading ? 'Збереження...' : 'Зберегти зміни'}
           </Button>
         </form>
       </DialogContent>

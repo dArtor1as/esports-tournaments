@@ -1,16 +1,16 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { Mail, XCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
-import { useSearchParams } from "react-router-dom";
-import AcceptInviteModal from "@/components/tournament/AcceptInviteModal";
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import { Mail, XCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
+import { useSearchParams } from 'react-router-dom';
+import AcceptInviteModal from '@/components/tournament/AcceptInviteModal';
 
 export default function Inbox() {
   const [searchParams] = useSearchParams();
-  const urlToken = searchParams.get("token");
+  const urlToken = searchParams.get('token');
 
   const [selectedInvite, setSelectedInvite] = useState<any>(null);
 
@@ -19,9 +19,9 @@ export default function Inbox() {
     isLoading,
     refetch,
   } = useQuery({
-    queryKey: ["my-team-invites"],
+    queryKey: ['my-team-invites'],
     queryFn: async () => {
-      const { data } = await api.get("/tournament-invitations/my-inbox");
+      const { data } = await api.get('/tournament-invitations/my-inbox');
       return data;
     },
   });
@@ -37,13 +37,13 @@ export default function Inbox() {
   }, [urlToken, invites]);
 
   const handleDecline = async (token: string) => {
-    if (!confirm("Ви впевнені, що хочете відхилити це запрошення?")) return;
+    if (!confirm('Ви впевнені, що хочете відхилити це запрошення?')) return;
     try {
       await api.patch(`/tournament-invitations/${token}/decline`);
-      toast.success("Запрошення відхилено");
+      toast.success('Запрошення відхилено');
       refetch();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Помилка");
+      toast.error(err.response?.data?.message || 'Помилка');
     }
   };
 
@@ -95,7 +95,7 @@ export default function Inbox() {
                   {invite.tournament?.title}
                 </h3>
                 <p className="text-sm text-slate-400 mt-1">
-                  Команда:{" "}
+                  Команда:{' '}
                   <strong className="text-esports-accent">
                     [{invite.team?.tag}] {invite.team?.name}
                   </strong>

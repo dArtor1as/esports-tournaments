@@ -1,9 +1,9 @@
-import { Calendar, GitBranch, LayoutGrid, Network } from "lucide-react";
-import { useMemo, useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import TournamentBracket from "@/components/TournamentBracket";
-import GroupStageStandings from "@/components/tournament/GroupStageStandings";
-import ConfirmModal from "@/components/ConfirmModal";
+import { Calendar, GitBranch, LayoutGrid, Network } from 'lucide-react';
+import { useMemo, useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import TournamentBracket from '@/components/TournamentBracket';
+import GroupStageStandings from '@/components/tournament/GroupStageStandings';
+import ConfirmModal from '@/components/ConfirmModal';
 
 interface TournamentBracketTabProps {
   matches: any[];
@@ -32,15 +32,15 @@ export default function TournamentBracketTab({
   onTransitionToPlayoffs,
   onFinishTournament,
 }: TournamentBracketTabProps) {
-  const isRoundRobin = tournament.settings?.bracketType === "ROUND_ROBIN";
+  const isRoundRobin = tournament.settings?.bracketType === 'ROUND_ROBIN';
   // Локальний стейт для перемикання етапів відображення всередині вкладки
-  const [subStageView, setSubStageView] = useState<"group" | "playoff">(
-    hasPlayoffMatches ? "playoff" : "group",
+  const [subStageView, setSubStageView] = useState<'group' | 'playoff'>(
+    hasPlayoffMatches ? 'playoff' : 'group',
   );
 
   useEffect(() => {
     if (hasPlayoffMatches) {
-      setSubStageView("playoff");
+      setSubStageView('playoff');
     }
   }, [hasPlayoffMatches]);
 
@@ -49,7 +49,7 @@ export default function TournamentBracketTab({
     return [...matches].sort((a, b) => {
       if (a.stage !== b.stage) return a.stage.localeCompare(b.stage);
       if (a.bracket !== b.bracket)
-        return (a.bracket || "").localeCompare(b.bracket || "");
+        return (a.bracket || '').localeCompare(b.bracket || '');
       if (a.round !== b.round) return a.round - b.round;
       return a.id.localeCompare(b.id);
     });
@@ -57,21 +57,21 @@ export default function TournamentBracketTab({
 
   // Фільтруємо суто за стадією PLAYOFF ігноруємо поле bracket
   const playoffOnlyMatches = useMemo(() => {
-    return sortedMatches.filter((m) => m.stage === "PLAYOFF");
+    return sortedMatches.filter((m) => m.stage === 'PLAYOFF');
   }, [sortedMatches]);
 
   const groupOnlyMatches = useMemo(() => {
-    return sortedMatches.filter((m) => m.stage === "GROUP");
+    return sortedMatches.filter((m) => m.stage === 'GROUP');
   }, [sortedMatches]);
 
   const effectivePlayoffBracketType = useMemo(() => {
     const hasLowerBracket = playoffOnlyMatches.some(
-      (m) => m.bracket === "LOWER",
+      (m) => m.bracket === 'LOWER',
     );
-    return hasLowerBracket ? "DOUBLE_ELIMINATION" : "SINGLE_ELIMINATION";
+    return hasLowerBracket ? 'DOUBLE_ELIMINATION' : 'SINGLE_ELIMINATION';
   }, [playoffOnlyMatches]);
 
-  const isTournamentFinished = tournament?.status === "finished";
+  const isTournamentFinished = tournament?.status === 'finished';
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl overflow-hidden min-h-[400px] space-y-6">
@@ -87,14 +87,14 @@ export default function TournamentBracketTab({
           {isRoundRobin && hasPlayoffMatches && (
             <div className="flex bg-slate-950 p-1 rounded-lg border border-slate-800">
               <button
-                onClick={() => setSubStageView("group")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase rounded-md transition-all ${subStageView === "group" ? "bg-amber-500 text-black shadow-md" : "text-slate-400 hover:text-white"}`}
+                onClick={() => setSubStageView('group')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase rounded-md transition-all ${subStageView === 'group' ? 'bg-amber-500 text-black shadow-md' : 'text-slate-400 hover:text-white'}`}
               >
                 <LayoutGrid size={14} /> Групи
               </button>
               <button
-                onClick={() => setSubStageView("playoff")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase rounded-md transition-all ${subStageView === "playoff" ? "bg-amber-500 text-black shadow-md" : "text-slate-400 hover:text-white"}`}
+                onClick={() => setSubStageView('playoff')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase rounded-md transition-all ${subStageView === 'playoff' ? 'bg-amber-500 text-black shadow-md' : 'text-slate-400 hover:text-white'}`}
               >
                 <Network size={14} /> Плей-оф сітка
               </button>
@@ -112,8 +112,8 @@ export default function TournamentBracketTab({
                 disabled={bracketLoading || participantsCount < 2}
                 className="bg-esports-accent text-black hover:bg-esports-accent/90 text-xs font-black uppercase h-8"
               >
-                <GitBranch size={14} className="mr-1.5" />{" "}
-                {bracketLoading ? "Формування..." : "Згенерувати сітку"}
+                <GitBranch size={14} className="mr-1.5" />{' '}
+                {bracketLoading ? 'Формування...' : 'Згенерувати сітку'}
               </Button>
             )}
 
@@ -128,8 +128,8 @@ export default function TournamentBracketTab({
                   disabled={bracketLoading}
                   className="bg-purple-600 hover:bg-purple-500 text-white text-xs font-black uppercase h-8 shadow-[0_0_15px_rgba(147,51,234,0.3)]"
                 >
-                  <GitBranch size={14} className="mr-1.5" />{" "}
-                  {bracketLoading ? "Обробка..." : "Перейти до Плей-оф"}
+                  <GitBranch size={14} className="mr-1.5" />{' '}
+                  {bracketLoading ? 'Обробка...' : 'Перейти до Плей-оф'}
                 </Button>
 
                 <ConfirmModal
@@ -152,8 +152,8 @@ export default function TournamentBracketTab({
 
       {/* РЕНДЕР СТАДІЙ */}
       <div className="pt-2">
-        {tournament.settings?.bracketType === "ROUND_ROBIN" &&
-        subStageView === "group" ? (
+        {tournament.settings?.bracketType === 'ROUND_ROBIN' &&
+        subStageView === 'group' ? (
           <GroupStageStandings matches={groupOnlyMatches} pointsPerWin={3} />
         ) : (
           <TournamentBracket
@@ -162,7 +162,7 @@ export default function TournamentBracketTab({
             bracketType={
               isRoundRobin
                 ? effectivePlayoffBracketType
-                : tournament.settings?.bracketType || "SINGLE_ELIMINATION"
+                : tournament.settings?.bracketType || 'SINGLE_ELIMINATION'
             }
           />
         )}

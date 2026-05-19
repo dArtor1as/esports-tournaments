@@ -39,7 +39,7 @@ export default function PlayerSummaryCard({
           {player.nickname}
         </h1>
         <p className="text-sm text-esports-muted font-medium mb-6">
-          {player.user?.username} {age ? `• ${age} років` : ""}
+          {player.user?.username} {age ? `• ${age} років` : ''}
         </p>
         <div className="w-full bg-slate-950/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-2">
           <div className="flex justify-between items-center border-b border-slate-800/60 pb-2">
@@ -63,7 +63,7 @@ export default function PlayerSummaryCard({
               K/D Ratio
             </span>
             <span
-              className={`text-sm font-black ${Number(kd) >= 1.0 ? "text-green-400" : "text-red-400"}`}
+              className={`text-sm font-black ${Number(kd) >= 1.0 ? 'text-green-400' : 'text-red-400'}`}
             >
               {kd}
             </span>

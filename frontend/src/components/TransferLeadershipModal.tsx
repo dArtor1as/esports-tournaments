@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { api } from "@/lib/api";
+import { useState } from 'react';
+import { api } from '@/lib/api';
 import {
   Dialog,
   DialogContent,
@@ -7,17 +7,17 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogDescription,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Crown } from "lucide-react";
+} from '@/components/ui/select';
+import { Crown } from 'lucide-react';
 
 interface TransferLeadershipModalProps {
   teamId: string;
@@ -33,14 +33,14 @@ export default function TransferLeadershipModal({
   onSuccess,
 }: TransferLeadershipModalProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [newCaptainId, setNewCaptainId] = useState("");
+  const [newCaptainId, setNewCaptainId] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
   const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
+    setError('');
 
     try {
       await api.patch(`/teams/${teamId}/transfer-leadership`, {
@@ -49,7 +49,7 @@ export default function TransferLeadershipModal({
       setIsOpen(false);
       onSuccess();
     } catch (err: any) {
-      setError(err.response?.data?.message || "Помилка передачі лідерства.");
+      setError(err.response?.data?.message || 'Помилка передачі лідерства.');
     } finally {
       setLoading(false);
     }
@@ -112,7 +112,7 @@ export default function TransferLeadershipModal({
             type="submit"
             className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold"
           >
-            {loading ? "Передача..." : "Передати права"}
+            {loading ? 'Передача...' : 'Передати права'}
           </Button>
         </form>
       </DialogContent>

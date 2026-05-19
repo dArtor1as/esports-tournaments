@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { api } from "@/lib/api";
+import { useState } from 'react';
+import { api } from '@/lib/api';
 import {
   Dialog,
   DialogContent,
@@ -7,18 +7,18 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogDescription,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { ShieldPlus } from "lucide-react";
+} from '@/components/ui/select';
+import { ShieldPlus } from 'lucide-react';
 
 interface CreateTeamModalProps {
   player: {
@@ -29,7 +29,7 @@ interface CreateTeamModalProps {
   onSuccess: () => void;
 }
 
-const REGIONS = ["EU", "NA", "CIS", "ASIA", "SA", "GLOBAL"];
+const REGIONS = ['EU', 'NA', 'CIS', 'ASIA', 'SA', 'GLOBAL'];
 
 export default function CreateTeamModal({
   player,
@@ -37,30 +37,30 @@ export default function CreateTeamModal({
 }: CreateTeamModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
-  const [name, setName] = useState("");
-  const [tag, setTag] = useState("");
-  const [region, setRegion] = useState("GLOBAL");
+  const [name, setName] = useState('');
+  const [tag, setTag] = useState('');
+  const [region, setRegion] = useState('GLOBAL');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
+    setError('');
 
     try {
-      await api.post("/teams", {
+      await api.post('/teams', {
         name,
         tag: tag.toUpperCase(),
         region,
         captainPlayerId: player.id, // Автоматично підставляємо ID гравця
       });
       setIsOpen(false);
-      setName("");
-      setTag("");
+      setName('');
+      setTag('');
       onSuccess();
     } catch (err: any) {
-      setError(err.response?.data?.message || "Помилка при створенні команди");
+      setError(err.response?.data?.message || 'Помилка при створенні команди');
     } finally {
       setLoading(false);
     }
@@ -87,7 +87,7 @@ export default function CreateTeamModal({
             Нова команда ({player.game.name})
           </DialogTitle>
           <DialogDescription className="text-esports-muted">
-            Ви станете капітаном від імені профілю{" "}
+            Ви станете капітаном від імені профілю{' '}
             <span className="text-white font-bold">{player.nickname}</span>.
           </DialogDescription>
         </DialogHeader>
@@ -140,7 +140,7 @@ export default function CreateTeamModal({
             type="submit"
             className="w-full bg-esports-accent text-black hover:bg-esports-accent/90 font-bold mt-2"
           >
-            {loading ? "Реєстрація..." : "Заснувати організацію"}
+            {loading ? 'Реєстрація...' : 'Заснувати організацію'}
           </Button>
         </form>
       </DialogContent>

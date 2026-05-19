@@ -1,6 +1,6 @@
-import { Info, GitBranch, Sparkles, CheckCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import TournamentBracket from "@/components/TournamentBracket";
+import { Info, GitBranch, Sparkles, CheckCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import TournamentBracket from '@/components/TournamentBracket';
 
 interface GaResultsTabProps {
   predictionResult: any;
@@ -55,9 +55,9 @@ export default function GaResultsTab({
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900/10 via-slate-900/10 to-transparent"></div>
         <div className="relative z-10">
           <h4
-            className={`${isLive ? "text-emerald-400" : "text-blue-400"} font-black tracking-widest text-sm uppercase mb-2`}
+            className={`${isLive ? 'text-emerald-400' : 'text-blue-400'} font-black tracking-widest text-sm uppercase mb-2`}
           >
-            {isLive ? "Симуляцію Завершено" : "ШІ Прогноз Завершено"}
+            {isLive ? 'Симуляцію Завершено' : 'ШІ Прогноз Завершено'}
           </h4>
           <div className="text-slate-400 uppercase tracking-widest text-[10px] font-bold mb-1">
             Оцінка фітнесу
@@ -84,7 +84,7 @@ export default function GaResultsTab({
       ) : (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
           <h3 className="text-lg font-black text-white flex items-center gap-2 mb-6 border-b border-slate-800 pb-4">
-            <GitBranch size={18} className="text-blue-400" />{" "}
+            <GitBranch size={18} className="text-blue-400" />{' '}
             <Sparkles size={16} className="text-blue-400" /> Гіпотетична сітка
             від AI
           </h3>

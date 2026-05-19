@@ -1,38 +1,38 @@
-import { useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { useState } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   CardDescription,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { MailOpen, Check, X } from "lucide-react";
+} from '@/components/ui/select';
+import { MailOpen, Check, X } from 'lucide-react';
 
 export default function AcceptTeamInvite() {
   const [searchParams] = useSearchParams();
-  const token = searchParams.get("token");
+  const token = searchParams.get('token');
   const navigate = useNavigate();
 
-  const [playerId, setPlayerId] = useState("");
+  const [playerId, setPlayerId] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
   // Завантажуємо ігрові профілі поточного юзера
   const { data: myPlayers = [], isLoading } = useQuery({
-    queryKey: ["myPlayersForInvite"],
+    queryKey: ['myPlayersForInvite'],
     queryFn: async () => {
-      const { data } = await api.get("/players/me");
+      const { data } = await api.get('/players/me');
       // Фільтруємо тих, хто ще не в команді
       return data.filter((p: any) => !p.teamId);
     },
@@ -40,17 +40,17 @@ export default function AcceptTeamInvite() {
 
   const handleAccept = async () => {
     if (!playerId) {
-      setError("Оберіть ігровий профіль, яким хочете вступити.");
+      setError('Оберіть ігровий профіль, яким хочете вступити.');
       return;
     }
     setLoading(true);
     try {
       await api.patch(`/team-invitations/${token}/accept`, { playerId });
-      navigate("/teams"); // Після успіху кидаємо на список команд
+      navigate('/teams'); // Після успіху кидаємо на список команд
     } catch (err: any) {
       setError(
         err.response?.data?.message ||
-          "Помилка прийому інвайту. Можливо токен прострочений.",
+          'Помилка прийому інвайту. Можливо токен прострочений.',
       );
     } finally {
       setLoading(false);
@@ -61,9 +61,9 @@ export default function AcceptTeamInvite() {
     setLoading(true);
     try {
       await api.patch(`/team-invitations/${token}/decline`);
-      navigate("/");
+      navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.message || "Помилка відхилення інвайту.");
+      setError(err.response?.data?.message || 'Помилка відхилення інвайту.');
     } finally {
       setLoading(false);
     }

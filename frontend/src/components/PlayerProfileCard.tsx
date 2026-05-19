@@ -1,15 +1,15 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from 'react-router-dom';
 import {
   Card,
   CardHeader,
   CardTitle,
   CardDescription,
   CardContent,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Trophy, Shield, ArrowRight } from "lucide-react";
-import EditPlayerModal from "./EditPlayerModal";
-import CreateTeamModal from "./CreateTeamModal";
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Trophy, Shield, ArrowRight } from 'lucide-react';
+import EditPlayerModal from './EditPlayerModal';
+import CreateTeamModal from './CreateTeamModal';
 
 interface PlayerProfileCardProps {
   player: any;
@@ -99,7 +99,7 @@ export default function PlayerProfileCard({
 
         <div className="pt-2 flex justify-end">
           <span className="text-esports-muted group-hover:text-esports-accent transition-colors text-sm font-semibold flex items-center gap-1">
-            Повна статистика{" "}
+            Повна статистика{' '}
             <ArrowRight
               size={18}
               className="group-hover:translate-x-1 transition-transform"

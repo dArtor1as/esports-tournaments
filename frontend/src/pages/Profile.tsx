@@ -1,13 +1,13 @@
-import { useParams, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { api } from "../lib/api";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { UserCircle, Swords } from "lucide-react";
-import CreatePlayerModal from "@/components/CreatePlayerModal";
-import EditProfileModal from "@/components/EditProfileModal";
-import PlayerProfileCard from "@/components/PlayerProfileCard";
+import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { api } from '../lib/api';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { UserCircle, Swords } from 'lucide-react';
+import CreatePlayerModal from '@/components/CreatePlayerModal';
+import EditProfileModal from '@/components/EditProfileModal';
+import PlayerProfileCard from '@/components/PlayerProfileCard';
 
 // ХЕЛПЕР ДЛЯ ВІКУ
 const calculateAge = (dateString?: string) => {
@@ -36,9 +36,9 @@ export default function Profile() {
     isLoading: isUserLoading,
     isError: isUserError,
   } = useQuery({
-    queryKey: ["user", id],
+    queryKey: ['user', id],
     queryFn: async () => {
-      const endpoint = isMyProfile ? "/users/me" : `/users/${id}`;
+      const endpoint = isMyProfile ? '/users/me' : `/users/${id}`;
       const { data } = await api.get(endpoint);
       return data;
     },
@@ -47,10 +47,10 @@ export default function Profile() {
 
   // 2. Запит для ігрових профілів (Players)
   const { data: playerProfiles = [], isLoading: isPlayersLoading } = useQuery({
-    queryKey: ["players", id],
+    queryKey: ['players', id],
     queryFn: async () => {
       if (!isMyProfile) return [];
-      const { data } = await api.get("/players/me");
+      const { data } = await api.get('/players/me');
       return data;
     },
     enabled: !!id && isMyProfile, // Запускати тільки для свого профілю
@@ -60,8 +60,8 @@ export default function Profile() {
 
   // Функція для оновлення даних після редагування (інвалідація кешу)
   const refreshData = () => {
-    queryClient.invalidateQueries({ queryKey: ["user", id] });
-    queryClient.invalidateQueries({ queryKey: ["players", id] });
+    queryClient.invalidateQueries({ queryKey: ['user', id] });
+    queryClient.invalidateQueries({ queryKey: ['players', id] });
   };
 
   if (isLoading)
@@ -76,7 +76,7 @@ export default function Profile() {
       <div className="text-center py-20 space-y-4">
         <h2 className="text-2xl font-bold text-red-500">Профіль не знайдено</h2>
         <button
-          onClick={() => navigate("/")}
+          onClick={() => navigate('/')}
           className="text-esports-accent underline hover:text-white"
         >
           Повернутися на головну
@@ -109,7 +109,7 @@ export default function Profile() {
                 />
               )}
               {userData.username}
-              {userData.role === "ADMIN" && (
+              {userData.role === 'ADMIN' && (
                 <Badge className="bg-red-500 text-white border-none text-xs ml-2 align-middle">
                   ADMIN
                 </Badge>
@@ -147,7 +147,7 @@ export default function Profile() {
         {playerProfiles.length === 0 ? (
           <Card className="bg-slate-900/50 border-slate-800 border-dashed">
             <CardContent className="text-center py-10 text-esports-muted">
-              У {isMyProfile ? "вас" : "цього користувача"} ще немає ігрових
+              У {isMyProfile ? 'вас' : 'цього користувача'} ще немає ігрових
               профілів.
             </CardContent>
           </Card>

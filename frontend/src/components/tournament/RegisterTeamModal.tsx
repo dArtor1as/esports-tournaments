@@ -1,18 +1,18 @@
 // src/components/tournament/RegisterTeamModal.tsx
-import { useState, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { toast } from "sonner";
-import { ShieldAlert, UserPlus } from "lucide-react";
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { toast } from 'sonner';
+import { ShieldAlert, UserPlus } from 'lucide-react';
 
 interface RegisterTeamModalProps {
   tournament: any;
@@ -30,8 +30,8 @@ export default function RegisterTeamModal({
 
   // 1. Шукаємо всі профілі поточного юзера
   const { data: myProfiles = [], isLoading: profilesLoading } = useQuery({
-    queryKey: ["myProfilesForRegistration"],
-    queryFn: async () => (await api.get("/players/me")).data,
+    queryKey: ['myProfilesForRegistration'],
+    queryFn: async () => (await api.get('/players/me')).data,
     enabled: isOpen, // Завантажуємо тільки коли відкрили модалку
   });
 
@@ -39,13 +39,13 @@ export default function RegisterTeamModal({
   const captainProfile = myProfiles.find(
     (p: any) =>
       (p.gameId === tournament.gameId || p.game?.id === tournament.gameId) &&
-      p.teamRole === "CAPTAIN" &&
+      p.teamRole === 'CAPTAIN' &&
       p.teamId,
   );
 
   // 3. Якщо знайшли команду, завантажуємо її повний склад
   const { data: teamDetails, isLoading: teamLoading } = useQuery({
-    queryKey: ["teamDetailsForRegistration", captainProfile?.teamId],
+    queryKey: ['teamDetailsForRegistration', captainProfile?.teamId],
     queryFn: async () =>
       (await api.get(`/teams/${captainProfile.teamId}`)).data,
     enabled: !!captainProfile?.teamId && isOpen,
@@ -55,7 +55,7 @@ export default function RegisterTeamModal({
   useEffect(() => {
     if (teamDetails?.players) {
       const defaultRoster = teamDetails.players
-        .filter((p: any) => p.teamRole === "PLAYER" || p.teamRole === "CAPTAIN")
+        .filter((p: any) => p.teamRole === 'PLAYER' || p.teamRole === 'CAPTAIN')
         .map((p: any) => p.id);
       setSelectedPlayers(defaultRoster);
     }
@@ -71,28 +71,28 @@ export default function RegisterTeamModal({
 
   const handleRegister = async () => {
     if (selectedPlayers.length < 5) {
-      return toast.error("Для участі необхідно обрати мінімум 5 гравців");
+      return toast.error('Для участі необхідно обрати мінімум 5 гравців');
     }
     if (selectedPlayers.length > 7) {
       return toast.error(
-        "Максимальний розмір заявки - 7 гравців (5 основи + тренер + заміна)",
+        'Максимальний розмір заявки - 7 гравців (5 основи + тренер + заміна)',
       );
     }
 
     setLoading(true);
     try {
-      await api.post("/tournament-participants", {
+      await api.post('/tournament-participants', {
         tournamentId: tournament.id,
         teamId: captainProfile.teamId,
         rosterPlayerIds: selectedPlayers, // Відправляємо обраний склад
       });
-      toast.success("Команду успішно зареєстровано на турнір!");
+      toast.success('Команду успішно зареєстровано на турнір!');
       setIsOpen(false);
       queryClient.invalidateQueries({
-        queryKey: ["tournamentParticipants", tournament.id],
+        queryKey: ['tournamentParticipants', tournament.id],
       });
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Помилка при реєстрації");
+      toast.error(err.response?.data?.message || 'Помилка при реєстрації');
     } finally {
       setLoading(false);
     }
@@ -123,8 +123,8 @@ export default function RegisterTeamModal({
           <div className="py-6 text-center space-y-3">
             <ShieldAlert size={40} className="mx-auto text-yellow-500" />
             <p className="text-slate-300">
-              Ви не можете зареєструватися, оскільки{" "}
-              <strong>не є капітаном</strong> жодної команди в дисципліні{" "}
+              Ви не можете зареєструватися, оскільки{' '}
+              <strong>не є капітаном</strong> жодної команди в дисципліні{' '}
               <strong>{tournament.game?.name}</strong>.
             </p>
           </div>
@@ -173,7 +173,7 @@ export default function RegisterTeamModal({
               className="w-full bg-esports-primary hover:bg-esports-primary/90 text-white font-black uppercase"
             >
               {loading
-                ? "Реєстрація..."
+                ? 'Реєстрація...'
                 : `Заявити ростер (${selectedPlayers.length} гравців)`}
             </Button>
           </div>

@@ -1,6 +1,6 @@
-import { Link } from "react-router-dom";
-import { User } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Link } from 'react-router-dom';
+import { User } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 export default function MatchRosters({ match }: { match: any }) {
   const renderRoster = (team: any) => {
@@ -9,9 +9,9 @@ export default function MatchRosters({ match }: { match: any }) {
         <p className="text-xs text-slate-500 italic">Команда ще не визначена</p>
       );
     const players =
-      team.players?.filter((p: any) => p.inGameRole !== "COACH") || [];
+      team.players?.filter((p: any) => p.inGameRole !== 'COACH') || [];
     const coaches =
-      team.players?.filter((p: any) => p.inGameRole === "COACH") || [];
+      team.players?.filter((p: any) => p.inGameRole === 'COACH') || [];
 
     return (
       <div className="space-y-4">
@@ -30,7 +30,7 @@ export default function MatchRosters({ match }: { match: any }) {
                   {p.nickname}
                 </span>
                 <span className="text-[9px] text-slate-400 uppercase tracking-widest font-bold">
-                  {p.inGameRole || "Player"}
+                  {p.inGameRole || 'Player'}
                 </span>
               </div>
               <Badge
@@ -76,13 +76,13 @@ export default function MatchRosters({ match }: { match: any }) {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-lg">
         <h3 className="text-base font-black text-white mb-4 border-b border-slate-800 pb-3">
-          Склад [{match.teamA?.tag || "TBD"}]
+          Склад [{match.teamA?.tag || 'TBD'}]
         </h3>
         {renderRoster(match.teamA)}
       </div>
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-lg">
         <h3 className="text-base font-black text-white mb-4 border-b border-slate-800 pb-3">
-          Склад [{match.teamB?.tag || "TBD"}]
+          Склад [{match.teamB?.tag || 'TBD'}]
         </h3>
         {renderRoster(match.teamB)}
       </div>

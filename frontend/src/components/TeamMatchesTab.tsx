@@ -1,5 +1,5 @@
-import { Calendar, History } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Calendar, History } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface TeamMatchesTabProps {
   upcomingMatches: any[];
@@ -36,13 +36,13 @@ export default function TeamMatchesTab({
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1 justify-center font-mono">
                   <span className="font-black text-white truncate text-right flex-1 text-sm">
-                    [{match.teamA?.tag || "TBD"}] {match.teamA?.name || "TBD"}
+                    [{match.teamA?.tag || 'TBD'}] {match.teamA?.name || 'TBD'}
                   </span>
                   <span className="px-2 py-0.5 bg-slate-900 border border-slate-800 rounded text-[9px] font-black text-slate-500">
                     VS
                   </span>
                   <span className="font-black text-white truncate text-left flex-1 text-sm">
-                    [{match.teamB?.tag || "TBD"}] {match.teamB?.name || "TBD"}
+                    [{match.teamB?.tag || 'TBD'}] {match.teamB?.name || 'TBD'}
                   </span>
                 </div>
                 <div className="text-right text-[10px] text-slate-500 font-bold border-l border-slate-800 pl-4 flex-shrink-0">
@@ -85,22 +85,22 @@ export default function TeamMatchesTab({
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span
-                      className={`w-2 h-2 rounded-full flex-shrink-0 ${isWin ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" : "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"}`}
+                      className={`w-2 h-2 rounded-full flex-shrink-0 ${isWin ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'}`}
                     />
                     <span className="font-black text-white truncate text-sm">
-                      [{teamTag}] {teamName}{" "}
+                      [{teamTag}] {teamName}{' '}
                       <span className="text-slate-500 font-normal px-1.5 text-xs">
                         vs
                       </span>
                       <span className="text-slate-500 font-normal">
-                        [{oppTag || "TBD"}]
-                      </span>{" "}
-                      {oppName || "Unknown Team"}
+                        [{oppTag || 'TBD'}]
+                      </span>{' '}
+                      {oppName || 'Unknown Team'}
                     </span>
                   </div>
                   <div className="flex items-center gap-6">
                     <span
-                      className={`font-mono font-black text-base ${isWin ? "text-green-400" : "text-red-400"}`}
+                      className={`font-mono font-black text-base ${isWin ? 'text-green-400' : 'text-red-400'}`}
                     >
                       {myScore} : {oppScore}
                     </span>

@@ -1,7 +1,7 @@
-import { Cpu, Eye, Play } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Cpu, Eye, Play } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface TournamentGaSimulatorTabProps {
   populations: string;
@@ -74,12 +74,12 @@ export default function TournamentGaSimulatorTab({
                 onClick={() => onRunAlgorithm(true)}
                 className="w-full mt-6 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider"
               >
-                {simLoading ? "Процесинг ШІ..." : "Запустити AI Forecast"}
+                {simLoading ? 'Процесинг ШІ...' : 'Запустити AI Forecast'}
               </Button>
             </div>
 
             {/* LIVE SIMULATION */}
-            {(isCreator || isAdmin) && tournamentStatus !== "finished" && (
+            {(isCreator || isAdmin) && tournamentStatus !== 'finished' && (
               <div className="bg-slate-950 border border-slate-800 p-5 rounded-xl flex flex-col justify-between relative overflow-hidden shadow-[0_0_15px_rgba(239,68,68,0.1)]">
                 <div className="space-y-2">
                   <div className="text-red-500 font-black tracking-widest text-[10px] uppercase flex items-center gap-1">
@@ -99,8 +99,8 @@ export default function TournamentGaSimulatorTab({
                   className="w-full mt-6 bg-red-600 hover:bg-red-500 text-white font-bold text-xs uppercase tracking-wider"
                 >
                   {simLoading
-                    ? "Генерація турніру..."
-                    : "Симулювати етап в LIVE"}
+                    ? 'Генерація турніру...'
+                    : 'Симулювати етап в LIVE'}
                 </Button>
               </div>
             )}
