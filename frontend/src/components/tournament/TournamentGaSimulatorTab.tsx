@@ -19,6 +19,7 @@ export default function TournamentGaSimulatorTab({
   setPopulations,
   simLoading,
   matchesLength,
+  tournamentStatus,
   isCreator,
   isAdmin,
   onRunAlgorithm,
@@ -78,11 +79,11 @@ export default function TournamentGaSimulatorTab({
             </div>
 
             {/* LIVE SIMULATION */}
-            {(isCreator || isAdmin) && (
+            {(isCreator || isAdmin) && tournamentStatus !== "finished" && (
               <div className="bg-slate-950 border border-slate-800 p-5 rounded-xl flex flex-col justify-between relative overflow-hidden shadow-[0_0_15px_rgba(239,68,68,0.1)]">
                 <div className="space-y-2">
                   <div className="text-red-500 font-black tracking-widest text-[10px] uppercase flex items-center gap-1">
-                    <Play size={12} /> Live-Моделювання
+                    <Play size={12} /> Live-генерація
                   </div>
                   <h4 className="text-lg font-bold text-white">
                     Автоматичний розрахунок
@@ -97,7 +98,9 @@ export default function TournamentGaSimulatorTab({
                   onClick={() => onRunAlgorithm(false)}
                   className="w-full mt-6 bg-red-600 hover:bg-red-500 text-white font-bold text-xs uppercase tracking-wider"
                 >
-                  {simLoading ? "Генерація життя..." : "Симулювати етап в LIVE"}
+                  {simLoading
+                    ? "Генерація турніру..."
+                    : "Симулювати етап в LIVE"}
                 </Button>
               </div>
             )}

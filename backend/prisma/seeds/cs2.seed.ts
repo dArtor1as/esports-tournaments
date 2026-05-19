@@ -12,8 +12,6 @@ import {
 } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
-
-// Імпорти сервісів (зверни увагу на змінені шляхи ../../)
 import { Cs2SimulatorService } from '../../src/match-simulators/simulators/cs2-simulator.service';
 import { TeamsService } from '../../src/teams/teams.service';
 import { PlayersService } from '../../src/players/players.service';
@@ -175,7 +173,7 @@ export async function seedCS2(prisma: PrismaClient, admin: User, game: Game) {
 
     await prisma.player.update({
       where: { id: captainPlayer.id },
-      data: { teamId: team.id },
+      data: { teamId: team.id, teamRole: RosterRole.CAPTAIN },
     });
     rosterData.push({
       playerId: captainPlayer.id,
@@ -212,6 +210,7 @@ export async function seedCS2(prisma: PrismaClient, admin: User, game: Game) {
           rating: pRating,
           teamId: team.id,
           inGameRole: playerRole,
+          teamRole: RosterRole.PLAYER,
         },
       });
       rosterData.push({
@@ -243,6 +242,7 @@ export async function seedCS2(prisma: PrismaClient, admin: User, game: Game) {
         rating: 1500,
         teamId: team.id,
         inGameRole: 'COACH',
+        teamRole: RosterRole.COACH,
       },
     });
     rosterData.push({

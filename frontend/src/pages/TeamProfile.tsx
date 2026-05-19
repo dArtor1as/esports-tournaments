@@ -36,13 +36,32 @@ export default function TeamProfile() {
       </div>
     );
 
-  const isCaptain = team.captain?.userId === currentUser?.id;
+  const isCaptain = team?.captain?.userId === currentUser?.id;
+  const isAdmin = currentUser?.role === "ADMIN";
+  const canManageRoles = isCaptain || isAdmin;
+
+  // 1. ПРАВИЛЬНА ФІЛЬТРАЦІЯ (використовуємо teamRole, а не inGameRole)
   const activePlayers =
-    team.players?.filter((p: any) => p.inGameRole?.toUpperCase() !== "COACH") ||
-    [];
-  const coach = team.players?.find(
-    (p: any) => p.inGameRole?.toUpperCase() === "COACH",
+    team.players?.filter(
+      (p: any) => p.teamRole === "PLAYER" || p.teamRole === "CAPTAIN",
+    ) || [];
+
+  const coach = team.players?.find((p: any) => p.teamRole === "COACH");
+
+  // Знаходимо всіх запасних
+  const allSubstitutes =
+    team.players?.filter((p: any) => p.teamRole === "SUBSTITUTE") || [];
+
+  // 2. перевірка чи є юзер тренером цієї команди
+  const isCoach = team.players?.some(
+    (p: any) => p.userId === currentUser?.id && p.teamRole === "COACH",
   );
+
+  const canSeeSubstitutes = isCaptain || isAdmin || isCoach;
+
+  // 3. приховуємо запасних якщо немає прав, передаємо порожній масив
+  const substitutes = canSeeSubstitutes ? allSubstitutes : [];
+
   const teamFlag = getFlagUrl(team.countryCode, "w40");
 
   const invalidate = () =>
@@ -127,9 +146,10 @@ export default function TeamProfile() {
             coach={coach}
             team={team}
             currentUser={currentUser}
-            isCaptain={isCaptain}
+            isCaptain={canManageRoles}
             onKick={handleKick}
             onLeave={handleLeave}
+            substitutes={substitutes}
           />
         </TabsContent>
 

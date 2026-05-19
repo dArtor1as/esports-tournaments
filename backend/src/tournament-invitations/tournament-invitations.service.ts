@@ -11,7 +11,6 @@ import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { InvitationPolicyService } from './invitation-policy.service';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
 import { AcceptTournamentInvitationDto } from './dto/accept-tournament-invitation.dto';
-import { Stage } from '@prisma/client';
 
 @Injectable()
 export class TournamentInvitationsService {
@@ -130,9 +129,13 @@ export class TournamentInvitationsService {
     dto: AcceptTournamentInvitationDto,
     user: JwtPayload,
   ) {
+    // ДОДАНО: players: true, щоб ми могли валідувати склад команди
     const invite = await this.prisma.tournamentInvitation.findUnique({
       where: { token },
-      include: { tournament: true, team: { include: { captain: true } } },
+      include: {
+        tournament: true,
+        team: { include: { captain: true, players: true } },
+      },
     });
 
     if (!invite || invite.status !== 'PENDING') {
@@ -141,7 +144,7 @@ export class TournamentInvitationsService {
 
     this.accessPolicy.checkCaptainOrAdmin(invite.team.captain.userId, user);
 
-    // 1. Формуємо єдиний формат ростера з урахуванням зворотньої сумісності (fallback)
+    // 1. Формуємо єдиний формат ростера з урахуванням зворотньої сумісності
     let finalRoster: Array<{ playerId: string; role: any }> = [];
 
     if (dto.rosterPlayers && dto.rosterPlayers.length > 0) {
@@ -153,6 +156,24 @@ export class TournamentInvitationsService {
       }));
     } else {
       throw new BadRequestException('Необхідно надати список гравців ростера.');
+    }
+
+    // перевіряємо, що всі гравці дійсно належать цій команді
+    const teamPlayerIds = new Set(invite.team.players.map((p) => p.id));
+    for (const roster of finalRoster) {
+      if (!teamPlayerIds.has(roster.playerId)) {
+        throw new BadRequestException(
+          `Гравець з ID ${roster.playerId} не належить команді`,
+        );
+      }
+    }
+
+    // перевіряємо унікальність (щоб одного гравця не додали двічі)
+    const uniqueIds = new Set(finalRoster.map((r) => r.playerId));
+    if (uniqueIds.size !== finalRoster.length) {
+      throw new BadRequestException(
+        'Гравці у турнірному складі не повинні повторюватися',
+      );
     }
 
     // 2. БІЗНЕС-ВАЛІДАЦІЯ РОСТЕРУ (Правила 5v5)

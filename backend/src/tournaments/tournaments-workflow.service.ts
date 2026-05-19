@@ -91,14 +91,20 @@ export class TournamentsWorkflowService {
         });
 
         // 2. Автоматично заявляємо всіх гравців цієї команди в TournamentRoster (тільки для тестів!)
-        const rosterData = team.players.map((player) => ({
-          participantId: participant.id,
-          playerId: player.id,
-          role:
-            player.inGameRole === 'COACH'
-              ? RosterRole.COACH
-              : RosterRole.PLAYER,
-        }));
+        const rosterData = team.players.map((player) => {
+          let mappedRole: RosterRole = RosterRole.PLAYER;
+
+          if (player.teamRole === 'CAPTAIN') mappedRole = RosterRole.CAPTAIN;
+          if (player.teamRole === 'COACH') mappedRole = RosterRole.COACH;
+          if (player.teamRole === 'SUBSTITUTE')
+            mappedRole = RosterRole.SUBSTITUTE;
+
+          return {
+            participantId: participant.id,
+            playerId: player.id,
+            role: mappedRole,
+          };
+        });
 
         await prismaTx.tournamentRoster.createMany({
           data: rosterData,

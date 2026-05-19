@@ -136,7 +136,7 @@ export class TeamInvitationsService {
         );
       }
 
-      // Шукаємо конкретнйи профіль, який передав фронтенд
+      // Шукаємо конкретний профіль, який передав фронтенд
       const player = await prisma.player.findUnique({
         where: { id: playerId },
       });
@@ -155,14 +155,37 @@ export class TeamInvitationsService {
       }
       if (player.teamId)
         throw new BadRequestException('Цей ігровий профіль вже в команді');
+
       // Беремо значення з гри (напр. 5 для CS2, 1 для Solo гри)
+      const requiredSize = invite.team.game.minTeamSize;
+
+      //  Рахуємо тільки АКТИВНИХ гравців команди
+      const activePlayersCount = await prisma.player.count({
+        where: {
+          teamId: invite.teamId,
+          teamRole: { in: ['PLAYER', 'CAPTAIN'] },
+        },
+      });
+
+      //  ВИЗНАЧАЄМО СТРУКТУРНУ РОЛЬ
+      let assignedTeamRole: 'PLAYER' | 'COACH' | 'SUBSTITUTE' = 'PLAYER';
+      if (player.inGameRole === 'COACH') {
+        assignedTeamRole = 'COACH';
+      } else if (activePlayersCount >= requiredSize) {
+        // Якщо основа (5 гравців) вже заповнена, він стає заміною
+        assignedTeamRole = 'SUBSTITUTE';
+      }
+
       // 2. Додаємо гравця в команду
       await prisma.player.update({
         where: { id: player.id },
-        data: { teamId: invite.teamId },
+        data: {
+          teamId: invite.teamId,
+          teamRole: assignedTeamRole, // Записуємо вирахувану роль
+        },
       });
 
-      //Фіксуємо трансфер (JOIN)
+      // Фіксуємо трансфер (JOIN)
       await prisma.teamTransfer.create({
         data: {
           playerId: player.id,
@@ -174,18 +197,25 @@ export class TeamInvitationsService {
       // 3. Перераховуємо середній рейтинг і тір команди після додавання нового гравця
       const teamPlayers = await prisma.player.findMany({
         where: { teamId: invite.teamId },
-        select: { rating: true },
+        select: { rating: true, teamRole: true },
       });
 
-      const requiredSize = invite.team.game.minTeamSize;
-      const isTeamNowComplete = teamPlayers.length >= requiredSize;
+      // Перевіряємо, чи зібралася основа
+      const newActiveCount =
+        assignedTeamRole === 'PLAYER'
+          ? activePlayersCount + 1
+          : activePlayersCount;
+      const isTeamNowComplete = newActiveCount >= requiredSize;
 
       if (isTeamNowComplete) {
-        // Рахуємо суму і ділимо на кількість
-        const totalRating = teamPlayers.reduce((sum, p) => sum + p.rating, 0);
-        const newAverageRating = Math.floor(totalRating / teamPlayers.length);
+        //  Рахуємо середній рейтинг ТІЛЬКИ по гравцях основи (щоб саби не тягнули ELO вниз/вверх)
+        const activeRoster = teamPlayers.filter(
+          (p) => p.teamRole === 'PLAYER' || p.teamRole === 'CAPTAIN',
+        );
+        const totalRating = activeRoster.reduce((sum, p) => sum + p.rating, 0);
+        const newAverageRating = Math.floor(totalRating / activeRoster.length);
 
-        // Визначаємо новий тір
+        // Визначаємо новий тір (припускаю, метод calculateTier у тебе знаходиться в teamsService або локально)
         const newTier = this.teamsService.calculateTier(newAverageRating);
 
         // Оновлюємо команду
@@ -203,6 +233,7 @@ export class TeamInvitationsService {
           data: { isComplete: false },
         });
       }
+
       await this.cacheManager.del('all_teams');
 
       // 4. Змінюємо статус інвайту на ACCEPTED

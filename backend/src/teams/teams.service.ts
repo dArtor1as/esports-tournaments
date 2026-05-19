@@ -10,6 +10,7 @@ import { UpdateTeamDto } from './dto/update-team.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
+import { RosterRole } from '@prisma/client';
 import { AccessPolicyService } from '../auth/access-policy.service';
 import type { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 
@@ -36,7 +37,9 @@ export class TeamsService {
 
     if (!team || team.isManualCountry) return; // Якщо ручне налаштування, ігноруємо
 
-    const activePlayers = team.players;
+    const activePlayers = team.players.filter(
+      (p) => p.teamRole === 'PLAYER' || p.teamRole === 'CAPTAIN',
+    );
     if (activePlayers.length === 0) return;
 
     // Рахуємо кількість кожного countryCode
@@ -117,7 +120,7 @@ export class TeamsService {
       // Прив'язуємо цього гравця до команди як звичайного учасника
       await prisma.player.update({
         where: { id: captain.id },
-        data: { teamId: newTeam.id },
+        data: { teamId: newTeam.id, teamRole: 'CAPTAIN' },
       });
 
       await this.cacheManager.del('all_teams'); // Очищаємо кеш при створенні нової команди
@@ -142,7 +145,19 @@ export class TeamsService {
         game: true,
         captain: { include: { user: true } },
         players: {
-          include: { user: true },
+          select: {
+            id: true,
+            nickname: true,
+            inGameRole: true,
+            rating: true,
+            teamRole: true,
+            user: {
+              select: {
+                countryCode: true,
+                username: true,
+              },
+            },
+          },
         },
       },
     });
@@ -189,6 +204,50 @@ export class TeamsService {
     return updatedTeam;
   }
 
+  async updatePlayerTeamRole(
+    teamId: string,
+    playerId: string,
+    newRole: RosterRole,
+    user: JwtPayload,
+  ) {
+    const team = await this.prisma.team.findUnique({
+      where: { id: teamId },
+      include: { captain: true },
+    });
+
+    if (!team) throw new NotFoundException('Команду не знайдено');
+
+    // Перевіряємо, чи має користувач права капітана або адміна
+    this.accessPolicy.checkCaptainOrAdmin(team.captain.userId, user);
+
+    const player = await this.prisma.player.findUnique({
+      where: { id: playerId },
+    });
+
+    if (!player || player.teamId !== teamId) {
+      throw new BadRequestException('Гравець не перебуває у цій команді');
+    }
+
+    // Захист від зміни ролі діючого капітана
+    if (team.captainId === playerId) {
+      throw new BadRequestException(
+        'Не можна змінити роль капітана таким чином. Використовуйте передачу лідерства.',
+      );
+    }
+
+    // Оновлюємо роль
+    await this.prisma.player.update({
+      where: { id: playerId },
+      data: { teamRole: newRole },
+    });
+
+    //очищаємо кеш, оскільки змінився склад команди
+    await this.cacheManager.del('all_teams');
+    await this.cacheManager.del('all_players');
+
+    return { message: 'Роль гравця успішно оновлена', newRole };
+  }
+
   async remove(id: string, user: JwtPayload) {
     const teamCheck = await this.prisma.team.findUnique({
       where: { id },
@@ -212,7 +271,7 @@ export class TeamsService {
       // 2. Виключаємо всіх гравців із цієї команди (робимо їх вільними агентами)
       await prisma.player.updateMany({
         where: { teamId: id },
-        data: { teamId: null },
+        data: { teamId: null, teamRole: null },
       });
 
       // логуємо LEAVE для кожного гравця, який був у команді

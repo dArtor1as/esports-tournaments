@@ -19,6 +19,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
 import { TeamTransfersService } from './team-transfers.service';
+import { RosterRole } from 'node_modules/@prisma/client/default';
 
 @ApiTags('Teams (Команди)')
 @Controller('teams')
@@ -64,6 +65,26 @@ export class TeamsController {
     @CurrentUser() user: JwtPayload,
   ) {
     return this.teamsService.update(id, updateTeamDto, user);
+  }
+
+  @Patch(':id/players/:playerId/role')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Змінити роль гравця в команді (тільки для Капітана)',
+  })
+  updatePlayerTeamRole(
+    @Param('id') teamId: string,
+    @Param('playerId') playerId: string,
+    @Body() dto: { teamRole: RosterRole }, // Краще винести в окремий DTO
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.teamsService.updatePlayerTeamRole(
+      teamId,
+      playerId,
+      dto.teamRole,
+      user,
+    );
   }
 
   @Patch(':id/transfer-leadership')

@@ -115,6 +115,7 @@ model Player {
   rating    Int      @default(1000)
   
   inGameRole String? // Наприклад: "SNIPER", "IGL", "POS_1", "POS_5"
+  teamRole    RosterRole? // "CAPTAIN", "PLAYER", "COACH", "SUBSTITUTE" - для турнірного складу
   stats Json? // Додаткові статистичні дані (кількість ігор, K/D, улюблені герої тощо)
 
   @@unique([userId, gameId]) // Юзер не може мати два профілі для однієї ігри!
