@@ -12,11 +12,13 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
+import { StatsService } from 'src/stats/stats.service';
 @Injectable()
 export class TournamentsService {
   constructor(
     private prisma: PrismaService,
     private accessPolicy: AccessPolicyService,
+    private statsService: StatsService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
@@ -126,6 +128,47 @@ export class TournamentsService {
 
     return {
       message: 'Турнір скасовано. Всі незіграні матчі анульовано без змін Elo.',
+    };
+  }
+  async finishTournament(id: string, user: JwtPayload) {
+    // 1. Шукаємо турнір разом із матчами для валідації
+    const tournament = await this.prisma.tournament.findUnique({
+      where: { id },
+      include: { matches: true },
+    });
+
+    if (!tournament) {
+      throw new NotFoundException('Турнір не знайдено');
+    }
+
+    // 2. Перевіряємо, чи він уже не закритий
+    if (tournament.status === 'finished' || tournament.status === 'cancelled') {
+      throw new BadRequestException('Турнір вже завершено або скасовано');
+    }
+
+    // 3. Перевіряємо, чи немає незіграних матчів
+    const hasUnprocessedMatches = tournament.matches.some(
+      (m) => !m.isProcessed,
+    );
+    if (hasUnprocessedMatches) {
+      throw new BadRequestException(
+        'Неможливо закрити турнір, оскільки серія матчів етапу ще не завершена.',
+      );
+    }
+
+    // 4. спочатку рахуємо статистику та нараховуємо Elo
+    await this.statsService.processTournamentStats(id, user);
+
+    // 5. Тільки після успішного нарахування змінюємо статус турніру в базі
+    const updatedTournament = await this.prisma.tournament.update({
+      where: { id },
+      data: { status: 'finished' },
+    });
+
+    return {
+      message:
+        "Турнір успішно завершено. Усі кар'єрні рейтинги Elo зафіксовані.",
+      tournament: updatedTournament,
     };
   }
 

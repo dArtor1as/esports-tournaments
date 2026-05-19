@@ -32,6 +32,20 @@ export class TournamentsController {
   ) {
     return this.tournamentsService.create(createTournamentDto, user.userId);
   }
+
+  @Post(':id/finish')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Остаточно закрити турнір (після групового етапу)',
+  })
+  finish(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.tournamentsService.finishTournament(id, user);
+  }
+
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')

@@ -35,7 +35,7 @@ export class GeneticSimulatorService {
 
   // Головні методи запуску
   async runSimulation(dto: SimulateTournamentDto, user: JwtPayload) {
-    const targetStage = dto.stage || Stage.PLAYOFF;
+    const targetStage = Stage.PLAYOFF;
     const context =
       await this.simulationContextBuilder.prepareSimulationContext(
         dto.tournamentId,
@@ -49,13 +49,7 @@ export class GeneticSimulatorService {
 
     if (!tournament) throw new NotFoundException('Турнір не знайдено');
 
-    // Блокування запуску основного алгоритму для групового етапу
-    const bracketType = context.tournament.settings?.bracketType;
-    if (bracketType === 'ROUND_ROBIN') {
-      throw new BadRequestException(
-        'Для групового етапу використовуйте ендпоінт /run-groups',
-      );
-    }
+    const targetStageMatches = context.baseSkeleton;
 
     const isDryRun = dto.isDryRun ?? true;
 
@@ -85,9 +79,14 @@ export class GeneticSimulatorService {
       }
     }
 
+    const bracketType = context.tournament.settings?.bracketType;
+    const isDoubleElim =
+      targetStageMatches.some((m) => m.bracket === 'LOWER') ||
+      bracketType === 'DOUBLE_ELIMINATION';
+
     // Логіка вибору стратегії на основі налаштувань турніру
     let result;
-    if (bracketType === 'DOUBLE_ELIMINATION') {
+    if (isDoubleElim) {
       result = await this.doubleEliminationStrategy.execute(
         context,
         dto.populations,
