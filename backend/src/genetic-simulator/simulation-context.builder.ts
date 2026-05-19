@@ -66,13 +66,17 @@ export class SimulationContextBuilder {
       // перевіряємо чи є спеціально поданий ростер на цей турнір?
       if (p.tournamentRosters && p.tournamentRosters.length > 0) {
         activePlayers = p.tournamentRosters
-          .filter((roster) => roster.role !== 'COACH')
+          // Дозволяємо грати ТІЛЬКИ гравцям основи та капітану.
+          .filter(
+            (roster) => roster.role === 'PLAYER' || roster.role === 'CAPTAIN',
+          )
           .map((roster) => roster.player);
       } else {
-        // якщо ростер не подано, беремо основний склад команди
-        // Фільтруємо за роллю в профілі гравця, якщо вона вказана
+        // Якщо ростер не подано, беремо основний склад команди
+        // Фільтруємо за роллю в профілі гравця, відсікаючи заміну та тренера
         activePlayers = p.team.players.filter(
-          (player) => player.inGameRole !== 'COACH',
+          (player) =>
+            player.inGameRole !== 'COACH' && player.inGameRole !== 'SUBSTITUTE',
         );
       }
 

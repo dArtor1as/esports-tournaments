@@ -50,11 +50,7 @@ export class TournamentInvitationsController {
     @Body() acceptDto: AcceptTournamentInvitationDto,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.invitationsService.accept(
-      token,
-      acceptDto.rosterPlayerIds,
-      user,
-    );
+    return this.invitationsService.accept(token, acceptDto, user);
   }
 
   @Patch(':token/decline')
