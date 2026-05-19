@@ -6,8 +6,8 @@ import {
   Tooltip,
   CartesianGrid,
   ResponsiveContainer,
-} from "recharts";
-import { TrendingUp } from "lucide-react";
+} from 'recharts';
+import { TrendingUp } from 'lucide-react';
 
 interface HistoryItem {
   createdAt: string;
@@ -45,7 +45,7 @@ const CustomTooltip = ({ active, payload }: any) => {
         <div className="flex items-center justify-between">
           <span className="text-slate-400 font-medium">Зміна:</span>
           <span
-            className={`font-black text-sm ${isPositive ? "text-green-500" : "text-red-500"}`}
+            className={`font-black text-sm ${isPositive ? 'text-green-500' : 'text-red-500'}`}
           >
             {isPositive ? `+${data.change}` : data.change}
           </span>
@@ -58,12 +58,12 @@ const CustomTooltip = ({ active, payload }: any) => {
 
 export default function EloRatingChart({
   historyData,
-  title = "Історія зміни рейтингу Elo",
+  title = 'Історія зміни рейтингу Elo',
 }: EloRatingChartProps) {
   const chartData = historyData.map((item, idx) => ({
     index: idx + 1,
     displayDate: new Date(item.createdAt).toLocaleDateString(),
-    tournamentTitle: item.match?.tournament?.title || "Товариський матч",
+    tournamentTitle: item.match?.tournament?.title || 'Товариський матч',
     Elo: item.newRating,
     change: item.ratingChange,
   }));
@@ -98,15 +98,15 @@ export default function EloRatingChart({
             <YAxis
               stroke="#64748b"
               fontSize={11}
-              domain={["dataMin - 50", "dataMax + 50"]}
+              domain={['dataMin - 50', 'dataMax + 50']}
               tickLine={false}
             />
             <Tooltip
               content={<CustomTooltip />}
               cursor={{
-                stroke: "#334155",
+                stroke: '#334155',
                 strokeWidth: 1,
-                strokeDasharray: "4 4",
+                strokeDasharray: '4 4',
               }}
             />
             <Line
@@ -114,8 +114,8 @@ export default function EloRatingChart({
               dataKey="Elo"
               stroke="#F2A71B"
               strokeWidth={3}
-              activeDot={{ r: 6, stroke: "#011F26", strokeWidth: 2 }}
-              dot={{ stroke: "#011F26", strokeWidth: 2, r: 4, fill: "#F2A71B" }}
+              activeDot={{ r: 6, stroke: '#011F26', strokeWidth: 2 }}
+              dot={{ stroke: '#011F26', strokeWidth: 2, r: 4, fill: '#F2A71B' }}
             />
           </LineChart>
         </ResponsiveContainer>

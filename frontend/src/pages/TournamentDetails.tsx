@@ -1,18 +1,18 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
-import { useTournamentDetailsData } from "@/hooks/useTournamentData";
-import { api } from "@/lib/api";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Cpu, Sparkles, X, ArrowLeft } from "lucide-react";
-import { toast } from "sonner";
-import TournamentHeader from "@/components/tournament/TournamentHeader";
-import TournamentBracketTab from "@/components/tournament/TournamentBracketTab";
-import TournamentParticipantsTab from "@/components/tournament/TournamentParticipantsTab";
-import TournamentGaSimulatorTab from "@/components/tournament/TournamentGaSimulatorTab";
-import GaResultsTab from "@/components/tournament/GaResultsTab";
-import { useMyProfilesData } from "@/hooks/useProfileData";
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
+import { useTournamentDetailsData } from '@/hooks/useTournamentData';
+import { api } from '@/lib/api';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Cpu, Sparkles, X, ArrowLeft } from 'lucide-react';
+import { toast } from 'sonner';
+import TournamentHeader from '@/components/tournament/TournamentHeader';
+import TournamentBracketTab from '@/components/tournament/TournamentBracketTab';
+import TournamentParticipantsTab from '@/components/tournament/TournamentParticipantsTab';
+import TournamentGaSimulatorTab from '@/components/tournament/TournamentGaSimulatorTab';
+import GaResultsTab from '@/components/tournament/GaResultsTab';
+import { useMyProfilesData } from '@/hooks/useProfileData';
 
 export default function TournamentDetails() {
   const { id } = useParams<{ id: string }>();
@@ -22,8 +22,8 @@ export default function TournamentDetails() {
   const { tournament, participants, matches, refetchMatches, isLoading } =
     useTournamentDetailsData(id);
 
-  const [activeTab, setActiveTab] = useState("bracket");
-  const [populations, setPopulations] = useState("100");
+  const [activeTab, setActiveTab] = useState('bracket');
+  const [populations, setPopulations] = useState('100');
   const [simLoading, setSimLoading] = useState(false);
   const [bracketLoading, setBracketLoading] = useState(false);
 
@@ -57,17 +57,17 @@ export default function TournamentDetails() {
     );
 
   const isCreator = tournament.creatorId === currentUser?.id;
-  const isAdmin = currentUser?.role === "ADMIN";
+  const isAdmin = currentUser?.role === 'ADMIN';
   const isTournamentOver =
-    tournament.status === "finished" || tournament.status === "cancelled";
+    tournament.status === 'finished' || tournament.status === 'cancelled';
 
   const handleGenerateBracket = async () => {
     setBracketLoading(true);
     try {
-      const isGroupStage = tournament.settings?.bracketType === "ROUND_ROBIN";
+      const isGroupStage = tournament.settings?.bracketType === 'ROUND_ROBIN';
       const endpoint = isGroupStage
-        ? "/matches/generate-groups"
-        : "/matches/generate-bracket";
+        ? '/matches/generate-groups'
+        : '/matches/generate-bracket';
 
       // Читаємо кількість груп з налаштувань, або ставимо фолбек (2 групи)
       const groupCount = tournament.settings?.groupCount || 2;
@@ -80,10 +80,10 @@ export default function TournamentDetails() {
       });
 
       await refetchMatches();
-      toast.success("Турнірну сітку успішно сформовано!");
+      toast.success('Турнірну сітку успішно сформовано!');
     } catch (err: any) {
       toast.error(
-        err.response?.data?.message || "Не вдалося згенерувати сітку.",
+        err.response?.data?.message || 'Не вдалося згенерувати сітку.',
       );
     } finally {
       setBracketLoading(false);
@@ -94,32 +94,32 @@ export default function TournamentDetails() {
     setSimLoading(true);
     try {
       const isGroupStage =
-        tournament.settings?.bracketType === "ROUND_ROBIN" &&
+        tournament.settings?.bracketType === 'ROUND_ROBIN' &&
         !hasPlayoffMatches;
       const endpoint = isGroupStage
-        ? "/genetic-simulator/run-groups"
-        : "/genetic-simulator/run";
+        ? '/genetic-simulator/run-groups'
+        : '/genetic-simulator/run';
 
       const response = await api.post(endpoint, {
         tournamentId: id,
         populations: parseInt(populations),
         isDryRun,
-        stage: isGroupStage ? "GROUP" : "PLAYOFF",
+        stage: isGroupStage ? 'GROUP' : 'PLAYOFF',
       });
 
       // Зберігаємо результат для обох режимів
       setPredictionResult({ ...response.data, isLive: !isDryRun });
 
       if (isDryRun) {
-        toast.success("ШІ-Аналітичний прогноз успішно розраховано!");
+        toast.success('ШІ-Аналітичний прогноз успішно розраховано!');
       } else {
-        toast.success("Матчі етапу успішно симульовано в LIVE!");
+        toast.success('Матчі етапу успішно симульовано в LIVE!');
         await refetchMatches();
       }
 
-      setActiveTab("ga-forecast-results"); // Завжди перекидаємо на вкладку результатів, щоб показати Фітнес
+      setActiveTab('ga-forecast-results'); // Завжди перекидаємо на вкладку результатів, щоб показати Фітнес
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Помилка роботи алгоритму");
+      toast.error(err.response?.data?.message || 'Помилка роботи алгоритму');
     } finally {
       setSimLoading(false);
     }
@@ -128,7 +128,7 @@ export default function TournamentDetails() {
   const closePrediction = (e: React.MouseEvent) => {
     e.stopPropagation();
     setPredictionResult(null);
-    setActiveTab("ga-simulator");
+    setActiveTab('ga-simulator');
   };
 
   const enrichedPredictionBracket = predictionResult
@@ -151,19 +151,19 @@ export default function TournamentDetails() {
           teamBId: predictedMatch.teamBId,
           scoreA: predictedMatch.scoreA,
           scoreB: predictedMatch.scoreB,
-          matchStatus: "COMPLETED",
-          teamA: pA?.team || { tag: "TBD", name: "To Be Determined" },
-          teamB: pB?.team || { tag: "TBD", name: "To Be Determined" },
+          matchStatus: 'COMPLETED',
+          teamA: pA?.team || { tag: 'TBD', name: 'To Be Determined' },
+          teamB: pB?.team || { tag: 'TBD', name: 'To Be Determined' },
         };
       })
     : [];
 
   // Перевірка стадій турніру
-  const groupMatches = matches.filter((m: any) => m.stage === "GROUP");
-  const playoffMatches = matches.filter((m: any) => m.stage === "PLAYOFF");
+  const groupMatches = matches.filter((m: any) => m.stage === 'GROUP');
+  const playoffMatches = matches.filter((m: any) => m.stage === 'PLAYOFF');
 
   const isGroupStageComplete =
-    tournament?.settings?.bracketType === "ROUND_ROBIN" &&
+    tournament?.settings?.bracketType === 'ROUND_ROBIN' &&
     groupMatches.length > 0 &&
     groupMatches.every((m: any) => m.isProcessed);
 
@@ -173,20 +173,20 @@ export default function TournamentDetails() {
   const handleTransitionToPlayoffs = async () => {
     setBracketLoading(true);
     try {
-      await api.post("/matches/transition-to-playoffs", { tournamentId: id });
+      await api.post('/matches/transition-to-playoffs', { tournamentId: id });
 
       // Явно вказуємо, що нам потрібен Single Elimination на 8 команд,
       // щоб генератор не читав Round Robin з налаштувань турніру
-      await api.post("/matches/generate-bracket", {
+      await api.post('/matches/generate-bracket', {
         tournamentId: id,
-        bracketType: "SINGLE_ELIMINATION",
+        bracketType: 'SINGLE_ELIMINATION',
         teamCount: 8,
       });
 
       await refetchMatches();
-      toast.success("Сітку Плей-оф успішно сформовано з лідерів груп!");
+      toast.success('Сітку Плей-оф успішно сформовано з лідерів груп!');
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Помилка переходу до Плей-оф");
+      toast.error(err.response?.data?.message || 'Помилка переходу до Плей-оф');
     } finally {
       setBracketLoading(false);
     }
@@ -195,11 +195,11 @@ export default function TournamentDetails() {
   const handleFinishTournament = async () => {
     try {
       await api.post(`/tournaments/${id}/finish`);
-      toast.success("Турнір успішно завершено!");
+      toast.success('Турнір успішно завершено!');
       window.location.reload();
     } catch (err: any) {
       toast.error(
-        err.response?.data?.message || "Помилка при завершенні турніру",
+        err.response?.data?.message || 'Помилка при завершенні турніру',
       );
     }
   };
@@ -219,11 +219,11 @@ export default function TournamentDetails() {
     try {
       await api.patch(`/tournaments/${tournament.id}/cancel`);
 
-      toast.success("Турнір успішно скасовано. Незіграні матчі анульовано.");
-      navigate("/"); // Редирект на головну сторінку
+      toast.success('Турнір успішно скасовано. Незіграні матчі анульовано.');
+      navigate('/'); // Редирект на головну сторінку
     } catch (err: any) {
       toast.error(
-        err.response?.data?.message || "Помилка при скасуванні турніру",
+        err.response?.data?.message || 'Помилка при скасуванні турніру',
       );
     }
   };
@@ -236,10 +236,10 @@ export default function TournamentDetails() {
       toast.success(
         "Турнір та всі пов'язані заявки успішно видалені з бази даних",
       );
-      navigate("/");
+      navigate('/');
     } catch (err: any) {
       toast.error(
-        err.response?.data?.message || "Помилка при спробі видалити турнір",
+        err.response?.data?.message || 'Помилка при спробі видалити турнір',
       );
     }
   };
@@ -290,15 +290,15 @@ export default function TournamentDetails() {
           {predictionResult && (
             <TabsTrigger
               value="ga-forecast-results"
-              className={`px-4 py-2 text-xs font-black uppercase tracking-wider flex items-center gap-2 ${predictionResult.isLive ? "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 data-[state=active]:bg-emerald-500/20" : "text-blue-400 bg-blue-500/10 border border-blue-500/20 data-[state=active]:bg-blue-500/20"}`}
+              className={`px-4 py-2 text-xs font-black uppercase tracking-wider flex items-center gap-2 ${predictionResult.isLive ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 data-[state=active]:bg-emerald-500/20' : 'text-blue-400 bg-blue-500/10 border border-blue-500/20 data-[state=active]:bg-blue-500/20'}`}
             >
-              <Sparkles size={14} />{" "}
+              <Sparkles size={14} />{' '}
               {predictionResult.isLive
-                ? "Результати Live"
-                : "Результати Прогнозу"}
+                ? 'Результати Live'
+                : 'Результати Прогнозу'}
               <div
                 onClick={closePrediction}
-                className={`ml-2 rounded-full p-0.5 transition-colors cursor-pointer ${predictionResult.isLive ? "bg-emerald-900/50 hover:bg-emerald-500 hover:text-black" : "bg-blue-900/50 hover:bg-red-500 hover:text-white"}`}
+                className={`ml-2 rounded-full p-0.5 transition-colors cursor-pointer ${predictionResult.isLive ? 'bg-emerald-900/50 hover:bg-emerald-500 hover:text-black' : 'bg-blue-900/50 hover:bg-red-500 hover:text-white'}`}
               >
                 <X size={12} />
               </div>
@@ -351,23 +351,23 @@ export default function TournamentDetails() {
             {(() => {
               // 1. Перевіряємо, чи є в прогнозі ШІ матчі стадії Плей-оф
               const isForecastPlayoff = enrichedPredictionBracket?.some(
-                (m: any) => m.stage === "PLAYOFF",
+                (m: any) => m.stage === 'PLAYOFF',
               );
 
               // 2. Визначаємо динамічний тип сітки
               const isRoundRobin =
-                tournament.settings?.bracketType === "ROUND_ROBIN";
+                tournament.settings?.bracketType === 'ROUND_ROBIN';
               const forecastBracketType =
                 isRoundRobin && isForecastPlayoff
                   ? tournament.settings?.playoffBracketType ||
-                    "SINGLE_ELIMINATION"
-                  : tournament.settings?.bracketType || "SINGLE_ELIMINATION";
+                    'SINGLE_ELIMINATION'
+                  : tournament.settings?.bracketType || 'SINGLE_ELIMINATION';
 
               //3. Фільтруємо старі матчі групового етапу
               // Якщо прогнозується Плей-оф стадію, ми залишаємо виключно матчі з stage === "PLAYOFF"
               const cleanForecastBracket = isForecastPlayoff
                 ? enrichedPredictionBracket.filter(
-                    (m: any) => m.stage === "PLAYOFF",
+                    (m: any) => m.stage === 'PLAYOFF',
                   )
                 : enrichedPredictionBracket;
 
@@ -376,7 +376,7 @@ export default function TournamentDetails() {
                   predictionResult={predictionResult}
                   enrichedBracket={cleanForecastBracket}
                   bracketType={forecastBracketType}
-                  onGoToBracket={() => setActiveTab("bracket")}
+                  onGoToBracket={() => setActiveTab('bracket')}
                 />
               );
             })()}

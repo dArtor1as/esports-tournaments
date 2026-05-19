@@ -1,6 +1,6 @@
-import { useMemo } from "react";
-import { Trophy } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useMemo } from 'react';
+import { Trophy } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface GroupStageStandingsProps {
   matches: any[];
@@ -19,7 +19,7 @@ export default function GroupStageStandings({
     > = {};
 
     matches.forEach((m) => {
-      const gName = m.groupName || "Group";
+      const gName = m.groupName || 'Group';
       if (!groups[gName]) groups[gName] = { teams: {}, matches: [] };
       groups[gName].matches.push(m);
 
@@ -45,7 +45,7 @@ export default function GroupStageStandings({
 
       // Нарахування очок за зіграні матчі
       const isPlayed =
-        m.matchStatus === "COMPLETED" || m.scoreA > 0 || m.scoreB > 0;
+        m.matchStatus === 'COMPLETED' || m.scoreA > 0 || m.scoreB > 0;
       if (isPlayed && m.teamAId && m.teamBId) {
         if (m.scoreA > m.scoreB) {
           groups[gName].teams[m.teamAId].w += 1;
@@ -125,7 +125,7 @@ export default function GroupStageStandings({
                               {t.team?.tag}
                             </span>
                             <span className="truncate max-w-[150px]">
-                              {t.team?.name || "Unknown"}
+                              {t.team?.name || 'Unknown'}
                             </span>
                           </Link>
                         </td>
@@ -153,7 +153,7 @@ export default function GroupStageStandings({
               <div className="space-y-2.5 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
                 {group.matches.map((m) => {
                   const isPlayed =
-                    m.matchStatus === "COMPLETED" ||
+                    m.matchStatus === 'COMPLETED' ||
                     m.scoreA > 0 ||
                     m.scoreB > 0;
                   const aWin = m.scoreA > m.scoreB;
@@ -167,12 +167,12 @@ export default function GroupStageStandings({
                     >
                       {/* Team A */}
                       <div
-                        className={`flex items-center gap-2 w-2/5 ${isPlayed && !aWin ? "opacity-50" : ""}`}
+                        className={`flex items-center gap-2 w-2/5 ${isPlayed && !aWin ? 'opacity-50' : ''}`}
                       >
                         <span
-                          className={`truncate text-xs font-bold ${aWin ? "text-emerald-400" : "text-white group-hover:text-amber-400"}`}
+                          className={`truncate text-xs font-bold ${aWin ? 'text-emerald-400' : 'text-white group-hover:text-amber-400'}`}
                         >
-                          {m.teamA?.name || "TBD"}
+                          {m.teamA?.name || 'TBD'}
                         </span>
                       </div>
 
@@ -182,7 +182,7 @@ export default function GroupStageStandings({
                           <>
                             <span
                               className={
-                                aWin ? "text-emerald-400" : "text-slate-400"
+                                aWin ? 'text-emerald-400' : 'text-slate-400'
                               }
                             >
                               {m.scoreA}
@@ -190,7 +190,7 @@ export default function GroupStageStandings({
                             <span className="text-slate-600">:</span>
                             <span
                               className={
-                                bWin ? "text-emerald-400" : "text-slate-400"
+                                bWin ? 'text-emerald-400' : 'text-slate-400'
                               }
                             >
                               {m.scoreB}
@@ -205,12 +205,12 @@ export default function GroupStageStandings({
 
                       {/* Team B */}
                       <div
-                        className={`flex items-center justify-end gap-2 w-2/5 ${isPlayed && !bWin ? "opacity-50" : ""}`}
+                        className={`flex items-center justify-end gap-2 w-2/5 ${isPlayed && !bWin ? 'opacity-50' : ''}`}
                       >
                         <span
-                          className={`truncate text-xs font-bold text-right ${bWin ? "text-emerald-400" : "text-white group-hover:text-amber-400"}`}
+                          className={`truncate text-xs font-bold text-right ${bWin ? 'text-emerald-400' : 'text-white group-hover:text-amber-400'}`}
                         >
-                          {m.teamB?.name || "TBD"}
+                          {m.teamB?.name || 'TBD'}
                         </span>
                       </div>
                     </Link>

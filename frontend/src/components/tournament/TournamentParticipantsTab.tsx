@@ -1,6 +1,6 @@
-import { Users } from "lucide-react";
-import { Link } from "react-router-dom";
-import InviteTeamModal from "./InviteTeamModal";
+import { Users } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import InviteTeamModal from './InviteTeamModal';
 
 interface TournamentParticipantsTabProps {
   participants: any[];
@@ -53,7 +53,7 @@ export default function TournamentParticipantsTab({
                 <span className="font-bold text-white text-lg transition-colors group-hover:text-esports-light">
                   <span className="text-slate-500 font-normal group-hover:text-slate-400">
                     [{p.team?.tag}]
-                  </span>{" "}
+                  </span>{' '}
                   {p.team?.name}
                 </span>
                 <span className="text-xs font-black text-yellow-500 bg-slate-900 border border-slate-800 px-2 py-1 rounded">

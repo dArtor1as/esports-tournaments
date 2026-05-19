@@ -1,22 +1,22 @@
-import { useState, useMemo, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { useState, useMemo, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { CheckCircle2, Users } from "lucide-react";
-import { toast } from "sonner";
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { CheckCircle2, Users } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select';
 
 interface AcceptInviteModalProps {
   invite: any;
@@ -27,7 +27,7 @@ interface AcceptInviteModalProps {
 
 type PlayerSelection = {
   playerId: string;
-  role: "PLAYER" | "CAPTAIN" | "COACH" | "SUBSTITUTE" | "NONE";
+  role: 'PLAYER' | 'CAPTAIN' | 'COACH' | 'SUBSTITUTE' | 'NONE';
 };
 
 export default function AcceptInviteModal({
@@ -37,12 +37,12 @@ export default function AcceptInviteModal({
   onSuccess,
 }: AcceptInviteModalProps) {
   const [selections, setSelections] = useState<
-    Record<string, PlayerSelection["role"]>
+    Record<string, PlayerSelection['role']>
   >({});
   const [isLoading, setIsLoading] = useState(false);
 
   const { data: teamData, isLoading: isLoadingTeam } = useQuery({
-    queryKey: ["team", invite?.teamId],
+    queryKey: ['team', invite?.teamId],
     queryFn: async () => (await api.get(`/teams/${invite?.teamId}`)).data,
     enabled: !!invite?.teamId && isOpen,
   });
@@ -51,7 +51,7 @@ export default function AcceptInviteModal({
 
   const handleRoleChange = (
     playerId: string,
-    role: PlayerSelection["role"],
+    role: PlayerSelection['role'],
   ) => {
     setSelections((prev) => ({ ...prev, [playerId]: role }));
   };
@@ -61,20 +61,20 @@ export default function AcceptInviteModal({
     if (players.length > 0 && Object.keys(selections).length === 0) {
       const initial: Record<
         string,
-        "PLAYER" | "CAPTAIN" | "COACH" | "SUBSTITUTE" | "NONE"
+        'PLAYER' | 'CAPTAIN' | 'COACH' | 'SUBSTITUTE' | 'NONE'
       > = {};
 
       players.forEach((p: any) => {
         if (p.id === teamData?.captainId) {
-          initial[p.id] = "CAPTAIN";
+          initial[p.id] = 'CAPTAIN';
         } else if (
-          p.inGameRole === "COACH" ||
-          p.role === "COACH" ||
-          p.player?.inGameRole === "COACH"
+          p.inGameRole === 'COACH' ||
+          p.role === 'COACH' ||
+          p.player?.inGameRole === 'COACH'
         ) {
-          initial[p.id] = "COACH";
+          initial[p.id] = 'COACH';
         } else {
-          initial[p.id] = "NONE";
+          initial[p.id] = 'NONE';
         }
       });
 
@@ -86,10 +86,10 @@ export default function AcceptInviteModal({
   const rosterMetrics = useMemo(() => {
     const values = Object.values(selections);
     const active = values.filter(
-      (v) => v === "PLAYER" || v === "CAPTAIN",
+      (v) => v === 'PLAYER' || v === 'CAPTAIN',
     ).length;
-    const coach = values.filter((v) => v === "COACH").length;
-    const sub = values.filter((v) => v === "SUBSTITUTE").length;
+    const coach = values.filter((v) => v === 'COACH').length;
+    const sub = values.filter((v) => v === 'SUBSTITUTE').length;
     return { active, coach, sub };
   }, [selections]);
 
@@ -102,7 +102,7 @@ export default function AcceptInviteModal({
     if (!isValid) return;
 
     const rosterPlayers = Object.entries(selections)
-      .filter(([_, role]) => role !== "NONE")
+      .filter(([_, role]) => role !== 'NONE')
       .map(([playerId, role]) => ({ playerId, role }));
 
     setIsLoading(true);
@@ -110,11 +110,11 @@ export default function AcceptInviteModal({
       await api.patch(`/tournament-invitations/${invite.token}/accept`, {
         rosterPlayers,
       });
-      toast.success("Ви успішно укомплектували склад та прийняли інвайт!");
+      toast.success('Ви успішно укомплектували склад та прийняли інвайт!');
       onSuccess();
       onClose();
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Помилка авторизації складу");
+      toast.error(err.response?.data?.message || 'Помилка авторизації складу');
     } finally {
       setIsLoading(false);
     }
@@ -132,7 +132,7 @@ export default function AcceptInviteModal({
 
         <div className="space-y-4 py-2">
           <p className="text-xs text-slate-400">
-            Розподіліть ролі для офіційної заявки на турнір. Потрібно обрати{" "}
+            Розподіліть ролі для офіційної заявки на турнір. Потрібно обрати{' '}
             <strong className="text-white">рівно 5 активних гравців</strong>.
           </p>
 
@@ -148,10 +148,10 @@ export default function AcceptInviteModal({
             ) : (
               <div className="space-y-2.5 max-h-[250px] overflow-y-auto pr-1 custom-scrollbar">
                 {players.map((player: any) => {
-                  const currentRole = selections[player.id] || "NONE";
+                  const currentRole = selections[player.id] || 'NONE';
                   // Блокуємо зміну селектора для Коуча та Капітана
                   const isLockedRole =
-                    currentRole === "COACH" || currentRole === "CAPTAIN";
+                    currentRole === 'COACH' || currentRole === 'CAPTAIN';
 
                   return (
                     <div
@@ -170,7 +170,7 @@ export default function AcceptInviteModal({
                         disabled={isLockedRole}
                       >
                         <SelectTrigger
-                          className={`w-[150px] bg-slate-950 border-slate-800 text-xs h-8 ${isLockedRole ? "opacity-75 text-amber-400 font-bold border-amber-500/20" : "text-slate-300"}`}
+                          className={`w-[150px] bg-slate-950 border-slate-800 text-xs h-8 ${isLockedRole ? 'opacity-75 text-amber-400 font-bold border-amber-500/20' : 'text-slate-300'}`}
                         >
                           <SelectValue />
                         </SelectTrigger>
@@ -200,22 +200,22 @@ export default function AcceptInviteModal({
             <span
               className={
                 rosterMetrics.active === 5
-                  ? "text-emerald-400"
-                  : "text-slate-500"
+                  ? 'text-emerald-400'
+                  : 'text-slate-500'
               }
             >
               Активні: {rosterMetrics.active} / 5
             </span>
             <span
               className={
-                rosterMetrics.sub <= 1 ? "text-slate-400" : "text-red-400"
+                rosterMetrics.sub <= 1 ? 'text-slate-400' : 'text-red-400'
               }
             >
               Заміна: {rosterMetrics.sub} / 1
             </span>
             <span
               className={
-                rosterMetrics.coach <= 1 ? "text-slate-400" : "text-red-400"
+                rosterMetrics.coach <= 1 ? 'text-slate-400' : 'text-red-400'
               }
             >
               Тренер: {rosterMetrics.coach} / 1
@@ -236,7 +236,7 @@ export default function AcceptInviteModal({
             disabled={isLoading || !isValid}
             className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black uppercase px-5"
           >
-            {isLoading ? "Реєстрація..." : "Підтвердити заявку"}
+            {isLoading ? 'Реєстрація...' : 'Підтвердити заявку'}
           </Button>
         </div>
       </DialogContent>

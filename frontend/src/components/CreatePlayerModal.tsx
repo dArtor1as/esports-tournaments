@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { api } from "@/lib/api";
+import { useState } from 'react';
+import { api } from '@/lib/api';
 import {
   Dialog,
   DialogContent,
@@ -7,23 +7,23 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Swords } from "lucide-react";
+} from '@/components/ui/select';
+import { Swords } from 'lucide-react';
 
 // Ролі, які ми беремо з твого player.enums.ts
 const ROLES = {
-  cs2: ["SNIPER", "RIFLER", "ENTRY", "SUPPORT", "IGL"],
-  dota2: ["POS_1", "POS_2", "POS_3", "POS_4", "POS_5"],
+  cs2: ['SNIPER', 'RIFLER', 'ENTRY', 'SUPPORT', 'IGL'],
+  dota2: ['POS_1', 'POS_2', 'POS_3', 'POS_4', 'POS_5'],
 };
 
 interface CreatePlayerModalProps {
@@ -35,21 +35,21 @@ export default function CreatePlayerModal({
 }: CreatePlayerModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
   // Стан форми
-  const [gameSlug, setGameSlug] = useState<"cs2" | "dota2">("cs2");
-  const [nickname, setNickname] = useState("");
-  const [inGameRole, setInGameRole] = useState("");
-  const [expectedTier, setExpectedTier] = useState("3"); // 3 - найнижчий рівень
+  const [gameSlug, setGameSlug] = useState<'cs2' | 'dota2'>('cs2');
+  const [nickname, setNickname] = useState('');
+  const [inGameRole, setInGameRole] = useState('');
+  const [expectedTier, setExpectedTier] = useState('3'); // 3 - найнижчий рівень
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setError('');
     setLoading(true);
 
     try {
-      await api.post("/players", {
+      await api.post('/players', {
         gameSlug,
         nickname,
         inGameRole,
@@ -59,16 +59,16 @@ export default function CreatePlayerModal({
       setIsOpen(false); // Закриваємо модалку
       onSuccess(); // Оновлюємо дані на сторінці профілю
     } catch (err: any) {
-      setError(err.response?.data?.message || "Помилка при створенні профілю");
+      setError(err.response?.data?.message || 'Помилка при створенні профілю');
     } finally {
       setLoading(false);
     }
   };
 
   // Коли змінюється гра, скидаємо роль, бо вони різні для CS2 і Dota
-  const handleGameChange = (val: "cs2" | "dota2") => {
+  const handleGameChange = (val: 'cs2' | 'dota2') => {
     setGameSlug(val);
-    setInGameRole("");
+    setInGameRole('');
   };
 
   return (
@@ -157,7 +157,7 @@ export default function CreatePlayerModal({
               type="submit"
               className="bg-esports-accent text-black hover:bg-esports-accent/90 w-full font-bold"
             >
-              {loading ? "Створення..." : "Зареєструвати профіль"}
+              {loading ? 'Створення...' : 'Зареєструвати профіль'}
             </Button>
           </div>
         </form>

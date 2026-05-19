@@ -1,5 +1,5 @@
-import { Trophy } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Trophy } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface TournamentBracketProps {
   matches: any[];
@@ -12,7 +12,7 @@ const MatchNode = ({ match }: { match: any }) => {
   const isTeamAWin = match.scoreA > match.scoreB;
   const isTeamBWin = match.scoreB > match.scoreA;
   const isPlayed =
-    match.scoreA > 0 || match.scoreB > 0 || match.matchStatus === "COMPLETED";
+    match.scoreA > 0 || match.scoreB > 0 || match.matchStatus === 'COMPLETED';
 
   return (
     <div
@@ -21,33 +21,33 @@ const MatchNode = ({ match }: { match: any }) => {
     >
       {/* TEAM A */}
       <div
-        className={`flex justify-between items-center p-2.5 border-b border-slate-700/50 transition-colors ${isPlayed && isTeamAWin ? "bg-emerald-500/10" : "group-hover:bg-slate-800"}`}
+        className={`flex justify-between items-center p-2.5 border-b border-slate-700/50 transition-colors ${isPlayed && isTeamAWin ? 'bg-emerald-500/10' : 'group-hover:bg-slate-800'}`}
       >
         <span
-          className={`truncate px-1 ${isPlayed && !isTeamAWin ? "text-slate-400 font-medium" : isPlayed && isTeamAWin ? "text-emerald-400 font-black" : "text-white font-medium"}`}
+          className={`truncate px-1 ${isPlayed && !isTeamAWin ? 'text-slate-400 font-medium' : isPlayed && isTeamAWin ? 'text-emerald-400 font-black' : 'text-white font-medium'}`}
         >
-          {match.teamA ? `[${match.teamA.tag}] ${match.teamA.name}` : "(TBD)"}
+          {match.teamA ? `[${match.teamA.tag}] ${match.teamA.name}` : '(TBD)'}
         </span>
         <span
-          className={`px-2.5 py-0.5 rounded font-black text-sm ${isPlayed && isTeamAWin ? "text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)] bg-emerald-500/20" : "text-slate-400"}`}
+          className={`px-2.5 py-0.5 rounded font-black text-sm ${isPlayed && isTeamAWin ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)] bg-emerald-500/20' : 'text-slate-400'}`}
         >
-          {match.scoreA ?? "-"}
+          {match.scoreA ?? '-'}
         </span>
       </div>
 
       {/* TEAM B */}
       <div
-        className={`flex justify-between items-center p-2.5 transition-colors ${isPlayed && isTeamBWin ? "bg-emerald-500/10" : "group-hover:bg-slate-800"}`}
+        className={`flex justify-between items-center p-2.5 transition-colors ${isPlayed && isTeamBWin ? 'bg-emerald-500/10' : 'group-hover:bg-slate-800'}`}
       >
         <span
-          className={`truncate px-1 ${isPlayed && !isTeamBWin ? "text-slate-400 font-medium" : isPlayed && isTeamBWin ? "text-emerald-400 font-black" : "text-white font-medium"}`}
+          className={`truncate px-1 ${isPlayed && !isTeamBWin ? 'text-slate-400 font-medium' : isPlayed && isTeamBWin ? 'text-emerald-400 font-black' : 'text-white font-medium'}`}
         >
-          {match.teamB ? `[${match.teamB.tag}] ${match.teamB.name}` : "(TBD)"}
+          {match.teamB ? `[${match.teamB.tag}] ${match.teamB.name}` : '(TBD)'}
         </span>
         <span
-          className={`px-2.5 py-0.5 rounded font-black text-sm ${isPlayed && isTeamBWin ? "text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)] bg-emerald-500/20" : "text-slate-400"}`}
+          className={`px-2.5 py-0.5 rounded font-black text-sm ${isPlayed && isTeamBWin ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)] bg-emerald-500/20' : 'text-slate-400'}`}
         >
-          {match.scoreB ?? "-"}
+          {match.scoreB ?? '-'}
         </span>
       </div>
     </div>
@@ -56,7 +56,7 @@ const MatchNode = ({ match }: { match: any }) => {
 const BracketTree = ({
   matches,
   title,
-  colorClass = "text-white",
+  colorClass = 'text-white',
 }: {
   matches: any[];
   title?: string;
@@ -114,10 +114,10 @@ export default function TournamentBracket({
     );
   }
 
-  if (bracketType === "ROUND_ROBIN") {
-    const groupMatches = matches.filter((m) => m.stage === "GROUP");
+  if (bracketType === 'ROUND_ROBIN') {
+    const groupMatches = matches.filter((m) => m.stage === 'GROUP');
     const groups = groupMatches.reduce((acc: any, match: any) => {
-      const gName = match.groupName || "Group Stage";
+      const gName = match.groupName || 'Group Stage';
       if (!acc[gName]) acc[gName] = [];
       acc[gName].push(match);
       return acc;
@@ -142,13 +142,13 @@ export default function TournamentBracket({
                     className="flex justify-between items-center text-xs font-mono bg-slate-900 border border-slate-800/40 p-3 rounded-xl hover:border-slate-700/60 transition-colors"
                   >
                     <span className="w-2/5 truncate text-right text-slate-300 font-medium">
-                      {match.teamA?.name || "TBD"}
+                      {match.teamA?.name || 'TBD'}
                     </span>
                     <span className="w-1/5 text-center font-black text-emerald-400 bg-slate-950 py-1 rounded-lg border border-slate-800/50 min-w-[65px] drop-shadow-[0_0_6px_rgba(52,211,153,0.2)]">
                       {match.scoreA} - {match.scoreB}
                     </span>
                     <span className="w-2/5 truncate text-left text-slate-300 font-medium">
-                      {match.teamB?.name || "TBD"}
+                      {match.teamB?.name || 'TBD'}
                     </span>
                   </div>
                 ))}
@@ -159,10 +159,10 @@ export default function TournamentBracket({
     );
   }
 
-  if (bracketType === "DOUBLE_ELIMINATION") {
-    const upperMatches = matches.filter((m) => m.bracket === "UPPER");
-    const lowerMatches = matches.filter((m) => m.bracket === "LOWER");
-    const grandFinal = matches.filter((m) => m.bracket === "GRAND_FINAL");
+  if (bracketType === 'DOUBLE_ELIMINATION') {
+    const upperMatches = matches.filter((m) => m.bracket === 'UPPER');
+    const lowerMatches = matches.filter((m) => m.bracket === 'LOWER');
+    const grandFinal = matches.filter((m) => m.bracket === 'GRAND_FINAL');
 
     return (
       <div className="space-y-8">
@@ -191,7 +191,7 @@ export default function TournamentBracket({
 
   const playoffMatches = matches.filter(
     (m) =>
-      m.stage === "PLAYOFF" || m.bracket === "UPPER" || m.bracket === "NONE",
+      m.stage === 'PLAYOFF' || m.bracket === 'UPPER' || m.bracket === 'NONE',
   );
   return (
     <BracketTree

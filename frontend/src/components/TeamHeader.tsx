@@ -1,10 +1,10 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Trash2, Trophy, Crown } from "lucide-react";
-import ConfirmModal from "./ConfirmModal";
-import TransferLeadershipModal from "./TransferLeadershipModal";
-import InvitePlayerModal from "./InvitePlayerModal";
-import { getFlagUrl } from "@/lib/helpers";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Trash2, Trophy, Crown } from 'lucide-react';
+import ConfirmModal from './ConfirmModal';
+import TransferLeadershipModal from './TransferLeadershipModal';
+import InvitePlayerModal from './InvitePlayerModal';
+import { getFlagUrl } from '@/lib/helpers';
 
 interface TeamHeaderProps {
   team: any;
@@ -23,7 +23,7 @@ export default function TeamHeader({
 }: TeamHeaderProps) {
   const activeCount =
     team?.players?.filter(
-      (p: any) => p.teamRole === "PLAYER" || p.teamRole === "CAPTAIN",
+      (p: any) => p.teamRole === 'PLAYER' || p.teamRole === 'CAPTAIN',
     ).length || 0;
 
   const isRosterComplete = activeCount >= 5;
@@ -56,19 +56,19 @@ export default function TeamHeader({
                 Регіон: <strong className="text-white">{team.region}</strong>
               </span>
               <span>
-                Тір:{" "}
+                Тір:{' '}
                 <strong className="text-esports-accent">
                   Tier {team.tier}
                 </strong>
               </span>
               <span>
-                Статус:{" "}
+                Статус:{' '}
                 <strong
                   className={
-                    isRosterComplete ? "text-green-400" : "text-yellow-400"
+                    isRosterComplete ? 'text-green-400' : 'text-yellow-400'
                   }
                 >
-                  {isRosterComplete ? "Повний склад" : "Неповний склад"}
+                  {isRosterComplete ? 'Повний склад' : 'Неповний склад'}
                 </strong>
               </span>
             </p>

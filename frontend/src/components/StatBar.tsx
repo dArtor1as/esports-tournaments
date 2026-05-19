@@ -2,20 +2,20 @@ interface StatBarProps {
   label: string;
   value: number;
   max: number;
-  status: "GOOD" | "AVERAGE" | "POOR";
+  status: 'GOOD' | 'AVERAGE' | 'POOR';
 }
 
 export default function StatBar({ label, value, max, status }: StatBarProps) {
   const percentage = Math.min((value / max) * 100, 100);
 
   const statusConfig = {
-    GOOD: { text: "GOOD", bar: "bg-green-500", textClass: "text-green-500" },
+    GOOD: { text: 'GOOD', bar: 'bg-green-500', textClass: 'text-green-500' },
     AVERAGE: {
-      text: "AVERAGE",
-      bar: "bg-yellow-500",
-      textClass: "text-yellow-500",
+      text: 'AVERAGE',
+      bar: 'bg-yellow-500',
+      textClass: 'text-yellow-500',
     },
-    POOR: { text: "POOR", bar: "bg-red-500", textClass: "text-red-500" },
+    POOR: { text: 'POOR', bar: 'bg-red-500', textClass: 'text-red-500' },
   };
 
   const current = statusConfig[status];

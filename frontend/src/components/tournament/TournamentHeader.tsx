@@ -1,8 +1,8 @@
-import { Trophy, Trash2, X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import ConfirmModal from "@/components/ConfirmModal";
-import RegisterTeamModal from "./RegisterTeamModal";
+import { Trophy, Trash2, X } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import ConfirmModal from '@/components/ConfirmModal';
+import RegisterTeamModal from './RegisterTeamModal';
 
 interface TournamentHeaderProps {
   tournament: any;
@@ -24,10 +24,10 @@ export default function TournamentHeader({
   onDelete,
 }: TournamentHeaderProps) {
   // Дії доступні тільки якщо турнір перебуває на стадії планування
-  const isPlanned = tournament.status === "planned";
+  const isPlanned = tournament.status === 'planned';
 
   const canManage =
-    tournament.status !== "finished" && tournament.status !== "cancelled";
+    tournament.status !== 'finished' && tournament.status !== 'cancelled';
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-2xl relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
@@ -44,17 +44,17 @@ export default function TournamentHeader({
           </h1>
           <p className="text-sm text-slate-400 mt-1 flex flex-wrap items-center gap-4">
             <span>
-              Дисципліна:{" "}
+              Дисципліна:{' '}
               <strong className="text-esports-accent uppercase">
                 {tournament.game?.name}
               </strong>
             </span>
             <span>
-              Регіон:{" "}
+              Регіон:{' '}
               <strong className="text-white">{tournament.region}</strong>
             </span>
             <span>
-              Тір:{" "}
+              Тір:{' '}
               <strong className="text-slate-300">Tier {tournament.tier}</strong>
             </span>
           </p>

@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { useAuth } from "@/context/AuthContext";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 import {
   Trophy,
   Users,
@@ -11,40 +11,40 @@ import {
   Lock,
   Unlock,
   FilterX,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+} from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import TournamentFormModal from "@/components/tournament/TournamentFormModal";
+} from '@/components/ui/select';
+import TournamentFormModal from '@/components/tournament/TournamentFormModal';
 
-type TournamentStatus = "planned" | "live" | "finished" | "cancelled";
-const REGIONS = ["EU", "NA", "CIS", "ASIA", "SA", "GLOBAL"];
+type TournamentStatus = 'planned' | 'live' | 'finished' | 'cancelled';
+const REGIONS = ['EU', 'NA', 'CIS', 'ASIA', 'SA', 'GLOBAL'];
 
 export default function Tournaments() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
   // Стани фільтрів
-  const [statusFilter, setStatusFilter] = useState<TournamentStatus | "all">(
-    "planned",
+  const [statusFilter, setStatusFilter] = useState<TournamentStatus | 'all'>(
+    'planned',
   );
-  const [gameSlug, setGameSlug] = useState<string>("all");
-  const [tier, setTier] = useState<string>("all");
-  const [region, setRegion] = useState<string>("all");
-  const [isPublic, setIsPublic] = useState<string>("all");
+  const [gameSlug, setGameSlug] = useState<string>('all');
+  const [tier, setTier] = useState<string>('all');
+  const [region, setRegion] = useState<string>('all');
+  const [isPublic, setIsPublic] = useState<string>('all');
 
   // Отримання списку ігор для фільтру
   const { data: games = [] } = useQuery({
-    queryKey: ["games"],
+    queryKey: ['games'],
     queryFn: async () => {
       try {
-        const { data } = await api.get("/games");
+        const { data } = await api.get('/games');
         return Array.isArray(data) ? data : data.data || [];
       } catch {
         return [];
@@ -54,15 +54,15 @@ export default function Tournaments() {
 
   // Головний запит турнірів з усіма параметрами
   const { data: tournamentsData, isLoading } = useQuery({
-    queryKey: ["tournaments", statusFilter, gameSlug, tier, region, isPublic],
+    queryKey: ['tournaments', statusFilter, gameSlug, tier, region, isPublic],
     queryFn: async () => {
       const params = new URLSearchParams();
-      params.append("limit", "50");
-      if (statusFilter !== "all") params.append("status", statusFilter);
-      if (gameSlug !== "all") params.append("gameSlug", gameSlug);
-      if (tier !== "all") params.append("tier", tier);
-      if (region !== "all") params.append("region", region);
-      if (isPublic !== "all") params.append("isPublic", isPublic);
+      params.append('limit', '50');
+      if (statusFilter !== 'all') params.append('status', statusFilter);
+      if (gameSlug !== 'all') params.append('gameSlug', gameSlug);
+      if (tier !== 'all') params.append('tier', tier);
+      if (region !== 'all') params.append('region', region);
+      if (isPublic !== 'all') params.append('isPublic', isPublic);
 
       const { data } = await api.get(`/tournaments?${params.toString()}`);
       return data;
@@ -73,46 +73,46 @@ export default function Tournaments() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "planned":
-        return "text-blue-400 bg-blue-400/10 border-blue-400/20";
-      case "live":
-        return "text-red-500 bg-red-500/10 border-red-500/20 animate-pulse";
-      case "finished":
-        return "text-slate-400 bg-slate-800 border-slate-700";
-      case "cancelled":
-        return "text-orange-500 bg-orange-500/10 border-orange-500/20";
+      case 'planned':
+        return 'text-blue-400 bg-blue-400/10 border-blue-400/20';
+      case 'live':
+        return 'text-red-500 bg-red-500/10 border-red-500/20 animate-pulse';
+      case 'finished':
+        return 'text-slate-400 bg-slate-800 border-slate-700';
+      case 'cancelled':
+        return 'text-orange-500 bg-orange-500/10 border-orange-500/20';
       default:
-        return "text-slate-400 bg-slate-800 border-slate-700";
+        return 'text-slate-400 bg-slate-800 border-slate-700';
     }
   };
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case "planned":
-        return "Реєстрація / Заплановано";
-      case "live":
-        return "🔴 LIVE";
-      case "finished":
-        return "Завершено";
-      case "cancelled":
-        return "Скасовано";
+      case 'planned':
+        return 'Реєстрація / Заплановано';
+      case 'live':
+        return '🔴 LIVE';
+      case 'finished':
+        return 'Завершено';
+      case 'cancelled':
+        return 'Скасовано';
       default:
         return status;
     }
   };
 
   const resetFilters = () => {
-    setGameSlug("all");
-    setTier("all");
-    setRegion("all");
-    setIsPublic("all");
+    setGameSlug('all');
+    setTier('all');
+    setRegion('all');
+    setIsPublic('all');
   };
 
   const hasActiveFilters =
-    gameSlug !== "all" ||
-    tier !== "all" ||
-    region !== "all" ||
-    isPublic !== "all";
+    gameSlug !== 'all' ||
+    tier !== 'all' ||
+    region !== 'all' ||
+    isPublic !== 'all';
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500">
@@ -131,7 +131,7 @@ export default function Tournaments() {
         </div>
 
         <div className="relative z-10 flex flex-col sm:flex-row gap-3">
-          {user?.role === "ADMIN" && <TournamentFormModal mode="test" />}
+          {user?.role === 'ADMIN' && <TournamentFormModal mode="test" />}
           {user && <TournamentFormModal mode="standard" />}
         </div>
       </div>
@@ -140,19 +140,19 @@ export default function Tournaments() {
       <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 shadow-md space-y-4">
         {/* Головні таби статусів */}
         <div className="flex gap-2 w-max">
-          {["all", "planned", "live", "finished"].map((status) => (
+          {['all', 'planned', 'live', 'finished'].map((status) => (
             <button
               key={status}
               onClick={() => setStatusFilter(status as any)}
               className={`px-4 py-2 text-xs font-black uppercase tracking-wider rounded-md transition-all ${
                 statusFilter === status
-                  ? "bg-esports-accent text-black shadow-[0_0_10px_rgba(242,167,27,0.3)]"
-                  : "bg-slate-900 text-slate-500 hover:text-white border border-slate-800"
+                  ? 'bg-esports-accent text-black shadow-[0_0_10px_rgba(242,167,27,0.3)]'
+                  : 'bg-slate-900 text-slate-500 hover:text-white border border-slate-800'
               }`}
             >
-              {status === "all"
-                ? "Всі турніри"
-                : getStatusLabel(status).replace("🔴 ", "")}
+              {status === 'all'
+                ? 'Всі турніри'
+                : getStatusLabel(status).replace('🔴 ', '')}
             </button>
           ))}
         </div>
@@ -257,10 +257,10 @@ export default function Tournaments() {
                       </div>
                       {/* БЕЙДЖ ТИПУ ДОСТУПУ */}
                       <div
-                        className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border ${isOpen ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-purple-500/10 border-purple-500/20 text-purple-400"}`}
+                        className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border ${isOpen ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-purple-500/10 border-purple-500/20 text-purple-400'}`}
                       >
                         {isOpen ? <Unlock size={10} /> : <Lock size={10} />}
-                        {isOpen ? "Відкритий" : "Закритий"}
+                        {isOpen ? 'Відкритий' : 'Закритий'}
                       </div>
                     </div>
                   </div>
@@ -274,7 +274,7 @@ export default function Tournaments() {
                       variant="outline"
                       className="border-slate-700 text-esports-accent bg-esports-accent/5 uppercase text-[10px]"
                     >
-                      {tournament.game?.name || "Game"}
+                      {tournament.game?.name || 'Game'}
                     </Badge>
                     <Badge
                       variant="outline"
@@ -290,7 +290,7 @@ export default function Tournaments() {
                     <div className="flex items-center gap-1.5 text-slate-400 text-sm">
                       <Users
                         size={16}
-                        className={isFull ? "text-green-500" : "text-slate-500"}
+                        className={isFull ? 'text-green-500' : 'text-slate-500'}
                       />
                       <span className="font-bold text-white">
                         {tournament._count?.participants || 0}

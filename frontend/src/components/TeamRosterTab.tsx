@@ -1,6 +1,6 @@
-import { Users, Shield, UserPlus } from "lucide-react";
-import TeamRosterCard from "./TeamRosterCard";
-import { getFlagUrl } from "@/lib/helpers";
+import { Users, Shield, UserPlus } from 'lucide-react';
+import TeamRosterCard from './TeamRosterCard';
+import { getFlagUrl } from '@/lib/helpers';
 
 interface TeamRosterTabProps {
   activePlayers: any[]; // Ті, у кого teamRole === 'PLAYER' або 'CAPTAIN'
@@ -68,9 +68,9 @@ export default function TeamRosterTab({
                     />
                   )}
                   <span
-                    className={`font-bold ${coach ? "text-white text-base" : "text-slate-600 text-sm italic"}`}
+                    className={`font-bold ${coach ? 'text-white text-base' : 'text-slate-600 text-sm italic'}`}
                   >
-                    {coach ? coach.nickname : "Місце вільне"}
+                    {coach ? coach.nickname : 'Місце вільне'}
                   </span>
                 </div>
               </div>

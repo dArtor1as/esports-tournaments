@@ -1,16 +1,16 @@
-import { useNavigate } from "react-router-dom";
-import { User, Crown, Trash2, LogOut } from "lucide-react";
-import ConfirmModal from "./ConfirmModal";
+import { useNavigate } from 'react-router-dom';
+import { User, Crown, Trash2, LogOut } from 'lucide-react';
+import ConfirmModal from './ConfirmModal';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { api } from "@/lib/api";
-import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+} from '@/components/ui/select';
+import { api } from '@/lib/api';
+import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface TeamRosterCardProps {
   player: any;
@@ -41,10 +41,10 @@ export default function TeamRosterCard({
       await api.patch(`/teams/${team.id}/players/${player.id}/role`, {
         teamRole: newRole,
       });
-      toast.success("Роль гравця успішно оновлено");
-      queryClient.invalidateQueries({ queryKey: ["teamProfile", team.id] });
+      toast.success('Роль гравця успішно оновлено');
+      queryClient.invalidateQueries({ queryKey: ['teamProfile', team.id] });
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Помилка при зміні ролі");
+      toast.error(error.response?.data?.message || 'Помилка при зміні ролі');
     }
   };
 
@@ -87,7 +87,7 @@ export default function TeamRosterCard({
           {isCaptain && !isPlayerCaptain ? (
             <div onClick={(e) => e.stopPropagation()} className="mt-1">
               <Select
-                defaultValue={player.teamRole || "PLAYER"}
+                defaultValue={player.teamRole || 'PLAYER'}
                 onValueChange={handleRoleChange}
               >
                 <SelectTrigger className="h-7 text-xs bg-slate-800 border-slate-700 text-white w-[110px]">
@@ -102,7 +102,7 @@ export default function TeamRosterCard({
             </div>
           ) : (
             <span className="text-[11px] text-esports-accent font-bold uppercase truncate">
-              {player.teamRole || "PLAYER"}
+              {player.teamRole || 'PLAYER'}
             </span>
           )}
         </div>
@@ -121,7 +121,7 @@ export default function TeamRosterCard({
             <div className="w-4 h-3 bg-slate-800 rounded-xs flex-shrink-0" />
           )}
           <span className="text-[10px] text-slate-400 font-bold uppercase truncate">
-            {player.inGameRole || "Player"}
+            {player.inGameRole || 'Player'}
           </span>
         </div>
 

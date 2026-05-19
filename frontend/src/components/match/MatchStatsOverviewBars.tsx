@@ -1,4 +1,4 @@
-import { Activity } from "lucide-react";
+import { Activity } from 'lucide-react';
 
 interface MatchStatsOverviewBarsProps {
   match: any;
@@ -26,7 +26,7 @@ export default function MatchStatsOverviewBars({
     const pctA = total > 0 ? (valA / total) * 100 : 50;
     const pctB = total > 0 ? (valB / total) * 100 : 50;
     const formatValue = (val: number) =>
-      label === "Net Worth" && val >= 1000
+      label === 'Net Worth' && val >= 1000
         ? `${(val / 1000).toFixed(1)}k`
         : val;
 
@@ -66,11 +66,11 @@ export default function MatchStatsOverviewBars({
       <div className="p-6">
         <div className="flex justify-between items-center mb-6 border-b border-slate-800 pb-3">
           <div className="flex items-center gap-2 font-black text-white text-base">
-            <span className="text-amber-500">[{match.teamA?.tag}]</span>{" "}
+            <span className="text-amber-500">[{match.teamA?.tag}]</span>{' '}
             {match.teamA?.name}
           </div>
           <div className="flex items-center gap-2 font-black text-white text-base">
-            {match.teamB?.name}{" "}
+            {match.teamB?.name}{' '}
             <span className="text-slate-500">[{match.teamB?.tag}]</span>
           </div>
         </div>

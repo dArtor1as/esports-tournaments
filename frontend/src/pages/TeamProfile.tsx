@@ -1,18 +1,18 @@
-import { useParams, useNavigate } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { useAuth } from "@/context/AuthContext";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
-import { useTeamProfileData } from "@/hooks/useProfileData";
-import { getFlagUrl } from "@/lib/helpers";
-import TeamHeader from "@/components/TeamHeader";
-import TeamRosterTab from "@/components/TeamRosterTab";
-import TeamMatchesTab from "@/components/TeamMatchesTab";
-import EloRatingChart from "@/components/EloRatingChart";
+import { useTeamProfileData } from '@/hooks/useProfileData';
+import { getFlagUrl } from '@/lib/helpers';
+import TeamHeader from '@/components/TeamHeader';
+import TeamRosterTab from '@/components/TeamRosterTab';
+import TeamMatchesTab from '@/components/TeamMatchesTab';
+import EloRatingChart from '@/components/EloRatingChart';
 
 export default function TeamProfile() {
   const { id } = useParams<{ id: string }>();
@@ -37,24 +37,24 @@ export default function TeamProfile() {
     );
 
   const isCaptain = team?.captain?.userId === currentUser?.id;
-  const isAdmin = currentUser?.role === "ADMIN";
+  const isAdmin = currentUser?.role === 'ADMIN';
   const canManageRoles = isCaptain || isAdmin;
 
   // 1. ПРАВИЛЬНА ФІЛЬТРАЦІЯ (використовуємо teamRole, а не inGameRole)
   const activePlayers =
     team.players?.filter(
-      (p: any) => p.teamRole === "PLAYER" || p.teamRole === "CAPTAIN",
+      (p: any) => p.teamRole === 'PLAYER' || p.teamRole === 'CAPTAIN',
     ) || [];
 
-  const coach = team.players?.find((p: any) => p.teamRole === "COACH");
+  const coach = team.players?.find((p: any) => p.teamRole === 'COACH');
 
   // Знаходимо всіх запасних
   const allSubstitutes =
-    team.players?.filter((p: any) => p.teamRole === "SUBSTITUTE") || [];
+    team.players?.filter((p: any) => p.teamRole === 'SUBSTITUTE') || [];
 
   // 2. перевірка чи є юзер тренером цієї команди
   const isCoach = team.players?.some(
-    (p: any) => p.userId === currentUser?.id && p.teamRole === "COACH",
+    (p: any) => p.userId === currentUser?.id && p.teamRole === 'COACH',
   );
 
   const canSeeSubstitutes = isCaptain || isAdmin || isCoach;
@@ -62,18 +62,18 @@ export default function TeamProfile() {
   // 3. приховуємо запасних якщо немає прав, передаємо порожній масив
   const substitutes = canSeeSubstitutes ? allSubstitutes : [];
 
-  const teamFlag = getFlagUrl(team.countryCode, "w40");
+  const teamFlag = getFlagUrl(team.countryCode, 'w40');
 
   const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: ["teamProfile", id] });
+    queryClient.invalidateQueries({ queryKey: ['teamProfile', id] });
 
   const handleDisband = async () => {
     try {
       await api.delete(`/teams/${id}`);
-      toast.success("Команду успішно розформовано");
-      navigate("/teams");
+      toast.success('Команду успішно розформовано');
+      navigate('/teams');
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Помилка при видаленні");
+      toast.error(err.response?.data?.message || 'Помилка при видаленні');
     }
   };
 
@@ -81,9 +81,9 @@ export default function TeamProfile() {
     try {
       await api.delete(`/teams/${id}/kick/${playerId}`);
       invalidate();
-      toast.success("Гравця виключено зі складу");
+      toast.success('Гравця виключено зі складу');
     } catch (err: any) {
-      toast.error(err.response?.data?.message || "Помилка при виключенні");
+      toast.error(err.response?.data?.message || 'Помилка при виключенні');
     }
   };
 
@@ -91,11 +91,11 @@ export default function TeamProfile() {
     try {
       await api.delete(`/teams/${id}/leave/${playerId}`);
       invalidate();
-      toast.success("Ви успішно покинули команду");
-      navigate("/");
+      toast.success('Ви успішно покинули команду');
+      navigate('/');
     } catch (err: any) {
       toast.error(
-        err.response?.data?.message || "Помилка при виході з команди",
+        err.response?.data?.message || 'Помилка при виході з команди',
       );
     }
   };

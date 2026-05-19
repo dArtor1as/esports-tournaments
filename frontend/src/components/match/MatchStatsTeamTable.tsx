@@ -1,5 +1,5 @@
-import { Link } from "react-router-dom";
-import { Link as LinkIcon } from "lucide-react";
+import { Link } from 'react-router-dom';
+import { Link as LinkIcon } from 'lucide-react';
 
 interface MatchStatsTeamTableProps {
   team: any;
@@ -17,7 +17,7 @@ export default function MatchStatsTeamTable({
   if (!team || !team.players) return null;
 
   const playersWithStats = team.players
-    .filter((p: any) => p.inGameRole !== "COACH")
+    .filter((p: any) => p.inGameRole !== 'COACH')
     .map((p: any) => ({ ...p, stat: playerStats[p.id] }))
     .filter((p: any) => p.stat)
     .sort((a: any, b: any) => (b.stat?.kills || 0) - (a.stat?.kills || 0));
@@ -35,7 +35,7 @@ export default function MatchStatsTeamTable({
             {team.tag}
           </div>
           <span className="font-bold text-white group-hover:text-amber-400 transition-colors flex items-center gap-1.5">
-            {team.name}{" "}
+            {team.name}{' '}
             <LinkIcon
               size={12}
               className="text-slate-500 group-hover:text-amber-400"
@@ -108,8 +108,8 @@ export default function MatchStatsTeamTable({
                     <span
                       className={
                         parseFloat(kdRatio) >= 1
-                          ? "text-emerald-500"
-                          : "text-slate-500"
+                          ? 'text-emerald-500'
+                          : 'text-slate-500'
                       }
                     >
                       {kdRatio}
@@ -117,32 +117,32 @@ export default function MatchStatsTeamTable({
                   </td>
                   {showDamage && (
                     <td className="px-4 py-3 text-center text-yellow-400 font-mono font-bold">
-                      {pStat.damage || "-"}
+                      {pStat.damage || '-'}
                     </td>
                   )}
                   {isCS2 ? (
                     <>
                       <td className="px-4 py-3 text-center text-slate-300 font-mono">
-                        {Math.round(pStat.adr || 0) || "-"}
+                        {Math.round(pStat.adr || 0) || '-'}
                       </td>
                       <td className="px-4 py-3 text-center text-slate-400 font-mono">
                         {pStat.headshots
                           ? `${Math.round(pStat.headshots)}%`
-                          : "-"}
+                          : '-'}
                       </td>
                     </>
                   ) : (
                     <>
                       <td className="px-4 py-3 text-center text-yellow-400 font-mono">
-                        {Math.round(pStat.gpm || 0) || "-"}
+                        {Math.round(pStat.gpm || 0) || '-'}
                       </td>
                       <td className="px-4 py-3 text-center text-blue-400 font-mono">
-                        {Math.round(pStat.xpm || 0) || "-"}
+                        {Math.round(pStat.xpm || 0) || '-'}
                       </td>
                       <td className="px-4 py-3 text-center text-emerald-400 font-mono">
                         {pStat.netWorth
                           ? `${(pStat.netWorth / 1000).toFixed(1)}k`
-                          : "-"}
+                          : '-'}
                       </td>
                     </>
                   )}

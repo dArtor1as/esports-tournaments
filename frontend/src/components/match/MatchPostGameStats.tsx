@@ -1,17 +1,17 @@
-import { useState, useMemo } from "react";
-import { Activity, Target } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useState, useMemo } from 'react';
+import { Activity, Target } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
-import MatchStatsOverviewBars from "./MatchStatsOverviewBars";
-import MatchStatsTeamTable from "./MatchStatsTeamTable";
+import MatchStatsOverviewBars from './MatchStatsOverviewBars';
+import MatchStatsTeamTable from './MatchStatsTeamTable';
 
 interface MatchPostGameStatsProps {
   match: any;
 }
 
 export default function MatchPostGameStats({ match }: MatchPostGameStatsProps) {
-  const [selectedMapIndex, setSelectedMapIndex] = useState<number | "all">(
-    "all",
+  const [selectedMapIndex, setSelectedMapIndex] = useState<number | 'all'>(
+    'all',
   );
 
   const maps = Array.isArray(match.stats?.maps) ? match.stats.maps : [];
@@ -23,7 +23,7 @@ export default function MatchPostGameStats({ match }: MatchPostGameStatsProps) {
     const tA = { kills: 0, deaths: 0, assists: 0, netWorth: 0 };
     const tB = { kills: 0, deaths: 0, assists: 0, netWorth: 0 };
 
-    if (selectedMapIndex === "all") {
+    if (selectedMapIndex === 'all') {
       if (hasMaps) {
         maps.forEach((map: any) => {
           map.teamA?.players?.forEach((p: any) => {
@@ -142,14 +142,14 @@ export default function MatchPostGameStats({ match }: MatchPostGameStatsProps) {
 
   // 2. Безпечне визначення дисципліни турніру
   const isCS2 = useMemo(() => {
-    const slug = match.tournament?.game?.slug || "";
-    if (slug) return slug.toLowerCase() === "cs2";
+    const slug = match.tournament?.game?.slug || '';
+    if (slug) return slug.toLowerCase() === 'cs2';
     return Object.values(playerStats).some(
       (s: any) => s.adr !== undefined && s.adr > 0,
     );
   }, [match.tournament, playerStats]);
 
-  const showDamage = selectedMapIndex !== "all" && isCS2;
+  const showDamage = selectedMapIndex !== 'all' && isCS2;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -158,8 +158,8 @@ export default function MatchPostGameStats({ match }: MatchPostGameStatsProps) {
         <div className="flex flex-wrap gap-2 bg-slate-950/60 border border-slate-800 p-1.5 rounded-xl w-max shadow-inner">
           <Button
             variant="ghost"
-            onClick={() => setSelectedMapIndex("all")}
-            className={`px-5 py-2 text-xs font-black uppercase tracking-wider transition-all duration-300 rounded-lg ${selectedMapIndex === "all" ? "bg-amber-500 text-black font-black shadow-[0_0_15px_rgba(245,158,11,0.25)]" : "text-slate-400 hover:text-white hover:bg-slate-900"}`}
+            onClick={() => setSelectedMapIndex('all')}
+            className={`px-5 py-2 text-xs font-black uppercase tracking-wider transition-all duration-300 rounded-lg ${selectedMapIndex === 'all' ? 'bg-amber-500 text-black font-black shadow-[0_0_15px_rgba(245,158,11,0.25)]' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}
             size="sm"
           >
             Загальна статистика
@@ -169,10 +169,10 @@ export default function MatchPostGameStats({ match }: MatchPostGameStatsProps) {
               key={idx}
               variant="ghost"
               onClick={() => setSelectedMapIndex(idx)}
-              className={`px-5 py-2 text-xs font-black uppercase tracking-wider transition-all duration-300 rounded-lg ${selectedMapIndex === idx ? "bg-amber-500 text-black font-black shadow-[0_0_15px_rgba(245,158,11,0.25)]" : "text-slate-400 hover:text-white hover:bg-slate-900"}`}
+              className={`px-5 py-2 text-xs font-black uppercase tracking-wider transition-all duration-300 rounded-lg ${selectedMapIndex === idx ? 'bg-amber-500 text-black font-black shadow-[0_0_15px_rgba(245,158,11,0.25)]' : 'text-slate-400 hover:text-white hover:bg-slate-900'}`}
               size="sm"
             >
-              Карта {idx + 1} {map.mapName ? `— ${map.mapName}` : ""}
+              Карта {idx + 1} {map.mapName ? `— ${map.mapName}` : ''}
             </Button>
           ))}
         </div>
