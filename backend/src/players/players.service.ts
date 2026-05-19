@@ -56,6 +56,7 @@ export class PlayersService {
         nickname: createPlayerDto.nickname,
         rating: initialRating, // Використовуємо згенерований рейтинг
         inGameRole: createPlayerDto.inGameRole,
+        teamRole: null,
       },
     });
 

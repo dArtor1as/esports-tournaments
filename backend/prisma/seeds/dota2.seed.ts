@@ -172,7 +172,7 @@ export async function seedDota2(prisma: PrismaClient, admin: User, game: Game) {
 
     await prisma.player.update({
       where: { id: captainPlayer.id },
-      data: { teamId: team.id },
+      data: { teamId: team.id, teamRole: RosterRole.CAPTAIN },
     });
     rosterData.push({
       playerId: captainPlayer.id,
@@ -207,6 +207,7 @@ export async function seedDota2(prisma: PrismaClient, admin: User, game: Game) {
           rating: pRating,
           teamId: team.id,
           inGameRole: playerRole,
+          teamRole: RosterRole.PLAYER,
         },
       });
       rosterData.push({
@@ -237,6 +238,7 @@ export async function seedDota2(prisma: PrismaClient, admin: User, game: Game) {
         rating: 1500,
         teamId: team.id,
         inGameRole: 'COACH',
+        teamRole: RosterRole.COACH,
       },
     });
     rosterData.push({
