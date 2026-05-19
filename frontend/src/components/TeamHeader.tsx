@@ -21,6 +21,13 @@ export default function TeamHeader({
   onDisband,
   onTransferSuccess,
 }: TeamHeaderProps) {
+  const activeCount =
+    team?.players?.filter(
+      (p: any) => p.teamRole === "PLAYER" || p.teamRole === "CAPTAIN",
+    ).length || 0;
+
+  const isRosterComplete = activeCount >= 5;
+
   return (
     <div className="space-y-6">
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-2xl relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
@@ -58,10 +65,10 @@ export default function TeamHeader({
                 Статус:{" "}
                 <strong
                   className={
-                    team.isComplete ? "text-green-400" : "text-yellow-400"
+                    isRosterComplete ? "text-green-400" : "text-yellow-400"
                   }
                 >
-                  {team.isComplete ? "Повний склад" : "Неповний склад"}
+                  {isRosterComplete ? "Повний склад" : "Неповний склад"}
                 </strong>
               </span>
             </p>

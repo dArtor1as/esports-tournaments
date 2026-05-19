@@ -8,6 +8,7 @@ interface TournamentParticipantsTabProps {
   tournamentTier: number;
   isCreatorOrAdmin: boolean;
   tournamentGameId: string;
+  isFull?: boolean;
 }
 
 export default function TournamentParticipantsTab({
@@ -16,6 +17,7 @@ export default function TournamentParticipantsTab({
   tournamentTier,
   isCreatorOrAdmin,
   tournamentGameId,
+  isFull = false,
 }: TournamentParticipantsTabProps) {
   return (
     <div className="space-y-6">
@@ -23,7 +25,7 @@ export default function TournamentParticipantsTab({
         <h3 className="text-lg font-black text-white">Список учасників</h3>
 
         {/* Кнопка запрошення для організаторів */}
-        {isCreatorOrAdmin && (
+        {isCreatorOrAdmin && !isFull && (
           <InviteTeamModal
             tournamentId={tournamentId}
             tournamentTier={tournamentTier}

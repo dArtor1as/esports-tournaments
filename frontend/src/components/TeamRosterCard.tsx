@@ -1,6 +1,16 @@
 import { useNavigate } from "react-router-dom";
-import { User, Crown, Trash2, LogOut } from "lucide-react";
+import { User, Crown, Trash2, LogOut, Edit2 } from "lucide-react";
 import ConfirmModal from "./ConfirmModal";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface TeamRosterCardProps {
   player: any;
@@ -20,13 +30,28 @@ export default function TeamRosterCard({
   onLeave,
 }: TeamRosterCardProps) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
   const isPlayerCaptain = team.captainId === player.id;
   const isMe = player.userId === currentUser?.id;
+
+  // Функція для зміни ролі
+  const handleRoleChange = async (newRole: string) => {
+    try {
+      await api.patch(`/teams/${team.id}/players/${player.id}/role`, {
+        teamRole: newRole,
+      });
+      toast.success("Роль гравця успішно оновлено");
+      queryClient.invalidateQueries({ queryKey: ["teamProfile", team.id] });
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Помилка при зміні ролі");
+    }
+  };
 
   return (
     <div
       onClick={() => navigate(`/player/${player.id}`)}
-      className="w-full h-[235px] bg-slate-950 border border-slate-800 rounded-xl overflow-hidden relative cursor-pointer group hover:border-esports-primary hover:scale-[1.03] transition-all duration-300 shadow-md flex flex-col justify-between"
+      className="w-full h-[260px] bg-slate-950 border border-slate-800 rounded-xl overflow-hidden relative cursor-pointer group hover:border-esports-primary hover:scale-[1.03] transition-all duration-300 shadow-md flex flex-col justify-between"
     >
       {isPlayerCaptain && (
         <div className="absolute top-2 left-2 z-20 bg-esports-accent/90 p-1 rounded shadow-md">
@@ -49,6 +74,37 @@ export default function TeamRosterCard({
           <p className="font-black text-sm text-white truncate tracking-tight">
             {player.nickname}
           </p>
+        </div>
+      </div>
+
+      <div className="p-3 bg-slate-900 border-t border-slate-800 flex justify-between items-center z-20">
+        <div className="flex flex-col">
+          <span className="text-[10px] text-slate-500 font-black uppercase">
+            Роль у команді
+          </span>
+
+          {/* Якщо я капітан і це не моя картка — показуємо селект для зміни ролі */}
+          {isCaptain && !isPlayerCaptain ? (
+            <div onClick={(e) => e.stopPropagation()} className="mt-1">
+              <Select
+                defaultValue={player.teamRole || "PLAYER"}
+                onValueChange={handleRoleChange}
+              >
+                <SelectTrigger className="h-7 text-xs bg-slate-800 border-slate-700 text-white w-[110px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-slate-700 text-white">
+                  <SelectItem value="PLAYER">Гравець</SelectItem>
+                  <SelectItem value="COACH">Тренер</SelectItem>
+                  <SelectItem value="SUBSTITUTE">Заміна</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <span className="text-[11px] text-esports-accent font-bold uppercase truncate">
+              {player.teamRole || "PLAYER"}
+            </span>
+          )}
         </div>
       </div>
 

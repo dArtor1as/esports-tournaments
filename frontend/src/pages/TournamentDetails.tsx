@@ -294,6 +294,7 @@ export default function TournamentDetails() {
             tournamentTier={tournament.tier}
             tournamentGameId={tournament.gameId || tournament.game?.id}
             isCreatorOrAdmin={isCreator || isAdmin}
+            isFull={participants.length >= (tournament.maxParticipants || 0)}
           />
         </TabsContent>
 
@@ -312,14 +313,38 @@ export default function TournamentDetails() {
 
         {predictionResult && (
           <TabsContent value="ga-forecast-results">
-            <GaResultsTab
-              predictionResult={predictionResult}
-              enrichedBracket={enrichedPredictionBracket}
-              bracketType={
-                tournament.settings?.bracketType || "SINGLE_ELIMINATION"
-              }
-              onGoToBracket={() => setActiveTab("bracket")}
-            />
+            {(() => {
+              // 1. Перевіряємо, чи є в прогнозі ШІ матчі стадії Плей-оф
+              const isForecastPlayoff = enrichedPredictionBracket?.some(
+                (m: any) => m.stage === "PLAYOFF",
+              );
+
+              // 2. Визначаємо динамічний тип сітки
+              const isRoundRobin =
+                tournament.settings?.bracketType === "ROUND_ROBIN";
+              const forecastBracketType =
+                isRoundRobin && isForecastPlayoff
+                  ? tournament.settings?.playoffBracketType ||
+                    "SINGLE_ELIMINATION"
+                  : tournament.settings?.bracketType || "SINGLE_ELIMINATION";
+
+              //3. Фільтруємо старі матчі групового етапу
+              // Якщо прогнозується Плей-оф стадію, ми залишаємо виключно матчі з stage === "PLAYOFF"
+              const cleanForecastBracket = isForecastPlayoff
+                ? enrichedPredictionBracket.filter(
+                    (m: any) => m.stage === "PLAYOFF",
+                  )
+                : enrichedPredictionBracket;
+
+              return (
+                <GaResultsTab
+                  predictionResult={predictionResult}
+                  enrichedBracket={cleanForecastBracket}
+                  bracketType={forecastBracketType}
+                  onGoToBracket={() => setActiveTab("bracket")}
+                />
+              );
+            })()}
           </TabsContent>
         )}
       </Tabs>
