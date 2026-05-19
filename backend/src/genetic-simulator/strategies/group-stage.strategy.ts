@@ -164,12 +164,6 @@ export class GroupStageStrategy extends BaseGeneticStrategy {
 
       if (winnerProb >= 0.5) {
         fitness += winnerProb * 8;
-        if (
-          (matchWinnerIsA && winsB === 0) ||
-          (!matchWinnerIsA && winsA === 0)
-        ) {
-          fitness += winnerProb * 2;
-        }
       } else {
         if (winnerProb > 0.35) fitness += 5;
         else if (winnerProb > 0.2) fitness += 0;

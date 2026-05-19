@@ -1,4 +1,4 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional, ApiProperty } from '@nestjs/swagger';
 import {
   IsIn,
   IsInt,
@@ -6,6 +6,8 @@ import {
   IsString,
   IsEnum,
   IsUUID,
+  IsBoolean,
+  IsNotEmpty,
 } from 'class-validator';
 import { BracketType } from './create-tournament.dto';
 import { Region } from '@prisma/client';
@@ -59,4 +61,12 @@ export class GenerateTestTournamentDto {
   @IsOptional()
   @IsInt()
   groupCount?: number;
+
+  @ApiProperty({
+    example: true,
+    description: 'Чи турнір публічний',
+  })
+  @IsBoolean()
+  @IsNotEmpty()
+  isPublic: boolean;
 }

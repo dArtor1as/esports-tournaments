@@ -74,7 +74,7 @@ export class TournamentsWorkflowService {
           },
           status: 'planned',
           creatorId: userId,
-          isPublic: true,
+          isPublic: dto.isPublic,
         },
       });
       // Cтворюємо і учасника, і його ростер

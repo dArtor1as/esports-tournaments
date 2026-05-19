@@ -27,7 +27,7 @@ export default function TournamentDetails() {
   const [simLoading, setSimLoading] = useState(false);
   const [bracketLoading, setBracketLoading] = useState(false);
 
-  // Твій код: зберігаємо результати в localStorage (зберігає і Forecast, і Live-Fitness)
+  // Зберігаємо результати в localStorage (Forecast і Live-Fitness)
   const [predictionResult, setPredictionResult] = useState<any>(() => {
     const saved = localStorage.getItem(`forecast_${id}`);
     return saved ? JSON.parse(saved) : null;
@@ -105,7 +105,9 @@ export default function TournamentDetails() {
   const runGeneticAlgorithm = async (isDryRun: boolean) => {
     setSimLoading(true);
     try {
-      const isGroupStage = tournament.settings?.bracketType === "ROUND_ROBIN";
+      const isGroupStage =
+        tournament.settings?.bracketType === "ROUND_ROBIN" &&
+        !hasPlayoffMatches;
       const endpoint = isGroupStage
         ? "/genetic-simulator/run-groups"
         : "/genetic-simulator/run";
@@ -117,7 +119,7 @@ export default function TournamentDetails() {
         stage: isGroupStage ? "GROUP" : "PLAYOFF",
       });
 
-      // Зберігаємо результат для обох режимів, помічаючи isLive!
+      // Зберігаємо результат для обох режимів
       setPredictionResult({ ...response.data, isLive: !isDryRun });
 
       if (isDryRun) {
@@ -167,6 +169,52 @@ export default function TournamentDetails() {
         };
       })
     : [];
+
+  // Перевірка стадій турніру
+  const groupMatches = matches.filter((m: any) => m.stage === "GROUP");
+  const playoffMatches = matches.filter((m: any) => m.stage === "PLAYOFF");
+
+  const isGroupStageComplete =
+    tournament?.settings?.bracketType === "ROUND_ROBIN" &&
+    groupMatches.length > 0 &&
+    groupMatches.every((m: any) => m.isProcessed);
+
+  const hasPlayoffMatches = playoffMatches.length > 0;
+
+  // Виправляємо генерацію плей-оф
+  const handleTransitionToPlayoffs = async () => {
+    setBracketLoading(true);
+    try {
+      await api.post("/matches/transition-to-playoffs", { tournamentId: id });
+
+      // Явно вказуємо, що нам потрібен Single Elimination на 8 команд,
+      // щоб генератор не читав Round Robin з налаштувань турніру
+      await api.post("/matches/generate-bracket", {
+        tournamentId: id,
+        bracketType: "SINGLE_ELIMINATION",
+        teamCount: 8,
+      });
+
+      await refetchMatches();
+      toast.success("Сітку Плей-оф успішно сформовано з лідерів груп!");
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Помилка переходу до Плей-оф");
+    } finally {
+      setBracketLoading(false);
+    }
+  };
+
+  const handleFinishTournament = async () => {
+    try {
+      await api.post(`/tournaments/${id}/finish`);
+      toast.success("Турнір успішно завершено!");
+      window.location.reload();
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || "Помилка при завершенні турніру",
+      );
+    }
+  };
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500">
@@ -232,6 +280,10 @@ export default function TournamentDetails() {
             isCreator={isCreator}
             isAdmin={isAdmin}
             onGenerateBracket={handleGenerateBracket}
+            isGroupStageComplete={isGroupStageComplete}
+            hasPlayoffMatches={hasPlayoffMatches}
+            onTransitionToPlayoffs={handleTransitionToPlayoffs}
+            onFinishTournament={handleFinishTournament}
           />
         </TabsContent>
 

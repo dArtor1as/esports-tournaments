@@ -37,7 +37,7 @@ export class MatchesGeneratorService {
 
     if (!tournament) throw new NotFoundException('Турнір не знайдено');
     this.accessPolicy.checkTournamentCreatorOrAdmin(tournament.creatorId, user);
-    if (tournament.status === 'finished') {
+    if (tournament.status === 'finished' || tournament.status === 'cancelled') {
       throw new BadRequestException('Турнір вже завершено');
     }
 
