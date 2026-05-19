@@ -36,7 +36,9 @@ export class TeamsService {
 
     if (!team || team.isManualCountry) return; // Якщо ручне налаштування, ігноруємо
 
-    const activePlayers = team.players;
+    const activePlayers = team.players.filter(
+      (p) => p.teamRole === 'PLAYER' || p.teamRole === 'CAPTAIN',
+    );
     if (activePlayers.length === 0) return;
 
     // Рахуємо кількість кожного countryCode
@@ -117,7 +119,7 @@ export class TeamsService {
       // Прив'язуємо цього гравця до команди як звичайного учасника
       await prisma.player.update({
         where: { id: captain.id },
-        data: { teamId: newTeam.id },
+        data: { teamId: newTeam.id, teamRole: 'CAPTAIN' },
       });
 
       await this.cacheManager.del('all_teams'); // Очищаємо кеш при створенні нової команди
@@ -212,7 +214,7 @@ export class TeamsService {
       // 2. Виключаємо всіх гравців із цієї команди (робимо їх вільними агентами)
       await prisma.player.updateMany({
         where: { teamId: id },
-        data: { teamId: null },
+        data: { teamId: null, teamRole: null },
       });
 
       // логуємо LEAVE для кожного гравця, який був у команді

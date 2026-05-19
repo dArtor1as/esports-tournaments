@@ -76,7 +76,7 @@ export class SimulationContextBuilder {
         // Фільтруємо за роллю в профілі гравця, відсікаючи заміну та тренера
         activePlayers = p.team.players.filter(
           (player) =>
-            player.inGameRole !== 'COACH' && player.inGameRole !== 'SUBSTITUTE',
+            player.teamRole === 'PLAYER' || player.teamRole === 'CAPTAIN',
         );
       }
 

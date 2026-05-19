@@ -45,17 +45,17 @@ export class TeamTransfersService {
       );
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      await tx.player.update({
+    return this.prisma.$transaction(async (prismaTx) => {
+      await prismaTx.player.update({
         where: { id: playerId },
-        data: { teamId: null },
+        data: { teamId: null, teamRole: null },
       });
 
-      await tx.teamTransfer.create({
+      await prismaTx.teamTransfer.create({
         data: { playerId, teamId, type: 'LEAVE' },
       });
       // Робимо команду неукомплектованою, рейтинг НЕ чіпаємо (заморожуємо)
-      await tx.team.update({
+      await prismaTx.team.update({
         where: { id: teamId },
         data: { isComplete: false },
       });
@@ -97,13 +97,31 @@ export class TeamTransfersService {
     if (team.captainId === newCaptainPlayerId) {
       throw new BadRequestException('Цей гравець уже є капітаном');
     }
-    // 3. Зміна капітана
-    const updatedTeam = await this.prisma.team.update({
-      where: { id: teamId },
-      data: { captainId: newCaptainPlayerId },
+
+    // 3. Зміна капітана ТА РОЛЕЙ в транзакції
+    await this.prisma.$transaction(async (prismaTx) => {
+      // Старому капітану повертаємо базову роль PLAYER
+      await prismaTx.player.update({
+        where: { id: team.captainId },
+        data: { teamRole: 'PLAYER' },
+      });
+
+      // Новому капітану видаємо роль CAPTAIN
+      await prismaTx.player.update({
+        where: { id: newCaptainPlayerId },
+        data: { teamRole: 'CAPTAIN' },
+      });
+
+      // Оновлюємо запис самої команди
+      await prismaTx.team.update({
+        where: { id: teamId },
+        data: { captainId: newCaptainPlayerId },
+      });
     });
 
+    // Очищуємо кеш після всіх оновлень
     await this.cacheManager.del('all_teams');
+
     return {
       message: `Лідерство успішно передано гравцю ${newCaptain.nickname}`,
       newCaptainId: newCaptainPlayerId,
@@ -129,17 +147,17 @@ export class TeamTransfersService {
 
     this.accessPolicy.checkCaptainOrAdmin(team.captain.userId, user);
 
-    return this.prisma.$transaction(async (tx) => {
-      await tx.player.update({
+    return this.prisma.$transaction(async (prismaTx) => {
+      await prismaTx.player.update({
         where: { id: playerId },
-        data: { teamId: null },
+        data: { teamId: null, teamRole: null },
       });
 
-      await tx.teamTransfer.create({
+      await prismaTx.teamTransfer.create({
         data: { playerId, teamId, type: 'KICK' },
       });
       // Робимо команду неукомплектованою, рейтинг заморожуємо
-      await tx.team.update({
+      await prismaTx.team.update({
         where: { id: teamId },
         data: { isComplete: false },
       });
