@@ -1,4 +1,4 @@
-name: Backend CI
+name: Backend and Frontend CI
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: ["master"]
 
 jobs:
-  lint-and-build:
+  prettier-and-build:
     runs-on: ubuntu-latest
 
     # всі команди треба виконувати в папці backend
