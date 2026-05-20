@@ -173,14 +173,18 @@ export default function TournamentDetails() {
   const handleTransitionToPlayoffs = async () => {
     setBracketLoading(true);
     try {
-      await api.post('/matches/transition-to-playoffs', { tournamentId: id });
+      const response = await api.post('/matches/transition-to-playoffs', {
+        tournamentId: id,
+      });
 
-      // Явно вказуємо, що нам потрібен Single Elimination на 8 команд,
-      // щоб генератор не читав Round Robin з налаштувань турніру
+      // Розраховуємо кількість команд динамічно!
+      const playoffTeams = response.data.playoffTeams || [];
+      const teamCount = playoffTeams.length;
+
       await api.post('/matches/generate-bracket', {
         tournamentId: id,
         bracketType: 'SINGLE_ELIMINATION',
-        teamCount: 8,
+        teamCount: teamCount,
       });
 
       await refetchMatches();
