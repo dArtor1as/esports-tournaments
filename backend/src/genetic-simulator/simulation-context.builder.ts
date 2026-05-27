@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SimulatorFactoryService } from 'src/match-simulators/simulator-factory.service';
-import { Bracket, Stage } from '@prisma/client';
+import { Stage } from '@prisma/client';
 import { SimulationContext, SimulationMatch } from './genetic-simulator.types';
 import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { AccessPolicyService } from 'src/auth/access-policy.service';

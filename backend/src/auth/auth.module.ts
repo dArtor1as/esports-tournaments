@@ -14,7 +14,7 @@ import { AccessPolicyService } from './access-policy.service';
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => {
+      useFactory: (configService: ConfigService) => {
         const secret = configService.get<string>('JWT_SECRET');
         const expiresIn = configService.get<string>('JWT_EXPIRES_IN');
 
@@ -27,8 +27,7 @@ import { AccessPolicyService } from './access-policy.service';
         return {
           secret,
           signOptions: {
-            // Кастуємо до any, щоб обійти строгий внутрішній тип StringValue
-            expiresIn: expiresIn as any,
+            expiresIn: expiresIn as unknown as number,
           },
         };
       },

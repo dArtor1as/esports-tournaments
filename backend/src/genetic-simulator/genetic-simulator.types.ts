@@ -43,7 +43,7 @@ export interface BaseIndividual {
 
 // Особина для Playoff (Single Elimination)
 
-export interface Individual extends BaseIndividual {}
+export type Individual = BaseIndividual;
 
 // типи для групового етапу (Group Stage)
 export interface GroupStanding {

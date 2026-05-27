@@ -32,7 +32,7 @@ import { HealthModule } from './health/health.module';
     CacheModule.registerAsync({
       isGlobal: true,
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
+      useFactory: (configService: ConfigService) => ({
         store: redisStore,
         host: configService.get<string>('REDIS_HOST') || 'localhost',
         port: configService.get<number>('REDIS_PORT') || 6379,

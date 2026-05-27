@@ -2,6 +2,9 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { JwtPayload } from './interfaces/jwt-payload.interface';
+
+type JwtTokenPayload = Omit<JwtPayload, 'userId'> & { sub: string };
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -21,7 +24,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   // Якщо токен валідний, викликаємо цей метод
   // Те, що ми тут повертаємо, буде доступно в контролерах через req.user
-  async validate(payload: any) {
+  validate(payload: JwtTokenPayload) {
     return { userId: payload.sub, email: payload.email, role: payload.role };
   }
 }

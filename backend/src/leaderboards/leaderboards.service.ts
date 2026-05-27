@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { LeaderboardQueryDto } from './dto/leaderboard-query.dto';
-import { Player, Prisma, Team } from '@prisma/client';
+import { Player, Team } from '@prisma/client';
 import { paginate } from 'common/utils/paginate.util';
 
 @Injectable()
