@@ -32,10 +32,18 @@ export interface SimulationMatch {
 }
 
 // Спільний інтерфейс для контексту, який ми будемо передавати в стратегії
+
+export interface ContextParticipant {
+  id: string;
+  teamId: string;
+  [key: string]: unknown;
+}
+
 export interface SimulationContext {
   tournament: {
     id: string;
     settings: TournamentSettings;
+    participants: ContextParticipant[];
     [key: string]: unknown;
   };
   simulator: IMatchSimulator;

@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { IBracketGenerator, MatchPayload } from './bracket-generator.interface';
+import {
+  IBracketGenerator,
+  MatchPayload,
+  ParticipantInput,
+} from './bracket-generator.interface';
 import { v4 as uuidv4 } from 'uuid';
 import { Bracket, Stage } from '@prisma/client';
 
@@ -11,7 +15,7 @@ export class SingleEliminationGenerator implements IBracketGenerator {
   async generate(
     tournamentId: string,
     teamCount: number,
-    participants: any[],
+    participants: ParticipantInput[],
     format: string,
   ) {
     const totalRounds = Math.log2(teamCount);

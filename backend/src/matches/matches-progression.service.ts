@@ -373,19 +373,4 @@ export class MatchesProgressionService {
       return a.teamId.localeCompare(b.teamId);
     });
   }
-
-  findAllByTournament(tournamentId: string, stage?: Stage) {
-    const whereCondition: any = { tournamentId };
-    if (stage) whereCondition.stage = stage;
-
-    return this.prisma.match.findMany({
-      where: whereCondition,
-      orderBy: [{ stage: 'asc' }, { groupName: 'asc' }, { round: 'asc' }],
-      include: {
-        teamA: { select: { id: true, name: true, tag: true, logoUrl: true } },
-        teamB: { select: { id: true, name: true, tag: true, logoUrl: true } },
-        nextMatchWinner: { select: { id: true, round: true } },
-      },
-    });
-  }
 }
