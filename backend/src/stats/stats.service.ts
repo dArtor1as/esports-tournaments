@@ -4,7 +4,10 @@ import { Prisma } from '@prisma/client';
 import { MatchStatsJson, GamePlayerStat } from './stats.types';
 import { TeamsService } from '../teams/teams.service';
 import { PlayersService } from '../players/players.service';
-import { PlayerStatsAggregatorService } from './player-stats-aggregator.service';
+import {
+  PlayerStatsAggregatorService,
+  PlayerStatsData,
+} from './player-stats-aggregator.service';
 import { EloCalculatorService } from './elo-calculator.service';
 import { AccessPolicyService } from '../auth/access-policy.service';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
@@ -56,10 +59,7 @@ export class StatsService {
 
     const currentTeamRatings = new Map<string, number>();
     const currentPlayerRatings = new Map<string, number>();
-    const currentPlayerStats = new Map<
-      string,
-      Record<string, string | number>
-    >();
+    const currentPlayerStats = new Map<string, PlayerStatsData>();
 
     const matches = tournament.matches; // Зберігаємо в змінну для TS
 
@@ -204,7 +204,7 @@ export class StatsService {
     matchId: string,
     change: number,
     isWinner: boolean,
-    queries: any[],
+    queries: Prisma.PrismaPromise<unknown>[],
   ) {
     const player = await this.prisma.player.findUnique({
       where: { id: playerId },
@@ -212,7 +212,7 @@ export class StatsService {
     if (!player) return;
 
     const newRating = player.rating + change;
-    const oldStats = (player.stats as any) || {};
+    const oldStats = (player.stats as PlayerStatsData) || {};
 
     // Створюємо "заглушку" сесії для техпоразки (mapCount: 1, але 0 вбивств/смертей)
     const newStats = this.statsAggregator.calculateNewLifetimeStats(
@@ -224,7 +224,7 @@ export class StatsService {
     queries.push(
       this.prisma.player.update({
         where: { id: playerId },
-        data: { rating: newRating, stats: newStats as any },
+        data: { rating: newRating, stats: newStats as Prisma.InputJsonValue },
       }),
       this.prisma.ratingHistory.create({
         data: {
@@ -275,7 +275,7 @@ export class StatsService {
     matchId: string,
     eloChange: number,
     ratingCache: Map<string, number>,
-    statsCache: Map<string, Record<string, string | number>>,
+    statsCache: Map<string, PlayerStatsData>,
     transactionQueries: Prisma.PrismaPromise<unknown>[],
     isWinner: boolean,
   ) {
@@ -299,12 +299,12 @@ export class StatsService {
           where: { id: pStat.playerId },
           select: { stats: true },
         });
-        oldStats = (player?.stats as Record<string, string | number>) || {};
+        oldStats = (player?.stats as PlayerStatsData) || {};
       }
 
       const newStatsJson = this.statsAggregator.calculateNewLifetimeStats(
         oldStats,
-        pStat,
+        pStat as Record<string, unknown>,
         isWinner,
       );
       statsCache.set(pStat.playerId, newStatsJson);

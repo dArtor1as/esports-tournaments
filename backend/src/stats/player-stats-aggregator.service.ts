@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { GamePlayerStat } from './stats.types';
+import { GamePlayerStat, BaseMapStat } from './stats.types';
 
 export interface PlayerStatsData {
   total_roundsPlayed?: number | string;
@@ -61,14 +61,19 @@ export class PlayerStatsAggregatorService {
   ];
 
   getSummedPlayerStatsForMatch(
-    maps: Record<string, any>[],
+    maps: BaseMapStat[],
     teamKey: 'teamA' | 'teamB',
   ): GamePlayerStat[] {
-    const playerTotals = new Map<string, any>();
+    const playerTotals = new Map<
+      string,
+      GamePlayerStat & { mapCount: number }
+    >();
 
     for (const match of maps) {
-      if (!match[teamKey] || !Array.isArray(match[teamKey].players)) continue;
-      for (const participant of match[teamKey].players) {
+      const teamData = match[teamKey];
+      if (!teamData || !Array.isArray(teamData.players)) continue;
+
+      for (const participant of teamData.players) {
         if (!playerTotals.has(participant.playerId)) {
           // Зберігаємо першу карту і додаємо лічильник
           playerTotals.set(participant.playerId, {
@@ -76,11 +81,18 @@ export class PlayerStatsAggregatorService {
             mapCount: 1,
           });
         } else {
-          const current = playerTotals.get(participant.playerId);
+          // Якщо гравець вже є, оновлюємо суму і збільшуємо лічильник карт
+          const current = playerTotals.get(participant.playerId)!;
           current.mapCount += 1;
+
           for (const [k, v] of Object.entries(participant)) {
             // cумуємо показники (кіли, смерті, adr) з усіх карт матчу
-            if (typeof v === 'number' && k !== 'mapCount') current[k] += v;
+            if (typeof v === 'number' && k !== 'mapCount') {
+              // додаємо до існуючого значення або ініціалізуємо його, якщо це перша карта для цього гравця
+              const currentValue = current[k];
+              current[k] =
+                (typeof currentValue === 'number' ? currentValue : 0) + v;
+            }
           }
         }
       }
@@ -91,9 +103,9 @@ export class PlayerStatsAggregatorService {
 
   calculateNewLifetimeStats(
     oldStats: PlayerStatsData,
-    sessionStats: Record<string, any>,
+    sessionStats: Record<string, unknown>,
     isWinner: boolean,
-  ): Record<string, string | number> {
+  ): PlayerStatsData {
     const oldMatches = Number(oldStats.matchesPlayed) || 0;
     const newMatches = oldMatches + 1;
     // Рахуємо карти (якщо є старі дані)
@@ -105,7 +117,7 @@ export class PlayerStatsAggregatorService {
     const winValue = isWinner ? 100 : 0;
     const newWinRate = (oldWinRate * oldMatches + winValue) / newMatches;
     // Об'єкт нової статистики (динамічно наповнюється)
-    const newStatsJson: Record<string, string | number> = {
+    const newStatsJson: PlayerStatsData = {
       matchesPlayed: newMatches,
       totalMapsPlayed: newTotalMaps,
       winRate: newWinRate.toFixed(2),
