@@ -10,7 +10,7 @@ export class MailService {
   ) {}
 
   async sendTeamInvite(email: string, teamName: string, token: string) {
-    const frontendUrl = this.configService.get('FRONTEND_URL');
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
     const inviteLink = `${frontendUrl}/invite/team?token=${token}`;
 
     await this.mailerService.sendMail({
@@ -34,7 +34,7 @@ export class MailService {
     matchId: string,
     reason: string,
   ) {
-    const frontendUrl = this.configService.get('FRONTEND_URL');
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
     const matchLink = `${frontendUrl}/matches/${matchId}`;
 
     await this.mailerService.sendMail({
@@ -59,7 +59,7 @@ export class MailService {
     teamName: string,
     token: string,
   ) {
-    const frontendUrl = this.configService.get('FRONTEND_URL');
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
     const inviteLink = `${frontendUrl}/invite/tournament?token=${token}`;
 
     await this.mailerService.sendMail({

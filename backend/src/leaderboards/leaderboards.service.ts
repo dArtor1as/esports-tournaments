@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { LeaderboardQueryDto } from './dto/leaderboard-query.dto';
-import { Player, Team } from '@prisma/client';
+import { Player, Prisma, Team } from '@prisma/client';
 import { paginate } from 'common/utils/paginate.util';
 
 @Injectable()
@@ -27,7 +27,7 @@ export class LeaderboardsService {
   }
 
   async getPlayersLeaderboard(query: LeaderboardQueryDto) {
-    const whereCondition: any = {};
+    const whereCondition: Prisma.PlayerWhereInput = {};
     if (query.region) {
       whereCondition.team = { region: query.region };
     }

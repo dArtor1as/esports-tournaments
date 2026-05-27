@@ -26,7 +26,7 @@ export class PrismaService
 
     // 3. Ініціалізуємо адаптер Prisma
     // Ігноруємо конфлікт вкладених типів @types/pg
-
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const adapter = new PrismaPg(pool as any);
 
     // 4. Передаємо адаптер у батьківський клас PrismaClient
