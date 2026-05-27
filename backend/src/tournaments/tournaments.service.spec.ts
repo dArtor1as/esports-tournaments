@@ -23,8 +23,8 @@ describe('TournamentsWorkflowService', () => {
   };
 
   beforeEach(async () => {
-    prismaMock.$transaction.mockImplementation(async (callback) =>
-      callback(prismaMock),
+    prismaMock.$transaction.mockImplementation(
+      <T>(callback: (tx: typeof prismaMock) => T): T => callback(prismaMock),
     );
 
     const module: TestingModule = await Test.createTestingModule({
@@ -112,7 +112,11 @@ describe('TournamentsWorkflowService', () => {
     });
 
     const result = await service.generateTestTournament(
-      { teamCount: 16 },
+      {
+        teamCount: 16,
+        title: 'Test Cup',
+        isPublic: true,
+      },
       'user-1',
     );
 

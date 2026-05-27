@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { paginate } from 'common/utils/paginate.util';
 import { PaginationQueryDto } from 'common/dto/pagination-query.dto';
 import { TournamentQueryDto } from './dto/tournament-query.dto';
+import { Prisma } from 'node_modules/@prisma/client/default';
 
 @Injectable()
 export class TournamentsQueryService {
@@ -10,7 +11,7 @@ export class TournamentsQueryService {
 
   // 1. Гнучкий пошук та фільтрація
   async findAll(query: TournamentQueryDto) {
-    const where: any = {
+    const where: Prisma.TournamentWhereInput = {
       ...(query.gameSlug && { game: { slug: query.gameSlug } }),
       ...(query.region && { region: query.region }),
       ...(query.status && { status: query.status }),

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateTournamentInvitationDto } from './dto/create-tournament-invitation.dto';
@@ -11,9 +12,12 @@ import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { InvitationPolicyService } from './invitation-policy.service';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
 import { AcceptTournamentInvitationDto } from './dto/accept-tournament-invitation.dto';
+import { TournamentSettings } from '../genetic-simulator/genetic-simulator.types';
+import { RosterRole } from 'node_modules/@prisma/client/default';
 
 @Injectable()
 export class TournamentInvitationsService {
+  private readonly logger = new Logger(TournamentInvitationsService.name);
   constructor(
     private prisma: PrismaService,
     private mailService: MailService,
@@ -150,14 +154,19 @@ export class TournamentInvitationsService {
     this.accessPolicy.checkCaptainOrAdmin(invite.team.captain.userId, user);
 
     // 1. Формуємо єдиний формат ростера з урахуванням зворотньої сумісності
-    let finalRoster: Array<{ playerId: string; role: any }> = [];
+    let finalRoster: Array<{ playerId: string; role: RosterRole }> = [];
 
     if (dto.rosterPlayers && dto.rosterPlayers.length > 0) {
-      finalRoster = dto.rosterPlayers;
+      finalRoster = dto.rosterPlayers.map((p) => ({
+        playerId: p.playerId,
+        role: p.role as RosterRole,
+      }));
     } else if (dto.rosterPlayerIds && dto.rosterPlayerIds.length > 0) {
       finalRoster = dto.rosterPlayerIds.map((id) => ({
         playerId: id,
-        role: id === invite.team.captainId ? 'CAPTAIN' : 'PLAYER',
+        role: (id === invite.team.captainId
+          ? 'CAPTAIN'
+          : 'PLAYER') as RosterRole,
       }));
     } else {
       throw new BadRequestException('Необхідно надати список гравців ростера.');
@@ -202,11 +211,21 @@ export class TournamentInvitationsService {
         'У ростері може бути не більше 1 запасного гравця (Substitute).',
       );
 
-    let settingsData: any = invite.tournament.settings || {};
-    if (typeof settingsData === 'string') {
+    let settingsData: TournamentSettings =
+      (invite.tournament.settings as unknown as TournamentSettings) || {};
+    if (typeof invite.tournament.settings === 'string') {
       try {
-        settingsData = JSON.parse(settingsData);
-      } catch (e) {}
+        settingsData = JSON.parse(
+          invite.tournament.settings,
+        ) as TournamentSettings;
+      } catch (error) {
+        const trace = error instanceof Error ? error.stack : String(error);
+        this.logger.error(
+          `Помилка парсингу JSON налаштувань для інвайту ${token}`,
+          trace,
+        );
+        settingsData = {} as TournamentSettings;
+      }
     }
     const initialStage =
       settingsData.bracketType === 'ROUND_ROBIN' ? 'GROUP' : 'PLAYOFF';
