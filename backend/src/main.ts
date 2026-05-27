@@ -24,8 +24,16 @@ async function bootstrap() {
     process.exit(1);
   });
 
-  process.on('unhandledRejection', (reason) => {
-    jsonLogger.error(`Unhandled Rejection, reason: ${reason}`, '', 'Process');
+  process.on('unhandledRejection', (reason: unknown) => {
+    // Перевіряємо, чи є reason об'єктом помилки, щоб витягнути з нього корисний текст
+    const errorMessage =
+      reason instanceof Error ? reason.stack || reason.message : String(reason);
+
+    jsonLogger.error(
+      `Unhandled Rejection, reason: ${errorMessage}`,
+      '',
+      'Process',
+    );
   });
 
   // 2. Плавне завершення роботи (Graceful Shutdown)

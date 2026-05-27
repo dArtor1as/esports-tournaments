@@ -4,6 +4,15 @@ import {
   TeamInput,
 } from '../match-simulators/match-simulator.interface';
 
+export interface TournamentSettings {
+  bracketType?: string;
+  playoffBracketType?: string;
+  groupCount?: number;
+  pointsForWin?: number;
+  tiebreakers?: string[];
+  [key: string]: unknown;
+}
+
 // Використовуємо універсальний Record для деталей і статів
 export interface SimulationMatch {
   id: string;
@@ -24,7 +33,11 @@ export interface SimulationMatch {
 
 // Спільний інтерфейс для контексту, який ми будемо передавати в стратегії
 export interface SimulationContext {
-  tournament: any;
+  tournament: {
+    id: string;
+    settings: TournamentSettings;
+    [key: string]: unknown;
+  };
   simulator: IMatchSimulator;
   pastMatches: Match[];
   teamRatings: Record<string, number>;
@@ -58,4 +71,14 @@ export interface GroupStanding {
 // Особина для Group Stage (з таблицею результатів)
 export interface GroupIndividual extends BaseIndividual {
   standings: Record<string, GroupStanding>;
+}
+
+export interface StrategyResult {
+  bestFitnessScore: number;
+  message?: string;
+  isLive?: boolean;
+  bestBracket?: SimulationMatch[];
+  bracket?: SimulationMatch[];
+  standings?: Record<string, GroupStanding>;
+  [key: string]: unknown; // Дозволяє будь-які інші непередбачені поля
 }

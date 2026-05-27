@@ -17,6 +17,7 @@ import { SimulationContextBuilder } from './simulation-context.builder';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
+import { StrategyResult } from './genetic-simulator.types';
 
 @Injectable()
 export class GeneticSimulatorService {
@@ -55,7 +56,7 @@ export class GeneticSimulatorService {
 
     // Блокуємо COMMIT-симуляцію, якщо турнір вже грається людьми
     if (!isDryRun) {
-      await this.accessPolicy.checkTournamentCreatorOrAdmin(
+      this.accessPolicy.checkTournamentCreatorOrAdmin(
         tournament.creatorId,
         user,
       );
@@ -85,19 +86,23 @@ export class GeneticSimulatorService {
       bracketType === 'DOUBLE_ELIMINATION';
 
     // Логіка вибору стратегії на основі налаштувань турніру
-    let result;
+    let result: StrategyResult;
     if (isDoubleElim) {
-      result = await this.doubleEliminationStrategy.execute(
-        context,
-        dto.populations,
-        isDryRun,
-      );
+      result = (await Promise.resolve(
+        this.doubleEliminationStrategy.execute(
+          context,
+          dto.populations,
+          isDryRun,
+        ),
+      )) as StrategyResult;
     } else {
-      result = await this.singleEliminationStrategy.execute(
-        context,
-        dto.populations,
-        isDryRun,
-      );
+      result = (await Promise.resolve(
+        this.singleEliminationStrategy.execute(
+          context,
+          dto.populations,
+          isDryRun,
+        ),
+      )) as StrategyResult;
     }
     // Після того, як турнір отримав статус 'finished'
     // ми одразу викликаємо наш сервіс для урахування статистики та оновлення Elo рейтингу
@@ -132,7 +137,7 @@ export class GeneticSimulatorService {
     const isDryRun = dto.isDryRun ?? true;
 
     if (!isDryRun) {
-      await this.accessPolicy.checkTournamentCreatorOrAdmin(
+      this.accessPolicy.checkTournamentCreatorOrAdmin(
         tournament.creatorId,
         user,
       );
@@ -156,13 +161,10 @@ export class GeneticSimulatorService {
     await this.cacheManager.del('/tournaments/workflow?workflow=generation');
     await this.cacheManager.del('/tournaments/workflow?workflow=simulation');
 
-    const result = await this.groupStageStrategy.execute(
-      context,
-      dto.populations,
-      isDryRun,
-    );
+    const result = (await Promise.resolve(
+      this.groupStageStrategy.execute(context, dto.populations, isDryRun),
+    )) as StrategyResult;
 
-    //запускаємо обробку статистики тільки якщо це не dry run, тобто якщо ми закоммітили результати в БD
     if (!isDryRun) {
       await this.statsService.processTournamentStats(dto.tournamentId, user);
     }
