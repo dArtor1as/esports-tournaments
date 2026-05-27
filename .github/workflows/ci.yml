@@ -27,15 +27,12 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-
+      - name: Generate Prisma Client
+        run: npx prisma generate
       - name: Check Code Formatting (Prettier)
         run: npm run format:check
       - name: Run ESLint
         run: npm run lint
-
-      - name: Generate Prisma Client
-        run: npx prisma generate
-
       - name: Build Project
         run: npm run build
 
