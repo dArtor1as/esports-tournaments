@@ -87,22 +87,19 @@ export class GeneticSimulatorService {
 
     // Логіка вибору стратегії на основі налаштувань турніру
     let result: StrategyResult;
+
     if (isDoubleElim) {
-      result = (await Promise.resolve(
-        this.doubleEliminationStrategy.execute(
-          context,
-          dto.populations,
-          isDryRun,
-        ),
-      )) as StrategyResult;
+      result = await this.doubleEliminationStrategy.execute(
+        context,
+        dto.populations,
+        isDryRun,
+      );
     } else {
-      result = (await Promise.resolve(
-        this.singleEliminationStrategy.execute(
-          context,
-          dto.populations,
-          isDryRun,
-        ),
-      )) as StrategyResult;
+      result = await this.singleEliminationStrategy.execute(
+        context,
+        dto.populations,
+        isDryRun,
+      );
     }
     // Після того, як турнір отримав статус 'finished'
     // ми одразу викликаємо наш сервіс для урахування статистики та оновлення Elo рейтингу
@@ -161,9 +158,11 @@ export class GeneticSimulatorService {
     await this.cacheManager.del('/tournaments/workflow?workflow=generation');
     await this.cacheManager.del('/tournaments/workflow?workflow=simulation');
 
-    const result = (await Promise.resolve(
-      this.groupStageStrategy.execute(context, dto.populations, isDryRun),
-    )) as StrategyResult;
+    const result = await this.groupStageStrategy.execute(
+      context,
+      dto.populations,
+      isDryRun,
+    );
 
     if (!isDryRun) {
       await this.statsService.processTournamentStats(dto.tournamentId, user);

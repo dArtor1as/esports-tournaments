@@ -13,7 +13,7 @@ import { InvitationPolicyService } from './invitation-policy.service';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
 import { AcceptTournamentInvitationDto } from './dto/accept-tournament-invitation.dto';
 import { TournamentSettings } from '../genetic-simulator/genetic-simulator.types';
-import { RosterRole } from 'node_modules/@prisma/client/default';
+import { RosterRole } from '@prisma/client';
 
 @Injectable()
 export class TournamentInvitationsService {

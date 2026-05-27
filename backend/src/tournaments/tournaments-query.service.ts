@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { paginate } from 'common/utils/paginate.util';
 import { PaginationQueryDto } from 'common/dto/pagination-query.dto';
 import { TournamentQueryDto } from './dto/tournament-query.dto';
-import { Prisma } from 'node_modules/@prisma/client/default';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class TournamentsQueryService {
