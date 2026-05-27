@@ -32,3 +32,18 @@ export interface IMatchSimulator {
     getGeneRoll: () => number,
   ): MatchSimulationResult;
 }
+
+// інтерфейси для множників ролей
+export interface Cs2RoleMultiplier {
+  kills: number;
+  deaths: number;
+  assists: number;
+  hs_rate: number;
+}
+
+export interface Dota2RoleMultiplier {
+  kills: number;
+  deaths: number;
+  assists: number;
+  gpm: number;
+}

@@ -54,7 +54,6 @@ export class MatchesConsensusService {
       );
 
     let isTeamAForfeiting = false;
-    let isTeamBForfeiting = false;
 
     // 1. Визначаємо , чи діє капітан
     const isCaptainA = match.teamA?.captain.userId === user.userId;
@@ -63,9 +62,9 @@ export class MatchesConsensusService {
     if (isCaptainA) {
       isTeamAForfeiting = true;
     } else if (isCaptainB) {
-      isTeamBForfeiting = true;
+      isTeamAForfeiting = false; // B здається, отже А перемагає
     } else {
-      // 2. Якщо це не капітан, перевіряємо права Організатора або Адміна через AccessPolicy
+      // 2. Якщо це не капітан, перевіряємо права Організатора або Адміна
       this.accessPolicy.checkTournamentCreatorOrAdmin(
         match.tournament.creatorId,
         user,
@@ -81,7 +80,7 @@ export class MatchesConsensusService {
       if (dto.forfeitingTeamId === match.teamAId) {
         isTeamAForfeiting = true;
       } else if (dto.forfeitingTeamId === match.teamBId) {
-        isTeamBForfeiting = true;
+        isTeamAForfeiting = false;
       } else {
         throw new BadRequestException(
           'Вказана команда не бере участі в цьому матчі',

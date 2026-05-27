@@ -14,11 +14,24 @@ export interface MatchPayload {
   bestOf: number;
 }
 
+export interface ParticipantInput {
+  id: string;
+  teamId: string;
+  team: {
+    id: string;
+    name: string;
+    region: string;
+    averageRating: number;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
 export interface IBracketGenerator {
   generate(
     tournamentId: string,
     teamCount: number,
-    participants: any[],
+    participants: ParticipantInput[],
     format: string,
     groupCount?: number,
   ): Promise<any>;

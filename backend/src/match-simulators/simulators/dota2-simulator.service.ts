@@ -5,12 +5,13 @@ import {
   MapResult,
   TeamInput,
   PlayerInput,
+  Dota2RoleMultiplier,
 } from '../match-simulator.interface';
 import { Dota2PlayerStat, BaseMapStat } from '../../stats/stats.types';
 
 @Injectable()
 export class Dota2SimulatorService implements IMatchSimulator {
-  private readonly ROLE_MULTIPLIERS = {
+  private readonly ROLE_MULTIPLIERS: Record<string, Dota2RoleMultiplier> = {
     POS_1: { gpm: 1.4, kills: 1.3, deaths: 0.8, assists: 0.7 }, // Кері фармить і вбиває, мало вмирає
     POS_2: { gpm: 1.25, kills: 1.45, deaths: 1.0, assists: 1.0 }, // Мідер найчастіше бере участь у бійках
     POS_3: { gpm: 1.0, kills: 0.9, deaths: 1.2, assists: 1.3 }, // Офлейнер ініціює (більше смертей і асистів)
@@ -146,12 +147,16 @@ export class Dota2SimulatorService implements IMatchSimulator {
     );
 
     // 3. Застосовуємо множники
-    playersWithForm.forEach((pf) => {
-      const statIndex = teamStats.findIndex((s) => s.playerId === pf.id);
+    playersWithForm.forEach((playerForm) => {
+      const statIndex = teamStats.findIndex(
+        (s) => s.playerId === playerForm.id,
+      );
       if (statIndex === -1) return;
 
-      const multipliers = this.ROLE_MULTIPLIERS[pf.role];
-      const share = pf.effectiveRating / totalEffective;
+      const multipliers =
+        this.ROLE_MULTIPLIERS[playerForm.role] ||
+        this.ROLE_MULTIPLIERS['POS_3'];
+      const share = playerForm.effectiveRating / totalEffective;
 
       // КІЛИ: Базова частка * Множник ролі
       let kills = Math.round(totalKills * share * multipliers.kills);

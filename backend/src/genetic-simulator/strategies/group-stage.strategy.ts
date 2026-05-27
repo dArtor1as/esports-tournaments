@@ -75,10 +75,10 @@ export class GroupStageStrategy extends BaseGeneticStrategy {
             },
           }),
         ),
-        ...simulationContext.tournament.participants.map((participant: any) => {
+        ...simulationContext.tournament.participants.map((participant) => {
           const stats = bestIndividual.standings[participant.teamId];
           return this.prisma.tournamentParticipant.update({
-            where: { id: participant.id },
+            where: { id: String(participant.id) },
             data: {
               groupPoints: stats?.points || 0,
               matchesWon: stats?.matchesWon || 0,

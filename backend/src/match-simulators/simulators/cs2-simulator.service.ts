@@ -5,6 +5,7 @@ import {
   MapResult,
   TeamInput,
   PlayerInput,
+  Cs2RoleMultiplier,
 } from '../match-simulator.interface';
 import { Cs2PlayerStat, BaseMapStat } from '../../stats/stats.types';
 
@@ -20,7 +21,7 @@ export class Cs2SimulatorService implements IMatchSimulator {
     'Vertigo',
   ];
 
-  private readonly ROLE_MULTIPLIERS = {
+  private readonly ROLE_MULTIPLIERS: Record<string, Cs2RoleMultiplier> = {
     SNIPER: { kills: 1.25, deaths: 0.7, assists: 0.5, hs_rate: 0.3 }, // Багато вбиває (AWP), рідко вмирає, мало асистів
     ENTRY: { kills: 1.1, deaths: 1.3, assists: 1.0, hs_rate: 0.55 }, // Перший іде в бій,тому багато вбиває, але часто вмирає першим
     IGL: { kills: 0.8, deaths: 1.05, assists: 1.3, hs_rate: 0.45 }, // Координує команду, фокус не на стрільбі, кидає флешки
@@ -153,12 +154,16 @@ export class Cs2SimulatorService implements IMatchSimulator {
       0,
     );
 
-    playersWithForm.forEach((pf) => {
-      const statIndex = teamStats.findIndex((s) => s.playerId === pf.id);
+    playersWithForm.forEach((playerForm) => {
+      const statIndex = teamStats.findIndex(
+        (s) => s.playerId === playerForm.id,
+      );
       if (statIndex === -1) return;
 
-      const multipliers = this.ROLE_MULTIPLIERS[pf.role];
-      const share = pf.effectiveRating / totalEffective;
+      const multipliers =
+        this.ROLE_MULTIPLIERS[playerForm.role] ||
+        this.ROLE_MULTIPLIERS['RIFLER'];
+      const share = playerForm.effectiveRating / totalEffective;
       // Застосовуємо множники ролі
       let kills = Math.round(mapTotalKills * share * multipliers.kills);
       kills += Math.floor(Math.random() * 5) - 2;

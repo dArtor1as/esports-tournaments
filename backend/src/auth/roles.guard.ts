@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Role } from '@prisma/client';
+import { JwtPayload } from './interfaces/jwt-payload.interface';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -23,7 +24,8 @@ export class RolesGuard implements CanActivate {
       return true;
     }
 
-    const { user } = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<{ user?: JwtPayload }>();
+    const user = request.user;
 
     // Якщо юзера немає або його роль не в списку дозволених — відмова
     if (!user || !requiredRoles.includes(user.role)) {

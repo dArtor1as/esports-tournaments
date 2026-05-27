@@ -27,7 +27,7 @@ export class LeaderboardsService {
   }
 
   async getPlayersLeaderboard(query: LeaderboardQueryDto) {
-    const whereCondition: any = {};
+    const whereCondition: Prisma.PlayerWhereInput = {};
     if (query.region) {
       whereCondition.team = { region: query.region };
     }

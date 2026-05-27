@@ -41,11 +41,14 @@ export class HealthController {
         redis: 'connected',
         timestamp: new Date().toISOString(),
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
       throw new ServiceUnavailableException({
         status: 'error',
         message: 'Сервіс недоступний',
-        details: error.message,
+        details: errorMessage,
       });
     }
   }

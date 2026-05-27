@@ -1,10 +1,17 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SimulatorFactoryService } from 'src/match-simulators/simulator-factory.service';
-import { Bracket, Stage } from '@prisma/client';
-import { SimulationContext, SimulationMatch } from './genetic-simulator.types';
+import { Stage } from '@prisma/client';
+import {
+  SimulationContext,
+  SimulationMatch,
+  TournamentSettings,
+} from './genetic-simulator.types';
 import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
+import { TeamInput } from 'src/match-simulators/match-simulator.interface';
+
+type ContextPlayer = { id: string; rating: number; inGameRole: string | null };
 
 @Injectable()
 export class SimulationContextBuilder {
@@ -56,12 +63,12 @@ export class SimulationContextBuilder {
     });
 
     const teamRatings: Record<string, number> = {};
-    const teamsData: Record<string, any> = {}; //  словник для симулятора
+    const teamsData: Record<string, TeamInput> = {}; //  словник для симулятора
 
     tournament.participants.forEach((p) => {
       teamRatings[p.teamId] = p.team.averageRating;
 
-      let activePlayers;
+      let activePlayers: ContextPlayer[];
 
       // перевіряємо чи є спеціально поданий ростер на цей турнір?
       if (p.tournamentRosters && p.tournamentRosters.length > 0) {
@@ -86,7 +93,7 @@ export class SimulationContextBuilder {
         players: activePlayers.map((player) => ({
           id: player.id,
           rating: player.rating,
-          inGameRole: player.inGameRole,
+          inGameRole: player.inGameRole ?? undefined,
         })),
       };
     });
@@ -140,8 +147,13 @@ export class SimulationContextBuilder {
       nextMatchLoserId: m.nextMatchLoserId,
     }));
 
+    const safeTournament = {
+      ...tournament,
+      settings: (tournament.settings as unknown as TournamentSettings) || {},
+    };
+
     return {
-      tournament,
+      tournament: safeTournament,
       simulator,
       pastMatches,
       teamRatings,

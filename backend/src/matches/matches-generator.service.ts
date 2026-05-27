@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
   Inject,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GenerateBracketDto } from './dto/generate-bracket.dto';
@@ -14,9 +15,11 @@ import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
+import { TournamentSettings } from '../genetic-simulator/genetic-simulator.types';
 
 @Injectable()
 export class MatchesGeneratorService {
+  private readonly logger = new Logger(MatchesGeneratorService.name);
   constructor(
     private prisma: PrismaService,
     private singleEliminationGenerator: SingleEliminationGenerator,
@@ -51,6 +54,7 @@ export class MatchesGeneratorService {
     const participants = await this.prisma.tournamentParticipant.findMany({
       where: { tournamentId, seed: { lte: 32 } },
       orderBy: { seed: 'asc' },
+      include: { team: true },
     });
 
     const requestedTeamCount = dto.teamCount;
@@ -79,11 +83,21 @@ export class MatchesGeneratorService {
     await this.cacheManager.del('/tournaments/workflow?workflow=simulation');
 
     // Безпечний парсинг налаштувань турніру для визначення формату сітки
-    let settingsData: any = tournament.settings || {};
-    if (typeof settingsData === 'string') {
+    let settingsData: TournamentSettings =
+      (tournament.settings as unknown as TournamentSettings) || {};
+    if (typeof tournament.settings === 'string') {
       try {
-        settingsData = JSON.parse(settingsData);
-      } catch (e) {}
+        settingsData = JSON.parse(tournament.settings) as TournamentSettings;
+      } catch (error) {
+        // 👈 ВИКОРИСТОВУЄМО error ДЛЯ ЛОГУВАННЯ
+        const trace = error instanceof Error ? error.stack : String(error);
+        this.logger.error(
+          `Помилка парсингу JSON налаштувань для турніру ${tournamentId}`,
+          trace,
+        );
+
+        settingsData = {} as TournamentSettings; // Фолбек до порожніх налаштувань
+      }
     }
     const bracketType = settingsData?.bracketType;
 
@@ -143,11 +157,20 @@ export class MatchesGeneratorService {
     }
 
     // парсинг налаштувань турніру
-    let settingsData: any = tournament.settings || {};
-    if (typeof settingsData === 'string') {
+    let settingsData: TournamentSettings =
+      (tournament.settings as unknown as TournamentSettings) || {};
+    if (typeof tournament.settings === 'string') {
       try {
-        settingsData = JSON.parse(settingsData);
-      } catch (e) {}
+        settingsData = JSON.parse(tournament.settings) as TournamentSettings;
+      } catch (error) {
+        const trace = error instanceof Error ? error.stack : String(error);
+        this.logger.error(
+          `Помилка парсингу JSON налаштувань (групи) для турніру ${tournamentId}`,
+          trace,
+        );
+
+        settingsData = {} as TournamentSettings;
+      }
     }
 
     //  визначаємо кількість груп

@@ -1,5 +1,11 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { Prisma, Stage, TournamentFormat, RosterRole } from '@prisma/client';
+import {
+  Prisma,
+  Stage,
+  TournamentFormat,
+  RosterRole,
+  Game,
+} from '@prisma/client';
 import { GenerateTestTournamentDto } from './dto/generate-test-tournament.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import type { TournamentStatus, WorkflowMode } from './tournaments.types'; // Винесемо типи окремо
@@ -24,7 +30,7 @@ export class TournamentsWorkflowService {
     if (tournamentTier === 2) kFactor = 0.6;
     if (tournamentTier === 3) kFactor = 0.3;
 
-    let game;
+    let game: Game | null = null;
     if (dto.gameId) {
       game = await this.prisma.game.findUnique({ where: { id: dto.gameId } });
     } else {
@@ -68,7 +74,7 @@ export class TournamentsWorkflowService {
             pointsForWin: 3,
             tiebreakers: ['h2h', 'mapDiff'],
             bracketType: bracketType,
-            ...(bracketType === 'ROUND_ROBIN' && {
+            ...(String(bracketType) === 'ROUND_ROBIN' && {
               groupCount: dto.groupCount || 2,
             }),
           },
@@ -94,9 +100,11 @@ export class TournamentsWorkflowService {
         const rosterData = team.players.map((player) => {
           let mappedRole: RosterRole = RosterRole.PLAYER;
 
-          if (player.teamRole === 'CAPTAIN') mappedRole = RosterRole.CAPTAIN;
-          if (player.teamRole === 'COACH') mappedRole = RosterRole.COACH;
-          if (player.teamRole === 'SUBSTITUTE')
+          if (String(player.teamRole) === String(RosterRole.CAPTAIN))
+            mappedRole = RosterRole.CAPTAIN;
+          if (String(player.teamRole) === String(RosterRole.COACH))
+            mappedRole = RosterRole.COACH;
+          if (String(player.teamRole) === String(RosterRole.SUBSTITUTE))
             mappedRole = RosterRole.SUBSTITUTE;
 
           return {

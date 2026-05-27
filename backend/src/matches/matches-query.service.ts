@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Stage } from '@prisma/client';
+import { Prisma, Stage } from '@prisma/client';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
 import { PaginationQueryDto } from 'common/dto/pagination-query.dto';
@@ -157,7 +157,7 @@ export class MatchesQueryService {
 
   // метод отримання сітки матчів для турніру (для сторінки турніру)
   async findAllByTournament(tournamentId: string, stage?: Stage) {
-    const whereCondition: any = { tournamentId };
+    const whereCondition: Prisma.MatchWhereInput = { tournamentId };
     if (stage) whereCondition.stage = stage;
 
     return this.prisma.match.findMany({
