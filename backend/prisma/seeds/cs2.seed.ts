@@ -19,6 +19,7 @@ import { StatsService } from '../../src/stats/stats.service';
 import { PlayerStatsAggregatorService } from '../../src/stats/player-stats-aggregator.service';
 import { EloCalculatorService } from '../../src/stats/elo-calculator.service';
 import { AccessPolicyService } from '../../src/auth/access-policy.service';
+import { StatsTransactionBuilder } from 'src/stats/stats-transaction.builder';
 
 const getRandomRating = (min: number, max: number) =>
   Math.floor(Math.random() * (max - min + 1)) + min;
@@ -96,13 +97,19 @@ export async function seedCS2(prisma: PrismaClient, admin: User, game: Game) {
   const playersService = new PlayersService(prisma as any, dummyCache);
   const eloCalculator = new EloCalculatorService();
   const statsAggregator = new PlayerStatsAggregatorService();
+  const statsTransactionBuilder = new StatsTransactionBuilder(
+    prisma as any,
+    eloCalculator,
+    statsAggregator,
+    teamsService,
+  );
   const statsService = new StatsService(
     prisma as any,
     teamsService,
     playersService,
-    eloCalculator,
     statsAggregator,
     accessPolicy,
+    statsTransactionBuilder,
   );
 
   const generatedTeams: Team[] = [];
