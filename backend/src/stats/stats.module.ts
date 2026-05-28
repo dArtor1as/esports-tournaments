@@ -9,6 +9,7 @@ import { AccessPolicyService } from 'src/auth/access-policy.service';
 import { EloCalculatorService } from './elo-calculator.service';
 import { PlayerStatsAggregatorService } from './player-stats-aggregator.service';
 import { AnalyticsController } from './analytics.controller';
+import { StatsTransactionBuilder } from './stats-transaction.builder';
 
 @Module({
   controllers: [StatsController, AnalyticsController],
@@ -21,6 +22,7 @@ import { AnalyticsController } from './analytics.controller';
     AccessPolicyService,
     EloCalculatorService,
     PlayerStatsAggregatorService,
+    StatsTransactionBuilder,
   ],
   exports: [StatsService],
 })
