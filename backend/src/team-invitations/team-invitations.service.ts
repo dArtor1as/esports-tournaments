@@ -13,6 +13,7 @@ import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
+import { TeamInvitationsLogic } from './team-invitations.logic';
 
 @Injectable()
 export class TeamInvitationsService {
@@ -114,115 +115,63 @@ export class TeamInvitationsService {
   // Метод прийняття запрошення
   async accept(token: string, playerId: string, userId: string) {
     return this.prisma.$transaction(async (prisma) => {
+      //  1. Дістаємо інвайт, гравця та поточний склад команди в одному запиті (щоб не було проблем з конкурентністю)
       const invite = await prisma.teamInvitation.findUnique({
         where: { token },
-        include: {
-          team: {
-            include: { game: true }, // Тягнемо гру, щоб знати minTeamSize
-          },
-        },
+        include: { team: { include: { game: true } } },
       });
-
       if (!invite) throw new NotFoundException('Запрошення не знайдено');
-      if (invite.status !== 'PENDING')
-        throw new BadRequestException('Запрошення вже оброблено');
-      if (invite.expiresAt < new Date())
-        throw new BadRequestException('Термін дії запрошення минув');
 
-      // Перевірка: чи це запрошення взагалі для цього юзера?
-      if (invite.userId !== userId) {
-        throw new BadRequestException(
-          'Це запрошення адресоване іншому користувачу',
-        );
-      }
-
-      // Шукаємо конкретний профіль, який передав фронтенд
       const player = await prisma.player.findUnique({
         where: { id: playerId },
       });
-
       if (!player) throw new NotFoundException('Ігровий профіль не знайдено');
 
-      // Перевірка гри профілю
-      if (player.gameId !== invite.team.gameId) {
-        throw new BadRequestException(
-          'Цей ігровий профіль належить до іншої гри, ніж команда, яка вас запрошує',
-        );
-      }
-      // Перевірка: чи намагається юзер зайти чужим профілем?
-      if (player.userId !== userId) {
-        throw new BadRequestException('Цей ігровий профіль вам не належить');
-      }
-      if (player.teamId)
-        throw new BadRequestException('Цей ігровий профіль вже в команді');
-
-      // Беремо значення з гри (напр. 5 для CS2, 1 для Solo гри)
-      const requiredSize = invite.team.game.minTeamSize;
-
-      //  Рахуємо тільки АКТИВНИХ гравців команди
-      const activePlayersCount = await prisma.player.count({
-        where: {
-          teamId: invite.teamId,
-          teamRole: { in: ['PLAYER', 'CAPTAIN'] },
-        },
-      });
-
-      //  ВИЗНАЧАЄМО СТРУКТУРНУ РОЛЬ
-      let assignedTeamRole: 'PLAYER' | 'COACH' | 'SUBSTITUTE' = 'PLAYER';
-      if (player.inGameRole === 'COACH') {
-        assignedTeamRole = 'COACH';
-      } else if (activePlayersCount >= requiredSize) {
-        // Якщо основа (5 гравців) вже заповнена, він стає заміною
-        assignedTeamRole = 'SUBSTITUTE';
-      }
-
-      // 2. Додаємо гравця в команду
-      await prisma.player.update({
-        where: { id: player.id },
-        data: {
-          teamId: invite.teamId,
-          teamRole: assignedTeamRole, // Записуємо вирахувану роль
-        },
-      });
-
-      // Фіксуємо трансфер (JOIN)
-      await prisma.teamTransfer.create({
-        data: {
-          playerId: player.id,
-          teamId: invite.teamId,
-          type: 'JOIN',
-        },
-      });
-
-      // 3. Перераховуємо середній рейтинг і тір команди після додавання нового гравця
+      // Дістаємо поточний склад команди ДО того, як додали нового гравця
       const teamPlayers = await prisma.player.findMany({
         where: { teamId: invite.teamId },
         select: { rating: true, teamRole: true },
       });
 
-      // Перевіряємо, чи зібралася основа
-      const newActiveCount =
-        assignedTeamRole === 'PLAYER'
-          ? activePlayersCount + 1
-          : activePlayersCount;
-      const isTeamNowComplete = newActiveCount >= requiredSize;
+      const activePlayersCount = teamPlayers.filter(
+        (p) => p.teamRole === 'PLAYER' || p.teamRole === 'CAPTAIN',
+      ).length;
 
-      if (isTeamNowComplete) {
-        //  Рахуємо середній рейтинг ТІЛЬКИ по гравцях основи (щоб саби не тягнули ELO вниз/вверх)
-        const activeRoster = teamPlayers.filter(
-          (p) => p.teamRole === 'PLAYER' || p.teamRole === 'CAPTAIN',
+      // 2. Валідація запрошення та гравця
+      TeamInvitationsLogic.validateAcceptance(invite, player, userId);
+
+      const assignedTeamRole = TeamInvitationsLogic.determineTeamRole(
+        player.inGameRole,
+        activePlayersCount,
+        invite.team.game.minTeamSize,
+      );
+
+      const ratingCalc = TeamInvitationsLogic.calculateTeamRating(
+        teamPlayers, // Передаємо склад БЕЗ нового гравця
+        player.rating,
+        assignedTeamRole,
+        invite.team.game.minTeamSize,
+        activePlayersCount,
+      );
+
+      // 3. Оновлюємо гравця, склад команди та статус інвайту в одній транзакції
+      await prisma.player.update({
+        where: { id: player.id },
+        data: { teamId: invite.teamId, teamRole: assignedTeamRole },
+      });
+
+      await prisma.teamTransfer.create({
+        data: { playerId: player.id, teamId: invite.teamId, type: 'JOIN' },
+      });
+      // Якщо команда тепер повна, оновлюємо її середній рейтинг та статус
+      if (ratingCalc.isComplete) {
+        const newTier = this.teamsService.calculateTier(
+          ratingCalc.newAverageRating!,
         );
-        const totalRating = activeRoster.reduce((sum, p) => sum + p.rating, 0);
-        const newAverageRating = Math.floor(totalRating / activeRoster.length);
-
-        // Визначаємо новий тір (припускаю, метод calculateTier у тебе знаходиться в teamsService або локально)
-        const newTier = this.teamsService.calculateTier(newAverageRating);
-
-        // Оновлюємо команду
         await prisma.team.update({
           where: { id: invite.teamId },
           data: {
-            averageRating: newAverageRating,
+            averageRating: ratingCalc.newAverageRating,
             tier: newTier,
             isComplete: true,
           },
@@ -262,23 +211,6 @@ export class TeamInvitationsService {
     return this.prisma.teamInvitation.update({
       where: { id: invite.id },
       data: { status: 'DECLINED' },
-    });
-  }
-
-  findAll() {
-    return this.prisma.teamInvitation.findMany();
-  }
-
-  async findMyInvites(userId: string) {
-    return this.prisma.teamInvitation.findMany({
-      where: {
-        userId,
-        status: 'PENDING',
-        expiresAt: { gt: new Date() }, // Тільки актуальні
-      },
-      include: {
-        team: { select: { name: true, tag: true, logoUrl: true } },
-      },
     });
   }
 }
