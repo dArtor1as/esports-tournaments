@@ -18,12 +18,14 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { Throttle } from '@nestjs/throttler';
+import { TournamentInvitationsQueryService } from './tournament-invitations-query.service';
 
 @ApiTags('Tournament Invitations (Запрошення на турнір)')
 @Controller('tournament-invitations')
 export class TournamentInvitationsController {
   constructor(
     private readonly invitationsService: TournamentInvitationsService,
+    private readonly queryService: TournamentInvitationsQueryService,
   ) {}
 
   @Post()
@@ -72,7 +74,7 @@ export class TournamentInvitationsController {
     @Param('tournamentId', ParseUUIDPipe) tournamentId: string,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.invitationsService.findAllByTournament(tournamentId, user);
+    return this.queryService.findAllByTournament(tournamentId, user);
   }
 
   @Get('my-inbox')
@@ -83,6 +85,6 @@ export class TournamentInvitationsController {
       'Отримати запрошення на турніри для моїх команд (тільки для капітанів)',
   })
   findMyTeamInvites(@CurrentUser() user: JwtPayload) {
-    return this.invitationsService.findMyTeamInvites(user.userId);
+    return this.queryService.findMyTeamInvites(user.userId);
   }
 }

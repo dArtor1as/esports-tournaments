@@ -5,6 +5,8 @@ import { MailModule } from 'src/mail/mail.module';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { InvitationPolicyService } from './invitation-policy.service';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
+import { TournamentInvitationsLogic } from './tournament-invitations.logic';
+import { TournamentInvitationsQueryService } from './tournament-invitations-query.service';
 
 @Module({
   imports: [MailModule],
@@ -14,6 +16,8 @@ import { AccessPolicyService } from 'src/auth/access-policy.service';
     RolesGuard,
     InvitationPolicyService,
     AccessPolicyService,
+    TournamentInvitationsLogic,
+    TournamentInvitationsQueryService,
   ],
 })
 export class TournamentInvitationsModule {}
