@@ -9,6 +9,7 @@ import { DoubleEliminationStrategy } from './strategies/double-elimination.strat
 import { StatsModule } from 'src/stats/stats.module';
 import { SimulationContextBuilder } from './simulation-context.builder';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
+import { GeneticSimulatorPersistence } from './genetic-simulator.persistence';
 
 @Module({
   imports: [MatchSimulatorsModule, StatsModule],
@@ -22,6 +23,7 @@ import { AccessPolicyService } from 'src/auth/access-policy.service';
     DoubleEliminationStrategy,
     SimulationContextBuilder,
     AccessPolicyService,
+    GeneticSimulatorPersistence,
   ],
 })
 export class GeneticSimulatorModule {}

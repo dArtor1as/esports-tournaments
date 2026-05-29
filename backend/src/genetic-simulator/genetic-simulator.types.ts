@@ -82,11 +82,12 @@ export interface GroupIndividual extends BaseIndividual {
 }
 
 export interface StrategyResult {
-  bestFitnessScore: number;
-  message?: string;
-  isLive?: boolean;
-  bestBracket?: SimulationMatch[];
-  bracket?: SimulationMatch[];
-  standings?: Record<string, GroupStanding>;
-  [key: string]: unknown; // Дозволяє будь-які інші непередбачені поля
+  algorithmType: string; // 'SINGLE_ELIMINATION', 'DOUBLE_ELIMINATION' або 'GROUP_STAGE'
+  bestFitnessScore: number; // Оцінка фітнесу найкращої особини
+  bracket: SimulationMatch[]; // Згенерована сітка (це і є найкращий варіант)
+  executionTimeMs: number; // Час виконання алгоритму в мілісекундах
+  generations: number; // Кількість пройдених поколінь
+
+  standings?: Record<string, GroupStanding>; // Тільки для групового етапу
+  message?: string; // Опціональне повідомлення
 }

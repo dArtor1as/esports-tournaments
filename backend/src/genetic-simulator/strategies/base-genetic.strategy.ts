@@ -3,6 +3,8 @@ import {
   BaseIndividual,
   SimulationMatch,
   SimulationContext,
+  Individual,
+  StrategyResult,
 } from '../genetic-simulator.types';
 
 export abstract class BaseGeneticStrategy {
@@ -15,8 +17,7 @@ export abstract class BaseGeneticStrategy {
   abstract execute(
     context: SimulationContext,
     populations: number,
-    isDryRun?: boolean,
-  ): Promise<any>;
+  ): StrategyResult;
 
   protected evolvePopulation<T extends BaseIndividual>(
     populations: number,
@@ -109,5 +110,84 @@ export abstract class BaseGeneticStrategy {
       winsA: result.winsA,
       winsB: result.winsB,
     };
+  }
+  protected evaluatePlayoffIndividual(
+    genes: number[],
+    simulationContext: SimulationContext,
+  ): Individual {
+    const bracket: SimulationMatch[] = simulationContext.baseSkeleton.map(
+      (m) => ({ ...m }),
+    );
+    let fitness = 0;
+    let currentGeneIndex = 0;
+    const getGeneRoll = () =>
+      currentGeneIndex < genes.length
+        ? genes[currentGeneIndex++]
+        : Math.random();
+
+    for (let i = 0; i < bracket.length; i++) {
+      const match = bracket[i];
+
+      if (!match.teamAId || !match.teamBId) continue;
+
+      // Беремо loserId, він потрібен для нижньої сітки
+      const { matchWinnerIsA, winnerId, loserId, winnerProb, winsA, winsB } =
+        this.processMatchSimulation(match, simulationContext, getGeneRoll);
+
+      // Розрахунок Fitness
+      if (winnerProb >= 0.5) {
+        // 1. Основна нагорода: переміг фаворит
+        fitness += winnerProb * 10;
+
+        const isSweep =
+          (matchWinnerIsA && winsB === 0) || (!matchWinnerIsA && winsA === 0);
+
+        if (isSweep) {
+          // 2. Фаворит виграв 2-0
+          if (winnerProb > 0.65) {
+            // Це логічно (ймовірність перемоги > 65%), даємо бонус
+            fitness += winnerProb * 3;
+          } else {
+            // Команди рівні (50-65%), але рахунок 2-0. Трохи штрафуємо, щоб стимулювати 2-1
+            fitness -= 1;
+          }
+        } else {
+          // 3. Фаворит виграв 2-1 (хтось віджав карту)
+          if (winnerProb <= 0.65) {
+            // Команди рівні, рахунок 2-1 - це ідеальний реалістичний сценарій! Даємо великий бонус
+            fitness += 4;
+          } else {
+            // Жорсткий фаворит віддав карту - це можливо, але не даємо за це бонусів
+          }
+        }
+      } else {
+        // Апсет (переміг андердог)
+        if (winnerProb > 0.4) fitness += 2;
+        else if (winnerProb > 0.25) fitness -= 5;
+        else fitness -= 30;
+      }
+
+      // Універсальне просування переможця (працює і для SE, і для DE)
+      if (match.nextMatchWinnerId) {
+        const nextMatch = bracket.find((m) => m.id === match.nextMatchWinnerId);
+        if (nextMatch) {
+          if (!nextMatch.teamAId) nextMatch.teamAId = winnerId;
+          else nextMatch.teamBId = winnerId;
+        }
+      }
+
+      // Універсальне просування переможеного (для SE просто скіпається)
+      if (match.nextMatchLoserId) {
+        const nextMatchLB = bracket.find(
+          (m) => m.id === match.nextMatchLoserId,
+        );
+        if (nextMatchLB) {
+          if (!nextMatchLB.teamAId) nextMatchLB.teamAId = loserId;
+          else nextMatchLB.teamBId = loserId;
+        }
+      }
+    }
+
+    return { genes, fitness, bracket };
   }
 }

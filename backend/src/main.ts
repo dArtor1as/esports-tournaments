@@ -53,10 +53,13 @@ async function bootstrap() {
     void gracefulShutdown('SIGINT');
   });
 
-  // 3. Налаштування CORS для майбутнього фронтенду
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+  // 3. Налаштування CORS для фронтенду
   app.enableCors({
-    origin: frontendUrl,
+    origin: [
+      'http://localhost:5173',
+      'http://localhost:3001',
+      process.env.FRONTEND_URL, // залишаємо для продакшену
+    ].filter(Boolean), // filter(Boolean) відкине undefined, якщо FRONTEND_URL не задано
     credentials: true,
   });
 
