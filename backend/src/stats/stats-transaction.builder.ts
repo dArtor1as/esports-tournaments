@@ -1,23 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, Stage, Bracket } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.service';
 import { EloCalculatorService } from './elo-calculator.service';
 import {
   PlayerStatsAggregatorService,
   PlayerStatsData,
 } from './player-stats-aggregator.service';
-import { TeamsService } from '../teams/teams.service';
+import { TierHelper } from '/common/helpers/tier.helper';
 
 @Injectable()
 export class StatsTransactionBuilder {
   constructor(
-    private prisma: PrismaService,
     private eloCalculator: EloCalculatorService,
     private statsAggregator: PlayerStatsAggregatorService,
-    private teamsService: TeamsService,
   ) {}
 
-  //  розраховуємо нові рейтинги команд та формуємо масив запитів
+  // Повертає тільки ДАНІ для оновлення, без викликів Prisma
   public buildTeamMatchUpdates(
     match: {
       id: string;
@@ -45,42 +42,37 @@ export class StatsTransactionBuilder {
 
     const newRatingA = ratingA + changeA;
     const newRatingB = ratingB + changeB;
-    const newTierA = this.teamsService.calculateTier(newRatingA);
-    const newTierB = this.teamsService.calculateTier(newRatingB);
 
-    const queries: Prisma.PrismaPromise<unknown>[] = [
-      this.prisma.team.update({
-        where: { id: match.teamAId },
-        data: { averageRating: newRatingA, tier: newTierA },
-      }),
-      this.prisma.team.update({
-        where: { id: match.teamBId },
-        data: { averageRating: newRatingB, tier: newTierB },
-      }),
-      this.prisma.ratingHistory.create({
-        data: {
-          teamId: match.teamAId,
-          matchId: match.id,
-          oldRating: ratingA,
-          newRating: newRatingA,
-          ratingChange: changeA,
-        },
-      }),
-      this.prisma.ratingHistory.create({
-        data: {
-          teamId: match.teamBId,
-          matchId: match.id,
-          oldRating: ratingB,
-          newRating: newRatingB,
-          ratingChange: changeB,
-        },
-      }),
-    ];
-
-    return { queries, newRatingA, newRatingB, changeA, changeB, isAWinner };
+    return {
+      isAWinner,
+      teamA: {
+        id: match.teamAId,
+        newRating: newRatingA,
+        newTier: TierHelper.calculateTier(newRatingA),
+      },
+      teamB: {
+        id: match.teamBId,
+        newRating: newRatingB,
+        newTier: TierHelper.calculateTier(newRatingB),
+      },
+      historyA: {
+        teamId: match.teamAId,
+        matchId: match.id,
+        oldRating: ratingA,
+        newRating: newRatingA,
+        ratingChange: changeA,
+      },
+      historyB: {
+        teamId: match.teamBId,
+        matchId: match.id,
+        oldRating: ratingB,
+        newRating: newRatingB,
+        ratingChange: changeB,
+      },
+    };
   }
 
-  // Розраховуємо нову статистику гравця та формуємо масив запитів
+  // Те саме для гравців: повертаємо лише дані
   public buildPlayerStatsUpdates(
     matchId: string,
     playerId: string,
@@ -97,25 +89,17 @@ export class StatsTransactionBuilder {
       isWinner,
     );
 
-    const queries: Prisma.PrismaPromise<unknown>[] = [
-      this.prisma.player.update({
-        where: { id: playerId },
-        data: {
-          rating: newRating,
-          stats: newStatsJson as Prisma.InputJsonValue,
-        },
-      }),
-      this.prisma.ratingHistory.create({
-        data: {
-          playerId: playerId,
-          matchId: matchId,
-          oldRating: currentRating,
-          newRating: newRating,
-          ratingChange: eloChange,
-        },
-      }),
-    ];
-
-    return { queries, newRating, newStatsJson };
+    return {
+      playerId,
+      newRating,
+      newStatsJson: newStatsJson as Prisma.InputJsonValue,
+      history: {
+        playerId,
+        matchId,
+        oldRating: currentRating,
+        newRating,
+        ratingChange: eloChange,
+      },
+    };
   }
 }

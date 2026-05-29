@@ -13,6 +13,7 @@ import type { Cache } from 'cache-manager';
 import { RosterRole } from '@prisma/client';
 import { AccessPolicyService } from '../auth/access-policy.service';
 import type { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
+import { TierHelper } from 'common/helpers/tier.helper';
 
 @Injectable()
 export class TeamsService {
@@ -21,12 +22,6 @@ export class TeamsService {
     private accessPolicy: AccessPolicyService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
-
-  public calculateTier(rating: number): number {
-    if (rating >= 2700) return 1;
-    if (rating >= 1800) return 2;
-    return 3;
-  }
 
   // метод для перерахунку прапора
   async recalculateTeamCountry(teamId: string) {
@@ -112,7 +107,7 @@ export class TeamsService {
           captainId: captain.id,
           // беремо рейтинг капітана як початковий середній рейтинг команди
           averageRating: captain.rating,
-          tier: this.calculateTier(captain.rating),
+          tier: TierHelper.calculateTier(captain.rating),
           isComplete: captain.game.minTeamSize === 1,
         },
       });

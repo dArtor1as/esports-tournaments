@@ -7,6 +7,7 @@ import { TournamentsQueryController } from './tournaments-query.controller';
 import { TournamentsQueryService } from './tournaments-query.service';
 import { TournamentsWorkflowService } from './tournaments-workflow.service';
 import { StatsModule } from 'src/stats/stats.module';
+import { TournamentsWorkflowLogic } from './tournaments-workflow.logic';
 
 @Module({
   imports: [StatsModule],
@@ -20,6 +21,7 @@ import { StatsModule } from 'src/stats/stats.module';
     AccessPolicyService,
     TournamentsQueryService,
     TournamentsWorkflowService,
+    TournamentsWorkflowLogic,
   ],
 })
 export class TournamentsModule {}

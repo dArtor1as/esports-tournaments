@@ -14,6 +14,7 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
 import { TeamInvitationsLogic } from './team-invitations.logic';
+import { TierHelper } from '/common/helpers/tier.helper';
 
 @Injectable()
 export class TeamInvitationsService {
@@ -165,9 +166,7 @@ export class TeamInvitationsService {
       });
       // Якщо команда тепер повна, оновлюємо її середній рейтинг та статус
       if (ratingCalc.isComplete) {
-        const newTier = this.teamsService.calculateTier(
-          ratingCalc.newAverageRating!,
-        );
+        const newTier = TierHelper.calculateTier(ratingCalc.newAverageRating!);
         await prisma.team.update({
           where: { id: invite.teamId },
           data: {

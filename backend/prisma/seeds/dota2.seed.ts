@@ -98,15 +98,11 @@ export async function seedDota2(prisma: PrismaClient, admin: User, game: Game) {
   const eloCalculator = new EloCalculatorService();
   const statsAggregator = new PlayerStatsAggregatorService();
   const statsTransactionBuilder = new StatsTransactionBuilder(
-    prisma as any,
     eloCalculator,
     statsAggregator,
-    teamsService,
   );
   const statsService = new StatsService(
     prisma as any,
-    teamsService,
-    playersService,
     statsAggregator,
     accessPolicy,
     statsTransactionBuilder,

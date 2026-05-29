@@ -2,8 +2,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { MatchStatsJson } from './stats.types';
-import { TeamsService } from '../teams/teams.service';
-import { PlayersService } from '../players/players.service';
 import {
   PlayerStatsAggregatorService,
   PlayerStatsData,
@@ -16,8 +14,6 @@ import { StatsTransactionBuilder } from './stats-transaction.builder';
 export class StatsService {
   constructor(
     private prisma: PrismaService,
-    private teamsService: TeamsService,
-    private playersService: PlayersService,
     private statsAggregator: PlayerStatsAggregatorService,
     private accessPolicy: AccessPolicyService,
     private builder: StatsTransactionBuilder,
@@ -31,7 +27,6 @@ export class StatsService {
         matches: {
           where: {
             isProcessed: true,
-            // Беремо лише ті матчі, які ще не оброблені в історії рейтингу
             ratingHistories: { none: {} },
           },
           orderBy: { round: 'asc' },
@@ -61,7 +56,7 @@ export class StatsService {
     for (const match of tournament.matches) {
       if (!match.teamAId || !match.teamBId) continue;
 
-      // 1. Отримуємо рейтинги команд з кешу або БД
+      // 1. Отримуємо рейтинги команд прямо з БД (кешуємо в Map, щоб не робити повторні запити)
       const ratingA = await this.fetchTeamRating(
         match.teamAId,
         currentTeamRatings,
@@ -71,15 +66,8 @@ export class StatsService {
         currentTeamRatings,
       );
 
-      // 2. Білдер формує апдейти для команд (чиста логіка)
-      const {
-        queries: teamQueries,
-        newRatingA,
-        newRatingB,
-        changeA,
-        changeB,
-        isAWinner,
-      } = this.builder.buildTeamMatchUpdates(
+      // 2. Білдер повертає payload (дані), а не запити
+      const updates = this.builder.buildTeamMatchUpdates(
         {
           id: match.id,
           stage: match.stage,
@@ -94,9 +82,28 @@ export class StatsService {
         ratingB,
       );
 
-      transactionQueries.push(...teamQueries);
-      currentTeamRatings.set(match.teamAId, newRatingA);
-      currentTeamRatings.set(match.teamBId, newRatingB);
+      // Оркестратор сам формує запити для Prisma
+      transactionQueries.push(
+        this.prisma.team.update({
+          where: { id: updates.teamA.id },
+          data: {
+            averageRating: updates.teamA.newRating,
+            tier: updates.teamA.newTier,
+          },
+        }),
+        this.prisma.team.update({
+          where: { id: updates.teamB.id },
+          data: {
+            averageRating: updates.teamB.newRating,
+            tier: updates.teamB.newTier,
+          },
+        }),
+        this.prisma.ratingHistory.create({ data: updates.historyA }),
+        this.prisma.ratingHistory.create({ data: updates.historyB }),
+      );
+
+      currentTeamRatings.set(match.teamAId, updates.teamA.newRating);
+      currentTeamRatings.set(match.teamBId, updates.teamB.newRating);
 
       // 3. Обробляємо гравців
       const stats = match.stats as unknown as MatchStatsJson;
@@ -116,8 +123,8 @@ export class StatsService {
           const queries = await this.processPlayer(
             pStat.playerId,
             match.id,
-            changeA,
-            isAWinner,
+            updates.historyA.ratingChange,
+            updates.isAWinner,
             pStat as Record<string, unknown>,
             currentPlayerRatings,
             currentPlayerStats,
@@ -128,8 +135,8 @@ export class StatsService {
           const queries = await this.processPlayer(
             pStat.playerId,
             match.id,
-            changeB,
-            !isAWinner,
+            updates.historyB.ratingChange,
+            !updates.isAWinner,
             pStat as Record<string, unknown>,
             currentPlayerRatings,
             currentPlayerStats,
@@ -150,9 +157,12 @@ export class StatsService {
 
         for (const roster of rosters) {
           if (roster.role === 'COACH' || roster.role === 'SUBSTITUTE') continue;
+
           const isTeamA = roster.participant.teamId === match.teamAId;
-          const eloChange = isTeamA ? changeA : changeB;
-          const isWinner = isTeamA ? isAWinner : !isAWinner;
+          const eloChange = isTeamA
+            ? updates.historyA.ratingChange
+            : updates.historyB.ratingChange;
+          const isWinner = isTeamA ? updates.isAWinner : !updates.isAWinner;
 
           const queries = await this.processPlayer(
             roster.playerId,
@@ -168,15 +178,14 @@ export class StatsService {
       }
     }
 
-    // Робимо єдиний запит до бази даних
     await this.prisma.$transaction(transactionQueries);
+
     return {
       message: "Рейтинги Elo та кар'єрна статистика успішно оновлені.",
       processedMatches: tournament.matches.length,
     };
   }
 
-  // Допоміжний метод для обробки одного гравця
   private async processPlayer(
     playerId: string,
     matchId: string,
@@ -199,23 +208,32 @@ export class StatsService {
       oldStats = (player?.stats as PlayerStatsData) || {};
     }
 
-    // Викликаємо Білдер
-    const { queries, newRating, newStatsJson } =
-      this.builder.buildPlayerStatsUpdates(
-        matchId,
-        playerId,
-        currentRating,
-        eloChange,
-        oldStats,
-        sessionStats,
-        isWinner,
-      );
+    // Викликаємо Білдер, він повертає лише дані
+    const payload = this.builder.buildPlayerStatsUpdates(
+      matchId,
+      playerId,
+      currentRating,
+      eloChange,
+      oldStats,
+      sessionStats,
+      isWinner,
+    );
 
     // Оновлюємо кеш
-    ratingCache.set(playerId, newRating);
-    statsCache.set(playerId, newStatsJson);
+    ratingCache.set(playerId, payload.newRating);
+    statsCache.set(playerId, payload.newStatsJson as PlayerStatsData);
 
-    return queries;
+    // Сервіс сам формує запити
+    return [
+      this.prisma.player.update({
+        where: { id: payload.playerId },
+        data: {
+          rating: payload.newRating,
+          stats: payload.newStatsJson,
+        },
+      }),
+      this.prisma.ratingHistory.create({ data: payload.history }),
+    ];
   }
 
   private async fetchTeamRating(
@@ -224,7 +242,11 @@ export class StatsService {
   ): Promise<number> {
     if (cache.has(teamId)) return cache.get(teamId) as number;
 
-    const team = await this.teamsService.findOne(teamId);
+    const team = await this.prisma.team.findUnique({
+      where: { id: teamId },
+      select: { averageRating: true },
+    });
+
     if (!team) {
       throw new Error(
         `Критична помилка цілісності: Команду ${teamId} не знайдено!`,
@@ -240,7 +262,11 @@ export class StatsService {
   ): Promise<number> {
     if (cache.has(playerId)) return cache.get(playerId) as number;
 
-    const player = await this.playersService.findOne(playerId);
+    const player = await this.prisma.player.findUnique({
+      where: { id: playerId },
+      select: { rating: true },
+    });
+
     if (!player) {
       throw new Error(
         `Критична помилка цілісності: Гравця ${playerId} не знайдено!`,
