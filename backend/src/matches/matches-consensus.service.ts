@@ -1,29 +1,22 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-  Inject,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatsService } from '../stats/stats.service';
 import { MatchesProgressionService } from './matches-progression.service';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { ForfeitMatchDto } from './dto/forfeit-match.dto';
 import { DisputeMatchDto, ReportScoreDto } from './dto/consensus.dto';
-import { AccessPolicyService } from '../auth/access-policy.service';
 import { MailService } from 'src/mail/mail.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
-
+import { MatchesConsensusLogic } from './matches-consensus.logic';
 @Injectable()
 export class MatchesConsensusService {
   constructor(
     private prisma: PrismaService,
     private statsService: StatsService,
     private progressionService: MatchesProgressionService,
-    private accessPolicy: AccessPolicyService,
     private mailService: MailService,
+    private consensusLogic: MatchesConsensusLogic,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
@@ -33,65 +26,29 @@ export class MatchesConsensusService {
     await this.cacheManager.del(`/tournaments/${tournamentId}`);
   }
 
-  async forfeitMatch(matchId: string, dto: ForfeitMatchDto, user: JwtPayload) {
+  private async getConsensusMatch(matchId: string) {
     const match = await this.prisma.match.findUnique({
       where: { id: matchId },
       include: {
-        tournament: true,
+        tournament: { include: { creator: true } },
         teamA: { include: { captain: true } },
         teamB: { include: { captain: true } },
       },
     });
 
     if (!match) throw new NotFoundException('Матч не знайдено');
-    if (match.isProcessed)
-      throw new BadRequestException('Цей матч вже завершено');
-    if (match.tournament.status !== 'live')
-      throw new BadRequestException('Турнір не активний');
-    if (!match.teamAId || !match.teamBId)
-      throw new BadRequestException(
-        'В цьому матчі ще не визначені обидва опоненти',
-      );
+    return match;
+  }
 
-    let isTeamAForfeiting = false;
+  async forfeitMatch(matchId: string, dto: ForfeitMatchDto, user: JwtPayload) {
+    const match = await this.getConsensusMatch(matchId);
 
-    // 1. Визначаємо , чи діє капітан
-    const isCaptainA = match.teamA?.captain.userId === user.userId;
-    const isCaptainB = match.teamB?.captain.userId === user.userId;
-
-    if (isCaptainA) {
-      isTeamAForfeiting = true;
-    } else if (isCaptainB) {
-      isTeamAForfeiting = false; // B здається, отже А перемагає
-    } else {
-      // 2. Якщо це не капітан, перевіряємо права Організатора або Адміна
-      this.accessPolicy.checkTournamentCreatorOrAdmin(
-        match.tournament.creatorId,
-        user,
-      );
-
-      // Якщо виклик вище не кинув ForbiddenException, значить це адмін/креатор
-      if (!dto.forfeitingTeamId) {
-        throw new BadRequestException(
-          'Адміністратор або Організатор повинен вказати ID команди, яку дискваліфікують (forfeitingTeamId)',
-        );
-      }
-
-      if (dto.forfeitingTeamId === match.teamAId) {
-        isTeamAForfeiting = true;
-      } else if (dto.forfeitingTeamId === match.teamBId) {
-        isTeamAForfeiting = false;
-      } else {
-        throw new BadRequestException(
-          'Вказана команда не бере участі в цьому матчі',
-        );
-      }
-    }
-
-    // 3. Визначаємо рахунок (Технічна перемога залежить від формату: 1:0, 2:0 або 3:0)
-    const pointsToWin = Math.ceil(match.bestOf / 2);
-    const scoreA = isTeamAForfeiting ? 0 : pointsToWin;
-    const scoreB = isTeamAForfeiting ? pointsToWin : 0;
+    // Чиста логіка віддає нам готовий рахунок
+    const { scoreA, scoreB } = this.consensusLogic.resolveForfeit(
+      match,
+      dto,
+      user,
+    );
 
     await this.prisma.$transaction(async (prismaTx) => {
       // Викликаємо публічний метод з Progression Service
@@ -111,22 +68,10 @@ export class MatchesConsensusService {
 
   //  1. внесення рахунку (REPORT)
   async reportMatch(matchId: string, dto: ReportScoreDto, user: JwtPayload) {
-    const match = await this.prisma.match.findUnique({
-      where: { id: matchId },
-      include: {
-        teamA: { include: { captain: true } },
-        teamB: { include: { captain: true } },
-      },
-    });
+    const match = await this.getConsensusMatch(matchId);
 
-    if (!match || match.matchStatus === 'COMPLETED')
-      throw new BadRequestException('Матч недоступний для звітування');
-
-    const isCaptainA = match.teamA?.captain.userId === user.userId;
-    const isCaptainB = match.teamB?.captain.userId === user.userId;
-
-    if (!isCaptainA && !isCaptainB)
-      throw new ForbiddenException('Тільки капітани можуть вносити рахунок');
+    // Чиста валідація
+    this.consensusLogic.validateReport(match, user);
 
     const updatedMatch = await this.prisma.match.update({
       where: { id: matchId },
@@ -142,27 +87,12 @@ export class MatchesConsensusService {
     return updatedMatch;
   }
 
+  //  2. підтвердження рахунку (CONFIRM)
   async confirmMatch(matchId: string, user: JwtPayload) {
-    const match = await this.prisma.match.findUnique({
-      where: { id: matchId },
-      include: {
-        teamA: { include: { captain: true } },
-        teamB: { include: { captain: true } },
-      },
-    });
+    const match = await this.getConsensusMatch(matchId);
 
-    if (match?.matchStatus !== 'REPORTED')
-      throw new BadRequestException('Немає рахунку для підтвердження');
-
-    const isCaptainA = match.teamA?.captain.userId === user.userId;
-    const isCaptainB = match.teamB?.captain.userId === user.userId;
-
-    if (!isCaptainA && !isCaptainB)
-      throw new ForbiddenException('Тільки капітан може підтвердити');
-    if (match.reportedById === user.userId)
-      throw new BadRequestException(
-        'Ви не можете підтвердити власний звіт. Чекайте на опонента.',
-      );
+    // Чиста валідація
+    this.consensusLogic.validateConfirm(match, user);
 
     await this.prisma.$transaction(async (prismaTx) => {
       // Викликаємо progressionService
@@ -182,26 +112,14 @@ export class MatchesConsensusService {
 
   //  3. оскарження (DISPUTE)
   async disputeMatch(matchId: string, dto: DisputeMatchDto, user: JwtPayload) {
-    const match = await this.prisma.match.findUnique({
-      where: { id: matchId },
-      include: {
-        teamA: { include: { captain: true } },
-        teamB: { include: { captain: true } },
-        tournament: { include: { creator: true } },
-      },
-    });
+    const match = await this.getConsensusMatch(matchId);
 
-    if (match?.matchStatus !== 'REPORTED')
-      throw new BadRequestException('Неможливо оскаржити');
-    if (match.reportedById === user.userId)
-      throw new BadRequestException('Ви не можете оскаржити власний звіт');
+    // Чиста валідація
+    this.consensusLogic.validateDispute(match, user);
 
     const updatedMatch = await this.prisma.match.update({
       where: { id: matchId },
-      data: {
-        matchStatus: 'DISPUTED',
-        disputeReason: dto.reason,
-      },
+      data: { matchStatus: 'DISPUTED', disputeReason: dto.reason },
     });
 
     if (match.tournament.creator?.email) {
@@ -228,18 +146,10 @@ export class MatchesConsensusService {
     dto: ReportScoreDto,
     user: JwtPayload,
   ) {
-    const match = await this.prisma.match.findUnique({
-      where: { id: matchId },
-      include: { tournament: true },
-    });
+    const match = await this.getConsensusMatch(matchId);
 
-    if (!match || match.matchStatus === 'COMPLETED')
-      throw new BadRequestException('Матч вже закритий');
-
-    this.accessPolicy.checkTournamentCreatorOrAdmin(
-      match.tournament.creatorId,
-      user,
-    );
+    // Чиста валідація
+    this.consensusLogic.validateForceResolve(match, user);
 
     await this.prisma.$transaction(async (prismaTx) => {
       await this.progressionService.finalizeMatchProgression(

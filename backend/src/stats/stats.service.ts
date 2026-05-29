@@ -1,26 +1,22 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
-import { MatchStatsJson, GamePlayerStat } from './stats.types';
-import { TeamsService } from '../teams/teams.service';
-import { PlayersService } from '../players/players.service';
+import { MatchStatsJson } from './stats.types';
 import {
   PlayerStatsAggregatorService,
   PlayerStatsData,
 } from './player-stats-aggregator.service';
-import { EloCalculatorService } from './elo-calculator.service';
 import { AccessPolicyService } from '../auth/access-policy.service';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
+import { StatsTransactionBuilder } from './stats-transaction.builder';
 
 @Injectable()
 export class StatsService {
   constructor(
     private prisma: PrismaService,
-    private teamsService: TeamsService,
-    private playersService: PlayersService,
-    private eloCalculator: EloCalculatorService,
     private statsAggregator: PlayerStatsAggregatorService,
     private accessPolicy: AccessPolicyService,
+    private builder: StatsTransactionBuilder,
   ) {}
 
   async processTournamentStats(tournamentId: string, user?: JwtPayload) {
@@ -31,7 +27,6 @@ export class StatsService {
         matches: {
           where: {
             isProcessed: true,
-            // Беремо лише ті матчі, які ще не оброблені в історії рейтингу
             ratingHistories: { none: {} },
           },
           orderBy: { round: 'asc' },
@@ -48,25 +43,20 @@ export class StatsService {
     }
     if (tournament.matches.length === 0) {
       return {
-        message:
-          'Усі доступні матчі турніру вже оброблені або нові результати відсутні.',
+        message: 'Усі доступні матчі турніру вже оброблені.',
         processedMatches: 0,
       };
     }
 
-    // Явно вказуємо тип масиву транзакцій
     const transactionQueries: Prisma.PrismaPromise<unknown>[] = [];
-
     const currentTeamRatings = new Map<string, number>();
     const currentPlayerRatings = new Map<string, number>();
     const currentPlayerStats = new Map<string, PlayerStatsData>();
 
-    const matches = tournament.matches; // Зберігаємо в змінну для TS
-
-    for (const match of matches) {
+    for (const match of tournament.matches) {
       if (!match.teamAId || !match.teamBId) continue;
 
-      // SRP: Використовуємо інжектовані сервіси для читання даних
+      // 1. Отримуємо рейтинги команд прямо з БД (кешуємо в Map, щоб не робити повторні запити)
       const ratingA = await this.fetchTeamRating(
         match.teamAId,
         currentTeamRatings,
@@ -76,64 +66,50 @@ export class StatsService {
         currentTeamRatings,
       );
 
-      // Використовуємо динамічну типізацію для JSON
-      const stats = match.stats as unknown as MatchStatsJson;
-      // Визначаємо переможця по рахунку
-      const isAWinner = match.scoreA > match.scoreB;
-
-      // ДЕЛЕГУЄМО РОЗРАХУНОК ELO
-      const { changeA, changeB } = this.eloCalculator.calculateElo(
+      // 2. Білдер повертає payload (дані), а не запити
+      const updates = this.builder.buildTeamMatchUpdates(
+        {
+          id: match.id,
+          stage: match.stage,
+          bracket: match.bracket,
+          teamAId: match.teamAId,
+          teamBId: match.teamBId,
+          scoreA: match.scoreA,
+          scoreB: match.scoreB,
+        },
+        tournament.kFactor,
         ratingA,
         ratingB,
-        isAWinner,
-        tournament.kFactor,
-        match.stage,
-        match.bracket,
       );
 
-      const newRatingA = ratingA + changeA;
-      const newRatingB = ratingB + changeB;
-      // Визначаємо новий тір для обох команд
-      const newTierA = this.teamsService.calculateTier(newRatingA);
-      const newTierB = this.teamsService.calculateTier(newRatingB);
-
-      currentTeamRatings.set(match.teamAId, newRatingA);
-      currentTeamRatings.set(match.teamBId, newRatingB);
-
-      // А) Оновлюємо рейтинг команд (накопичуємо запити для транзакції)
+      // Оркестратор сам формує запити для Prisma
       transactionQueries.push(
         this.prisma.team.update({
-          where: { id: match.teamAId },
-          data: { averageRating: newRatingA, tier: newTierA },
+          where: { id: updates.teamA.id },
+          data: {
+            averageRating: updates.teamA.newRating,
+            tier: updates.teamA.newTier,
+          },
         }),
         this.prisma.team.update({
-          where: { id: match.teamBId },
-          data: { averageRating: newRatingB, tier: newTierB },
-        }),
-
-        // Б) Записуємо Історію Команд
-        this.prisma.ratingHistory.create({
+          where: { id: updates.teamB.id },
           data: {
-            teamId: match.teamAId,
-            matchId: match.id,
-            oldRating: ratingA,
-            newRating: newRatingA,
-            ratingChange: changeA,
+            averageRating: updates.teamB.newRating,
+            tier: updates.teamB.newTier,
           },
         }),
-        this.prisma.ratingHistory.create({
-          data: {
-            teamId: match.teamBId,
-            matchId: match.id,
-            oldRating: ratingB,
-            newRating: newRatingB,
-            ratingChange: changeB,
-          },
-        }),
+        this.prisma.ratingHistory.create({ data: updates.historyA }),
+        this.prisma.ratingHistory.create({ data: updates.historyB }),
       );
 
-      // В) Обробляємо Lifetime Stats гравців (тільки якщо є детальна статистика)
+      currentTeamRatings.set(match.teamAId, updates.teamA.newRating);
+      currentTeamRatings.set(match.teamBId, updates.teamB.newRating);
+
+      // 3. Обробляємо гравців
+      const stats = match.stats as unknown as MatchStatsJson;
+
       if (stats && stats.maps && Array.isArray(stats.maps)) {
+        // Симуляція: є детальна статистика по картах
         const avgPlayersA = this.statsAggregator.getSummedPlayerStatsForMatch(
           stats.maps,
           'teamA',
@@ -143,27 +119,32 @@ export class StatsService {
           'teamB',
         );
 
-        await this.queuePlayerUpdates(
-          avgPlayersA,
-          match.id,
-          changeA,
-          currentPlayerRatings,
-          currentPlayerStats,
-          transactionQueries,
-          isAWinner,
-        );
-        await this.queuePlayerUpdates(
-          avgPlayersB,
-          match.id,
-          changeB,
-          currentPlayerRatings,
-          currentPlayerStats,
-          transactionQueries,
-          !isAWinner,
-        );
+        for (const pStat of avgPlayersA) {
+          const queries = await this.processPlayer(
+            pStat.playerId,
+            match.id,
+            updates.historyA.ratingChange,
+            updates.isAWinner,
+            pStat as Record<string, unknown>,
+            currentPlayerRatings,
+            currentPlayerStats,
+          );
+          transactionQueries.push(...queries);
+        }
+        for (const pStat of avgPlayersB) {
+          const queries = await this.processPlayer(
+            pStat.playerId,
+            match.id,
+            updates.historyB.ratingChange,
+            !updates.isAWinner,
+            pStat as Record<string, unknown>,
+            currentPlayerRatings,
+            currentPlayerStats,
+          );
+          transactionQueries.push(...queries);
+        }
       } else {
-        // Технічна поразка (forfeit) або ручне введення без карт
-        // Нараховуємо Elo всім гравцям, що були заявлені в TournamentRoster
+        // Технічна поразка (ручне закриття матчу)
         const rosters = await this.prisma.tournamentRoster.findMany({
           where: {
             participant: {
@@ -176,66 +157,83 @@ export class StatsService {
 
         for (const roster of rosters) {
           if (roster.role === 'COACH' || roster.role === 'SUBSTITUTE') continue;
-          const isTeamA = roster.participant.teamId === match.teamAId;
-          const eloChange = isTeamA ? changeA : changeB;
-          const isWinner = isTeamA ? isAWinner : !isAWinner;
 
-          // Оновлюємо тільки Elo та вінрейт (через агрегатор із порожніми статами сесії)
-          await this.applyTechnicalEloToPlayer(
+          const isTeamA = roster.participant.teamId === match.teamAId;
+          const eloChange = isTeamA
+            ? updates.historyA.ratingChange
+            : updates.historyB.ratingChange;
+          const isWinner = isTeamA ? updates.isAWinner : !updates.isAWinner;
+
+          const queries = await this.processPlayer(
             roster.playerId,
             match.id,
             eloChange,
             isWinner,
-            transactionQueries,
+            { mapCount: 1 },
+            currentPlayerRatings,
+            currentPlayerStats,
           );
+          transactionQueries.push(...queries);
         }
       }
     }
 
     await this.prisma.$transaction(transactionQueries);
+
     return {
       message: "Рейтинги Elo та кар'єрна статистика успішно оновлені.",
       processedMatches: tournament.matches.length,
     };
   }
 
-  private async applyTechnicalEloToPlayer(
+  private async processPlayer(
     playerId: string,
     matchId: string,
-    change: number,
+    eloChange: number,
     isWinner: boolean,
-    queries: Prisma.PrismaPromise<unknown>[],
-  ) {
-    const player = await this.prisma.player.findUnique({
-      where: { id: playerId },
-    });
-    if (!player) return;
+    sessionStats: Record<string, unknown>,
+    ratingCache: Map<string, number>,
+    statsCache: Map<string, PlayerStatsData>,
+  ): Promise<Prisma.PrismaPromise<unknown>[]> {
+    if (!playerId) return [];
 
-    const newRating = player.rating + change;
-    const oldStats = (player.stats as PlayerStatsData) || {};
+    const currentRating = await this.fetchPlayerRating(playerId, ratingCache);
 
-    // Створюємо "заглушку" сесії для техпоразки (mapCount: 1, але 0 вбивств/смертей)
-    const newStats = this.statsAggregator.calculateNewLifetimeStats(
+    let oldStats = statsCache.get(playerId);
+    if (!oldStats) {
+      const player = await this.prisma.player.findUnique({
+        where: { id: playerId },
+        select: { stats: true },
+      });
+      oldStats = (player?.stats as PlayerStatsData) || {};
+    }
+
+    // Викликаємо Білдер, він повертає лише дані
+    const payload = this.builder.buildPlayerStatsUpdates(
+      matchId,
+      playerId,
+      currentRating,
+      eloChange,
       oldStats,
-      { mapCount: 1 },
+      sessionStats,
       isWinner,
     );
 
-    queries.push(
+    // Оновлюємо кеш
+    ratingCache.set(playerId, payload.newRating);
+    statsCache.set(playerId, payload.newStatsJson as PlayerStatsData);
+
+    // Сервіс сам формує запити
+    return [
       this.prisma.player.update({
-        where: { id: playerId },
-        data: { rating: newRating, stats: newStats as Prisma.InputJsonValue },
-      }),
-      this.prisma.ratingHistory.create({
+        where: { id: payload.playerId },
         data: {
-          playerId,
-          matchId,
-          oldRating: player.rating,
-          newRating,
-          ratingChange: change,
+          rating: payload.newRating,
+          stats: payload.newStatsJson,
         },
       }),
-    );
+      this.prisma.ratingHistory.create({ data: payload.history }),
+    ];
   }
 
   private async fetchTeamRating(
@@ -244,10 +242,14 @@ export class StatsService {
   ): Promise<number> {
     if (cache.has(teamId)) return cache.get(teamId) as number;
 
-    const team = await this.teamsService.findOne(teamId);
+    const team = await this.prisma.team.findUnique({
+      where: { id: teamId },
+      select: { averageRating: true },
+    });
+
     if (!team) {
       throw new Error(
-        `Критична помилка цілісності: Команду з ID ${teamId} не знайдено в базі!`,
+        `Критична помилка цілісності: Команду ${teamId} не знайдено!`,
       );
     }
     cache.set(teamId, team.averageRating);
@@ -260,73 +262,17 @@ export class StatsService {
   ): Promise<number> {
     if (cache.has(playerId)) return cache.get(playerId) as number;
 
-    const player = await this.playersService.findOne(playerId);
+    const player = await this.prisma.player.findUnique({
+      where: { id: playerId },
+      select: { rating: true },
+    });
+
     if (!player) {
       throw new Error(
-        `Критична помилка цілісності: Гравця з ID ${playerId} не знайдено в базі!`,
+        `Критична помилка цілісності: Гравця ${playerId} не знайдено!`,
       );
     }
     cache.set(playerId, player.rating);
     return player.rating;
-  }
-
-  private async queuePlayerUpdates(
-    mapPlayers: GamePlayerStat[],
-    matchId: string,
-    eloChange: number,
-    ratingCache: Map<string, number>,
-    statsCache: Map<string, PlayerStatsData>,
-    transactionQueries: Prisma.PrismaPromise<unknown>[],
-    isWinner: boolean,
-  ) {
-    if (!mapPlayers || !Array.isArray(mapPlayers)) return;
-
-    for (const pStat of mapPlayers) {
-      if (!pStat.playerId) continue;
-
-      const currentRating = await this.fetchPlayerRating(
-        pStat.playerId,
-        ratingCache,
-      );
-      const newRating = currentRating + eloChange;
-
-      ratingCache.set(pStat.playerId, newRating);
-
-      // беремо стару стату гравця з кешу. Якщо немає - дістаємо з бази.
-      let oldStats = statsCache.get(pStat.playerId);
-      if (!oldStats) {
-        const player = await this.prisma.player.findUnique({
-          where: { id: pStat.playerId },
-          select: { stats: true },
-        });
-        oldStats = (player?.stats as PlayerStatsData) || {};
-      }
-
-      const newStatsJson = this.statsAggregator.calculateNewLifetimeStats(
-        oldStats,
-        pStat as Record<string, unknown>,
-        isWinner,
-      );
-      statsCache.set(pStat.playerId, newStatsJson);
-
-      transactionQueries.push(
-        this.prisma.player.update({
-          where: { id: pStat.playerId },
-          data: {
-            rating: newRating,
-            stats: newStatsJson as Prisma.InputJsonValue,
-          },
-        }),
-        this.prisma.ratingHistory.create({
-          data: {
-            playerId: pStat.playerId,
-            matchId: matchId,
-            oldRating: currentRating,
-            newRating: newRating,
-            ratingChange: eloChange,
-          },
-        }),
-      );
-    }
   }
 }

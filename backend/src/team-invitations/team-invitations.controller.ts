@@ -19,12 +19,14 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { Throttle } from '@nestjs/throttler';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
+import { TeamInvitationsQueryService } from './team-invitations-query.service';
 
 @ApiTags('Team Invitations (Запрошення в команду)')
 @Controller('team-invitations')
 export class TeamInvitationsController {
   constructor(
     private readonly teamInvitationsService: TeamInvitationsService,
+    private readonly queryService: TeamInvitationsQueryService,
   ) {}
 
   @Post()
@@ -71,7 +73,7 @@ export class TeamInvitationsController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Отримати список всіх інвайтів (тільки Адмін)' })
   findAll() {
-    return this.teamInvitationsService.findAll();
+    return this.queryService.findAll();
   }
 
   @Get('my-invites')
@@ -79,6 +81,6 @@ export class TeamInvitationsController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Отримати мої вхідні запрошення в команди' })
   findMyInvites(@CurrentUser() user: JwtPayload) {
-    return this.teamInvitationsService.findMyInvites(user.userId);
+    return this.queryService.findMyInvites(user.userId);
   }
 }

@@ -3,8 +3,8 @@ import type { JwtPayload } from '../interfaces/jwt-payload.interface';
 
 // Цей декоратор витягує розшифровані дані юзера з об'єкта запиту
 export const CurrentUser = createParamDecorator(
-  (data: unknown, context: ExecutionContext) => {
+  (data: unknown, context: ExecutionContext): JwtPayload | undefined => {
     const request = context.switchToHttp().getRequest<{ user?: JwtPayload }>();
-    return request.user as JwtPayload;
+    return request.user;
   },
 );

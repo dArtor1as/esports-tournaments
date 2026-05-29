@@ -16,6 +16,10 @@ import { EloCalculatorService } from 'src/stats/elo-calculator.service';
 import { PlayerStatsAggregatorService } from 'src/stats/player-stats-aggregator.service';
 import { MatchesQueryService } from './matches-query.service';
 import { MailService } from 'src/mail/mail.service';
+import { MatchesConsensusLogic } from './matches-consensus.logic';
+import { MatchesGenerationLogic } from './matches-generation.logic';
+import { MatchesProgressionLogic } from './matches-progression.logic';
+import { StatsTransactionBuilder } from 'src/stats/stats-transaction.builder';
 
 @Module({
   controllers: [MatchesController, MatchesQueryController],
@@ -35,6 +39,10 @@ import { MailService } from 'src/mail/mail.service';
     PlayerStatsAggregatorService,
     MatchesQueryService,
     MailService,
+    MatchesConsensusLogic,
+    MatchesGenerationLogic,
+    MatchesProgressionLogic,
+    StatsTransactionBuilder,
   ],
 })
 export class MatchesModule {}
