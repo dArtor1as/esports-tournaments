@@ -14,7 +14,7 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
 import { TeamInvitationsLogic } from './team-invitations.logic';
-import { TierHelper } from '/common/helpers/tier.helper';
+import { TierHelper } from 'common/helpers/tier.helper';
 
 @Injectable()
 export class TeamInvitationsService {

@@ -28,7 +28,7 @@ jest.mock('../stats/stats.service', () => ({
   StatsService: class {},
 }));
 jest.mock(
-  '/common/helpers/tier.helper',
+  'common/helpers/tier.helper',
   () => ({
     TierHelper: {},
   }),

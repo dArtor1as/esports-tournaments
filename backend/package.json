@@ -90,6 +90,20 @@
       "json",
       "ts"
     ],
+    "transformIgnorePatterns": [
+      "/node_modules/(?!uuid)/"
+    ],
+    "coveragePathIgnorePatterns": [
+      "/node_modules/",
+      ".*\\.dto\\.ts$",
+      ".*\\.module\\.ts$",
+      ".*\\.interface\\.ts$",
+      ".*\\.type\\.ts$",
+      ".*\\.entity\\.ts$",
+      ".*\\.enum\\.ts$",
+      ".*\\.enums\\.ts$",
+      "main.ts"
+    ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {

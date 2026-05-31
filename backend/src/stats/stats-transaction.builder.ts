@@ -5,7 +5,7 @@ import {
   PlayerStatsAggregatorService,
   PlayerStatsData,
 } from './player-stats-aggregator.service';
-import { TierHelper } from '/common/helpers/tier.helper';
+import { TierHelper } from 'common/helpers/tier.helper';
 
 @Injectable()
 export class StatsTransactionBuilder {

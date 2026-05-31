@@ -30,8 +30,8 @@ describe('GroupStageGenerator', () => {
   });
 
   it('throws when groups are not even', async () => {
-    await expect(generator.generate('t1', 6, [], 'TEAM', 3)).rejects.toThrow(
-      'У кожній групі має бути парна кількість команд. Зараз виходить по 2 команд у групі. Будь ласка, оберіть іншу кількість груп.',
+    await expect(generator.generate('t1', 6, [], 'TEAM', 2)).rejects.toThrow(
+      'У кожній групі має бути парна кількість команд. Зараз виходить по 3 команд у групі. Будь ласка, оберіть іншу кількість груп.',
     );
   });
 
