@@ -72,6 +72,7 @@
     "eslint-plugin-prettier": "^5.2.2",
     "globals": "^16.0.0",
     "jest": "^30.0.0",
+    "jest-mock-extended": "^4.0.1",
     "prettier": "^3.4.2",
     "prisma": "^7.5.0",
     "source-map-support": "^0.5.21",
@@ -89,10 +90,28 @@
       "json",
       "ts"
     ],
+    "transformIgnorePatterns": [
+      "/node_modules/(?!uuid)/"
+    ],
+    "coveragePathIgnorePatterns": [
+      "/node_modules/",
+      ".*\\.dto\\.ts$",
+      ".*\\.module\\.ts$",
+      ".*\\.interface\\.ts$",
+      ".*\\.type\\.ts$",
+      ".*\\.entity\\.ts$",
+      ".*\\.enum\\.ts$",
+      ".*\\.enums\\.ts$",
+      "main.ts"
+    ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "moduleNameMapper": {
+      "^src/(.*)$": "<rootDir>/$1",
+      "^common/(.*)$": "<rootDir>/../common/$1"
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"

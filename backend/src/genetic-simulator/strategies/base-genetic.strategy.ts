@@ -8,8 +8,8 @@ import {
 } from '../genetic-simulator.types';
 
 export abstract class BaseGeneticStrategy {
-  protected readonly generations = 20;
-  protected readonly mutationRate = 0.05;
+  protected readonly generations: number = 20;
+  protected readonly mutationRate: number = 0.05;
 
   constructor(protected probabilityCalc: ProbabilityCalculatorService) {}
 
