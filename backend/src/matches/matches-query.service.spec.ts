@@ -97,4 +97,82 @@ describe('MatchesQueryService', () => {
 
     expect(accessSpy).toHaveBeenCalledWith('u1', user);
   });
+
+  it('returns recent results', async () => {
+    const findManySpy = jest.spyOn(prisma.match, 'findMany');
+    prisma.match.findMany.mockResolvedValueOnce([{ id: 'm1' }] as never);
+
+    const result = await service.getRecentResults(5);
+    expect(result).toEqual([{ id: 'm1' }]);
+    expect(findManySpy).toHaveBeenCalledWith(
+      expect.objectContaining({ take: 5 }),
+    );
+  });
+
+  it('paginates team matches history', async () => {
+    (paginate as jest.Mock).mockResolvedValueOnce({ items: [] });
+
+    await service.getTeamMatchesHistory('team-a', { page: 1, limit: 10 });
+
+    // Передаємо ТОЧНІ об'єкти замість expect.objectContaining, щоб уникнути any
+    expect(paginate).toHaveBeenCalledWith(
+      prisma.match,
+      {
+        isProcessed: true,
+        OR: [{ teamAId: 'team-a' }, { teamBId: 'team-a' }],
+      },
+      { page: 1, limit: 10 },
+      {
+        tournament: {
+          select: { title: true, tier: true, game: { select: { slug: true } } },
+        },
+        teamA: { select: { id: true, name: true, tag: true, logoUrl: true } },
+        teamB: { select: { id: true, name: true, tag: true, logoUrl: true } },
+      },
+      { playedAt: 'desc' },
+    );
+  });
+
+  it('paginates player matches history', async () => {
+    (paginate as jest.Mock).mockResolvedValueOnce({ items: [] });
+
+    await service.getPlayerMatchesHistory('player-1', { page: 1, limit: 10 });
+
+    // Передаємо ТОЧНІ об'єкти замість expect.objectContaining
+    expect(paginate).toHaveBeenCalledWith(
+      prisma.match,
+      {
+        isProcessed: true,
+        tournament: {
+          participants: {
+            some: {
+              tournamentRosters: { some: { playerId: 'player-1' } },
+            },
+          },
+        },
+      },
+      { page: 1, limit: 10 },
+      {
+        tournament: {
+          select: { title: true, tier: true, game: { select: { slug: true } } },
+        },
+        teamA: { select: { id: true, name: true, tag: true, logoUrl: true } },
+        teamB: { select: { id: true, name: true, tag: true, logoUrl: true } },
+      },
+      { playedAt: 'desc' },
+    );
+  });
+
+  it('returns all matches by tournament', async () => {
+    const findManySpy = jest.spyOn(prisma.match, 'findMany');
+    prisma.match.findMany.mockResolvedValueOnce([{ id: 'm1' }] as never);
+
+    await service.findAllByTournament('t1', 'PLAYOFF');
+
+    expect(findManySpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { tournamentId: 't1', stage: 'PLAYOFF' },
+      }),
+    );
+  });
 });

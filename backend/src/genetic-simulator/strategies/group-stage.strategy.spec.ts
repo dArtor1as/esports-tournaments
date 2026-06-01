@@ -99,4 +99,43 @@ describe('GroupStageStrategy', () => {
     );
     expect(randomSpy).toHaveBeenCalled();
   });
+  it('застосовує всі правила тай-брейків (H2H, різниця карт, рандом) при однакових показниках', () => {
+    const context = buildContext();
+    context.baseSkeleton = [
+      {
+        id: 'm1',
+        stage: Stage.GROUP,
+        bracket: Bracket.NONE,
+        groupName: 'A',
+        round: 1,
+        teamAId: 'team-a',
+        teamBId: 'team-b',
+        scoreA: 0,
+        scoreB: 0,
+        bestOf: 2,
+      } as never,
+    ];
+
+    jest.spyOn(probabilityCalc, 'getBaseProbability').mockReturnValue(0.5);
+    jest.spyOn(probabilityCalc, 'getAdjustedProbability').mockReturnValue(0.5);
+
+    // Симулюємо нічию 1-1, щоб у команд були абсолютно однакові очки, H2H та різниця карт
+    jest.spyOn(context.simulator, 'simulateSeries').mockReturnValue({
+      winsA: 1,
+      winsB: 1,
+      mapDetails: [],
+      stats: {},
+    });
+
+    // Форсуємо рандом, щоб гарантовано покрити рядок 103: Math.random() > 0.5 ? 1 : -1
+    const randomSpy = jest.spyOn(Math, 'random').mockReturnValue(0.9);
+
+    const result = strategy.execute(context, 1);
+
+    expect(result.algorithmType).toBe('GROUP_STAGE');
+    // Перевіряємо, що стендінги успішно сформувались без падінь (тай-брейки відпрацювали)
+    expect(result.standings?.['team-a']).toBeDefined();
+
+    randomSpy.mockRestore();
+  });
 });

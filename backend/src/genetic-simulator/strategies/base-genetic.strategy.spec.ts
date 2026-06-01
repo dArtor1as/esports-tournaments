@@ -187,4 +187,93 @@ describe('BaseGeneticStrategy', () => {
     expect(result.fitness).toBeGreaterThan(0);
     expect(result.bracket.find((m) => m.id === 'm2')?.teamAId).toBe('team-a');
   });
+  it('evaluatePlayoffIndividual обробляє відсутність bestOf та екстремальні апсети (ймовірність <= 0.25)', () => {
+    const context = buildContext();
+    context.baseSkeleton = [
+      {
+        id: 'm1',
+        stage: Stage.PLAYOFF,
+        bracket: Bracket.UPPER,
+        groupName: null,
+        round: 1,
+        teamAId: 'team-a',
+        teamBId: 'team-b',
+        scoreA: 0,
+        scoreB: 0,
+        // bestOf навмисно пропущено для покриття фолбеку || 1 (рядок 124)
+        nextMatchWinnerId: null,
+        nextMatchLoserId: null,
+      } as never,
+    ];
+
+    // Робимо team-a абсолютним фаворитом (0.9), отже ймовірність перемоги B = 0.1
+    jest.spyOn(probabilityCalc, 'getBaseProbability').mockReturnValue(0.9);
+    jest.spyOn(probabilityCalc, 'getAdjustedProbability').mockReturnValue(0.9);
+
+    // Але виграє team-b (екстремальний апсет)
+    jest.spyOn(context.simulator, 'simulateSeries').mockReturnValue({
+      winsA: 0,
+      winsB: 1,
+      mapDetails: [],
+      stats: {},
+    });
+
+    const result = strategy.runEvaluatePlayoffIndividual([0.5], context);
+    // Перевіряємо, що спрацював сильний штраф (рядок 175: fitness -= 30)
+    expect(result.fitness).toBeLessThan(0);
+  });
+
+  it('evaluatePlayoffIndividual коректно просуває лузера у нижню сітку (nextMatchLoserId)', () => {
+    const context = buildContext();
+    context.baseSkeleton = [
+      {
+        id: 'm1',
+        stage: Stage.PLAYOFF,
+        bracket: Bracket.UPPER,
+        groupName: null,
+        round: 1,
+        teamAId: 'team-a',
+        teamBId: 'team-b',
+        scoreA: 0,
+        scoreB: 0,
+        bestOf: 3,
+        nextMatchWinnerId: 'm2',
+        nextMatchLoserId: 'm3', // Просування лузера (рядки 165-167, 181-186)
+      } as never,
+      {
+        id: 'm2',
+        stage: Stage.PLAYOFF,
+        bracket: Bracket.UPPER,
+        teamAId: 'team-x', // Одне місце вже зайняте, переможець має піти в teamBId
+        teamBId: null,
+      } as never,
+      {
+        id: 'm3',
+        stage: Stage.PLAYOFF,
+        bracket: Bracket.LOWER,
+        teamAId: null, // Вільне місце для лузера
+        teamBId: null,
+      } as never,
+    ];
+
+    jest.spyOn(probabilityCalc, 'getBaseProbability').mockReturnValue(0.6);
+    jest.spyOn(probabilityCalc, 'getAdjustedProbability').mockReturnValue(0.6);
+    jest.spyOn(context.simulator, 'simulateSeries').mockReturnValue({
+      winsA: 2, // team-a перемогла
+      winsB: 0, // team-b програла
+      mapDetails: [],
+      stats: {},
+    });
+
+    const result = strategy.runEvaluatePlayoffIndividual(
+      [0.5, 0.5, 0.5],
+      context,
+    );
+
+    const m2 = result.bracket.find((m) => m.id === 'm2');
+    expect(m2?.teamBId).toBe('team-a'); // Переможець пішов у вільний слот B
+
+    const m3 = result.bracket.find((m) => m.id === 'm3');
+    expect(m3?.teamAId).toBe('team-b'); // Лузер пішов у вільний слот A
+  });
 });

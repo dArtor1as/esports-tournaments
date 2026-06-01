@@ -134,4 +134,128 @@ describe('MatchesConsensusLogic', () => {
 
     expect(accessSpy).toHaveBeenCalledWith('u1', adminUser);
   });
+  it('resolves forfeit for admin picking teamA', () => {
+    const match = {
+      id: 'm1',
+      isProcessed: false,
+      tournament: { status: 'live', creatorId: 'u1' },
+      teamAId: 'team-a',
+      teamBId: 'team-b',
+      bestOf: 3,
+    } as ConsensusMatch;
+
+    // isTeamAForfeiting = true
+    const result = logic.resolveForfeit(
+      match,
+      { forfeitingTeamId: 'team-a' },
+      adminUser,
+    );
+    expect(result).toEqual({ scoreA: 0, scoreB: 2 });
+  });
+
+  it('resolves forfeit for admin picking teamB', () => {
+    const match = {
+      id: 'm1',
+      isProcessed: false,
+      tournament: { status: 'live', creatorId: 'u1' },
+      teamAId: 'team-a',
+      teamBId: 'team-b',
+      bestOf: 3,
+    } as ConsensusMatch;
+
+    const result = logic.resolveForfeit(
+      match,
+      { forfeitingTeamId: 'team-b' },
+      adminUser,
+    );
+    expect(result).toEqual({ scoreA: 2, scoreB: 0 });
+  });
+
+  it('throws if admin picks invalid team for forfeit', () => {
+    const match = {
+      id: 'm1',
+      isProcessed: false,
+      tournament: { status: 'live', creatorId: 'u1' },
+      teamAId: 'team-a',
+      teamBId: 'team-b',
+      bestOf: 3,
+    } as ConsensusMatch;
+
+    expect(() =>
+      logic.resolveForfeit(match, { forfeitingTeamId: 'team-c' }, adminUser),
+    ).toThrow(BadRequestException);
+  });
+
+  it('validateReport throws if completed', () => {
+    const match = { matchStatus: 'COMPLETED' } as ConsensusMatch;
+    expect(() => logic.validateReport(match, adminUser)).toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('validateReport happy path', () => {
+    const match = {
+      matchStatus: 'PENDING',
+      teamA: { captain: { userId: 'u1' } },
+    } as ConsensusMatch;
+    expect(() =>
+      logic.validateReport(match, { userId: 'u1' } as JwtPayload),
+    ).not.toThrow();
+  });
+
+  it('validateConfirm happy path', () => {
+    const match = {
+      matchStatus: 'REPORTED',
+      reportedById: 'u2',
+      teamA: { captain: { userId: 'u1' } },
+    } as ConsensusMatch;
+    expect(() =>
+      logic.validateConfirm(match, { userId: 'u1' } as JwtPayload),
+    ).not.toThrow();
+  });
+
+  it('validateDispute happy path', () => {
+    const match = {
+      matchStatus: 'REPORTED',
+      reportedById: 'u2',
+    } as ConsensusMatch;
+    expect(() =>
+      logic.validateDispute(match, { userId: 'u1' } as JwtPayload),
+    ).not.toThrow();
+  });
+
+  it('validateForceResolve throws if completed', () => {
+    const match = { matchStatus: 'COMPLETED' } as ConsensusMatch;
+    expect(() => logic.validateForceResolve(match, adminUser)).toThrow(
+      BadRequestException,
+    );
+  });
+  it('resolveForfeit throws if teamAId or teamBId is missing', () => {
+    const match = {
+      isProcessed: false,
+      tournament: { status: 'live' },
+      teamAId: null, // Штучно робимо null, щоб покрити рядки перевірки
+      teamBId: 'team-b',
+    } as unknown as ConsensusMatch;
+
+    expect(() => logic.resolveForfeit(match, {}, adminUser)).toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('validateDispute throws if match is not REPORTED', () => {
+    const match = { matchStatus: 'PENDING' } as ConsensusMatch;
+
+    expect(() => logic.validateDispute(match, adminUser)).toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('validateForceResolve throws if match is COMPLETED', () => {
+    const match = { matchStatus: 'COMPLETED' } as ConsensusMatch;
+
+    expect(() => logic.validateForceResolve(match, adminUser)).toThrow(
+      BadRequestException,
+    );
+  });
 });

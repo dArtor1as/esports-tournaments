@@ -197,4 +197,38 @@ describe('MatchesConsensusService', () => {
       data: { disputeReason: null },
     });
   });
+
+  it('disputeMatch catches email sending errors without failing', async () => {
+    const dto: DisputeMatchDto = { reason: 'test' };
+    const match = {
+      id: 'm1',
+      tournamentId: 't1',
+      tournament: { creator: { email: 'org@example.com' }, title: 'Cup' },
+    };
+
+    prisma.match.findUnique.mockResolvedValueOnce(match as never);
+    prisma.match.update.mockResolvedValueOnce({ id: 'm1' } as never);
+
+    mailService.sendMatchDisputeNotification.mockRejectedValueOnce(
+      new Error('SMTP Error'),
+    );
+
+    const consoleSpy = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+
+    await expect(service.disputeMatch('m1', dto, user)).resolves.toEqual({
+      id: 'm1',
+    });
+
+    await new Promise((resolve) => process.nextTick(resolve));
+
+    expect(consoleSpy.mock.calls.length).toBe(1);
+    expect(consoleSpy.mock.calls[0][0]).toBe(
+      'Помилка відправки листа про диспут:',
+    );
+    expect(consoleSpy.mock.calls[0][1]).toBeInstanceOf(Error);
+
+    consoleSpy.mockRestore();
+  });
 });
