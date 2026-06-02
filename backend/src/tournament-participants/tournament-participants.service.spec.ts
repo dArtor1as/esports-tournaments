@@ -11,12 +11,15 @@ import { AccessPolicyService } from 'src/auth/access-policy.service';
 import { InvitationPolicyService } from 'src/tournament-invitations/invitation-policy.service';
 import { Region, Role, Prisma } from '@prisma/client';
 import type { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 
 describe('TournamentParticipantsService', () => {
   let service: TournamentParticipantsService;
   let prisma: DeepMockProxy<PrismaService>;
   let accessPolicy: MockProxy<AccessPolicyService>;
   let invitationPolicy: MockProxy<InvitationPolicyService>;
+  let cacheManager: MockProxy<Cache>;
 
   const user: JwtPayload = {
     userId: 'user-1',
@@ -34,6 +37,7 @@ describe('TournamentParticipantsService', () => {
     prisma = mockDeep<PrismaService>();
     accessPolicy = mock<AccessPolicyService>();
     invitationPolicy = mock<InvitationPolicyService>();
+    cacheManager = mock<Cache>();
 
     // Мокаємо транзакцію так, щоб вона виконувала переданий колбек
     prisma.$transaction.mockImplementation(async (cb) => cb(prisma as never));
@@ -44,6 +48,7 @@ describe('TournamentParticipantsService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: AccessPolicyService, useValue: accessPolicy },
         { provide: InvitationPolicyService, useValue: invitationPolicy },
+        { provide: CACHE_MANAGER, useValue: cacheManager },
       ],
     }).compile();
 
