@@ -3,12 +3,15 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Inject,
 } from '@nestjs/common';
 import { CreateTournamentParticipantDto } from './dto/create-tournament-participant.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
 import { InvitationPolicyService } from 'src/tournament-invitations/invitation-policy.service';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 
 @Injectable()
 export class TournamentParticipantsService {
@@ -16,6 +19,7 @@ export class TournamentParticipantsService {
     private prisma: PrismaService,
     private accessPolicy: AccessPolicyService,
     private invitationPolicyService: InvitationPolicyService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async create(dto: CreateTournamentParticipantDto, user: JwtPayload) {
@@ -89,7 +93,7 @@ export class TournamentParticipantsService {
     }
 
     // 4. Транзакція: Створюємо учасника і фіксуємо склад (Roster)
-    return this.prisma.$transaction(async (prisma) => {
+    const result = this.prisma.$transaction(async (prisma) => {
       //  Реєструємо команду (створюємо сутність учасника)
       const participant = await prisma.tournamentParticipant.create({
         data: {
@@ -117,6 +121,13 @@ export class TournamentParticipantsService {
         include: { tournamentRosters: { include: { player: true } } }, // Повертаємо красиво зі складом
       });
     });
+
+    await this.cacheManager.del(
+      `/tournament-participants/tournament/${dto.tournamentId}`,
+    );
+    await this.cacheManager.del(`/tournaments/${dto.tournamentId}`);
+
+    return result;
   }
 
   findAllByTournament(tournamentId: string) {
@@ -124,7 +135,13 @@ export class TournamentParticipantsService {
       where: { tournamentId },
       include: {
         team: {
-          select: { name: true, tag: true, averageRating: true, logoUrl: true },
+          select: {
+            name: true,
+            tag: true,
+            averageRating: true,
+            logoUrl: true,
+            captain: { select: { userId: true } },
+          },
         },
         tournamentRosters: {
           include: { player: { select: { nickname: true } } },
@@ -135,7 +152,7 @@ export class TournamentParticipantsService {
   }
 
   async remove(id: string, user: JwtPayload) {
-    // 1. Шукаємо учасника разом із даними турніру (для creatorId) та команди (для captainId)
+    // 1. Шукаємо учасника разом із турніром (для creatorId) та командою (для captain.userId)
     const participant = await this.prisma.tournamentParticipant.findUnique({
       where: { id },
       include: {
@@ -146,7 +163,7 @@ export class TournamentParticipantsService {
 
     if (!participant) throw new NotFoundException('Учасника не знайдено');
 
-    // 2.Перевіряємо права доступу
+    // 2. перевіряємо права: видалити може тільки капітан команди, організатор турніру або адмін
     this.accessPolicy.checkTeamCaptainOrTournamentCreatorOrAdmin(
       participant.team.captain.userId,
       participant.tournament.creatorId,
@@ -161,11 +178,19 @@ export class TournamentParticipantsService {
     }
 
     // 4. Транзакція: видаляємо ростер та запис учасника
-    return this.prisma.$transaction(async (prismaTx) => {
+    const result = await this.prisma.$transaction(async (prismaTx) => {
       await prismaTx.tournamentRoster.deleteMany({
         where: { participantId: id },
       });
       return prismaTx.tournamentParticipant.delete({ where: { id } });
     });
+
+    // 5. Миттєво очищаємо кеш!
+    await this.cacheManager.del(
+      `/tournament-participants/tournament/${participant.tournamentId}`,
+    );
+    await this.cacheManager.del(`/tournaments/${participant.tournamentId}`);
+
+    return result;
   }
 }

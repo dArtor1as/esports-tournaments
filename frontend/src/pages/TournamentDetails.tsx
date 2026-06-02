@@ -19,6 +19,7 @@ export default function TournamentDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
+  const queryClient = useQueryClient();
 
   const {
     tournament,
@@ -236,8 +237,6 @@ export default function TournamentDetails() {
     myTeamIds.includes(p.teamId),
   );
 
-  const queryClient = useQueryClient();
-
   // 1. МЕТОД ДЛЯ СКАСУВАННЯ (SOFT DELETE)
   const handleCancelTournament = async () => {
     try {
@@ -306,16 +305,16 @@ export default function TournamentDetails() {
             Учасники ({participants.length})
           </TabsTrigger>
 
-          {!isTournamentOver && (
+          {!isTournamentOver && (isCreator || isAdmin) && (
             <TabsTrigger
               value="ga-simulator"
               className="px-6 py-2 text-xs font-black uppercase tracking-wider flex items-center gap-1.5 text-esports-accent"
             >
-              <Cpu size={14} /> ШІ-Лабораторія
+              <Cpu size={14} /> ГА-Лабораторія
             </TabsTrigger>
           )}
 
-          {predictionResult && (
+          {(isCreator || isAdmin) && predictionResult && (
             <TabsTrigger
               value="ga-forecast-results"
               className={`px-4 py-2 text-xs font-black uppercase tracking-wider flex items-center gap-2 ${predictionResult.isLive ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 data-[state=active]:bg-emerald-500/20' : 'text-blue-400 bg-blue-500/10 border border-blue-500/20 data-[state=active]:bg-blue-500/20'}`}
@@ -358,6 +357,7 @@ export default function TournamentDetails() {
             tournamentGameId={tournament.gameId || tournament.game?.id}
             isCreatorOrAdmin={isCreator || isAdmin}
             isFull={participants.length >= (tournament.maxParticipants || 0)}
+            isPlanned={tournament.status === 'planned'}
           />
         </TabsContent>
 
