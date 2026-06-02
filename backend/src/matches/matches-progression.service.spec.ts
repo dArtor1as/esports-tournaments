@@ -14,6 +14,7 @@ describe('MatchesProgressionService', () => {
   let prisma: DeepMockProxy<PrismaService>;
   let accessPolicy: MockProxy<AccessPolicyService>;
   let progressionLogic: MockProxy<MatchesProgressionLogic>;
+  let cacheManager: MockProxy<Cache>;
 
   const user: JwtPayload = {
     userId: 'u1',
@@ -25,6 +26,7 @@ describe('MatchesProgressionService', () => {
     prisma = mockDeep<PrismaService>();
     accessPolicy = mock<AccessPolicyService>();
     progressionLogic = mock<MatchesProgressionLogic>();
+    cacheManager = mock<Cache>();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -32,6 +34,7 @@ describe('MatchesProgressionService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: AccessPolicyService, useValue: accessPolicy },
         { provide: MatchesProgressionLogic, useValue: progressionLogic },
+        { provide: 'CACHE_MANAGER', useValue: cacheManager },
       ],
     }).compile();
 

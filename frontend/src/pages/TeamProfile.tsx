@@ -23,6 +23,11 @@ export default function TeamProfile() {
   const { team, teamEloHistory, upcomingMatches, historyMatches, isLoading } =
     useTeamProfileData(id);
 
+  const handleTransferSuccess = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['teamProfile', id] });
+    toast.success('Лідерство успішно передано!');
+  };
+
   if (isLoading)
     return (
       <div className="text-center py-20 text-esports-accent animate-pulse font-bold text-xl">
@@ -40,7 +45,7 @@ export default function TeamProfile() {
   const isAdmin = currentUser?.role === 'ADMIN';
   const canManageRoles = isCaptain || isAdmin;
 
-  // 1. ПРАВИЛЬНА ФІЛЬТРАЦІЯ (використовуємо teamRole, а не inGameRole)
+  // 1. ПРАВИЛЬНА ФІЛЬТРАЦІЯ (використовуємо teamRole для визначення активних гравців)
   const activePlayers =
     team.players?.filter(
       (p: any) => p.teamRole === 'PLAYER' || p.teamRole === 'CAPTAIN',
@@ -64,9 +69,6 @@ export default function TeamProfile() {
 
   const teamFlag = getFlagUrl(team.countryCode, 'w40');
 
-  const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: ['teamProfile', id] });
-
   const handleDisband = async () => {
     try {
       await api.delete(`/teams/${id}`);
@@ -80,7 +82,12 @@ export default function TeamProfile() {
   const handleKick = async (playerId: string) => {
     try {
       await api.delete(`/teams/${id}/kick/${playerId}`);
-      invalidate();
+      // Оновлюємо поточну сторінку команди (склад і статус isComplete)
+      await queryClient.invalidateQueries({ queryKey: ['teamProfile', id] });
+      // Оновлюємо загальний список команд, бо статус змінився
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['allTeams'] });
+      }, 3100);
       toast.success('Гравця виключено зі складу');
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Помилка при виключенні');
@@ -90,9 +97,12 @@ export default function TeamProfile() {
   const handleLeave = async (playerId: string) => {
     try {
       await api.delete(`/teams/${id}/leave/${playerId}`);
-      invalidate();
+      await queryClient.invalidateQueries({ queryKey: ['teamProfile', id] });
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['allTeams'] });
+      }, 3100);
+      navigate('/teams');
       toast.success('Ви успішно покинули команду');
-      navigate('/');
     } catch (err: any) {
       toast.error(
         err.response?.data?.message || 'Помилка при виході з команди',
@@ -115,7 +125,7 @@ export default function TeamProfile() {
         teamFlag={teamFlag}
         isCaptain={isCaptain}
         onDisband={handleDisband}
-        onTransferSuccess={invalidate}
+        onTransferSuccess={handleTransferSuccess}
       />
 
       <Tabs defaultValue="roster" className="w-full">

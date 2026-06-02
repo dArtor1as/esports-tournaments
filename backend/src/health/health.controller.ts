@@ -20,6 +20,7 @@ export class HealthController {
   @Get()
   @ApiOperation({ summary: 'Перевірка стану застосунку, БД та Redis' })
   async checkHealth() {
+    let timeoutId: NodeJS.Timeout | undefined;
     try {
       // 1. Перевірка БД
       const dbCheck = this.prisma.$queryRaw`SELECT 1`;
@@ -27,13 +28,16 @@ export class HealthController {
       // 2. Перевірка Redis
       const redisCheck = this.cacheManager.get('_health_check');
 
-      // Чекаємо обидві перевірки (з таймаутом у 3 секунди, щоб запит не завис назавжди)
-      await Promise.race([
-        Promise.all([dbCheck, redisCheck]),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Health check timeout')), 3000),
-        ),
-      ]);
+      // Встановлюємо таймаут на 3 секунди для обох перевірок
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(
+          () => reject(new Error('Health check timeout')),
+          3000,
+        );
+      });
+
+      // Чекаємо обидві перевірки
+      await Promise.race([Promise.all([dbCheck, redisCheck]), timeoutPromise]);
 
       return {
         status: 'ok',
@@ -44,12 +48,16 @@ export class HealthController {
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-
       throw new ServiceUnavailableException({
         status: 'error',
-        message: 'Сервіс недоступний',
+        database: 'disconnected or slow',
+        redis: 'disconnected or slow',
         details: errorMessage,
+        timestamp: new Date().toISOString(),
       });
+    } finally {
+      // Гарантоване очищення таймера
+      if (timeoutId) clearTimeout(timeoutId);
     }
   }
 }

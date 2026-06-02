@@ -69,12 +69,14 @@ describe('HealthController', () => {
     jest.useFakeTimers();
 
     cacheManagerMock.get.mockImplementationOnce(() => {
-      return new Promise((resolve) => setTimeout(resolve, 5000));
+      // Повертаємо Promise, який ніколи не вирішується.
+      return new Promise(() => {});
     });
     prismaMock.$queryRaw.mockResolvedValueOnce([{ 1: 1 }]);
 
     const checkPromise = controller.checkHealth();
 
+    // Просуваємо час, щоб спрацював внутрішній таймаут контролера (3 секунди)
     jest.advanceTimersByTime(3500);
 
     await expect(checkPromise).rejects.toThrow(ServiceUnavailableException);

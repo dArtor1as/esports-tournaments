@@ -22,6 +22,19 @@ export class TournamentsService {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
+  private async invalidateTournamentCache(tournamentId: string): Promise<void> {
+    const cacheKeys = [
+      `/tournaments/${tournamentId}`,
+      `/matches/tournament/${tournamentId}`,
+      '/tournaments/workflow',
+      '/tournaments/workflow?workflow=generation',
+      '/tournaments/workflow?workflow=simulation',
+    ];
+
+    // Видаляємо лише цільові ключі паралельно
+    await Promise.all(cacheKeys.map((key) => this.cacheManager.del(key)));
+  }
+
   async create(createTournamentDto: CreateTournamentDto, userId: string) {
     // Перевіряємо, чи існує така гра в базі
     const game = await this.prisma.game.findUnique({
@@ -54,6 +67,8 @@ export class TournamentsService {
       },
     });
 
+    await this.invalidateTournamentCache(createdTournament.id);
+
     return createdTournament;
   }
 
@@ -84,6 +99,8 @@ export class TournamentsService {
       where: { id },
       data: updateTournamentDto as unknown as Prisma.TournamentUpdateInput,
     });
+
+    await this.invalidateTournamentCache(id);
 
     return updatedTournament;
   }
@@ -126,6 +143,8 @@ export class TournamentsService {
       });
     });
 
+    await this.invalidateTournamentCache(id);
+
     return {
       message: 'Турнір скасовано. Всі незіграні матчі анульовано без змін Elo.',
     };
@@ -165,6 +184,8 @@ export class TournamentsService {
       data: { status: 'finished' },
     });
 
+    await this.invalidateTournamentCache(id);
+
     return {
       message:
         "Турнір успішно завершено. Усі кар'єрні рейтинги Elo зафіксовані.",
@@ -188,6 +209,8 @@ export class TournamentsService {
         'Неможливо видалити турнір, в якому вже створено матчі. Використовуйте скасування (Cancel).',
       );
     }
+
+    await this.invalidateTournamentCache(id);
 
     // Ручне послідовне очищення пов'язаних таблиць в транзакції
     return this.prisma.$transaction(async (prismaTx) => {

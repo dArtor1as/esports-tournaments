@@ -3,13 +3,11 @@ import {
   Get,
   Param,
   UseGuards,
-  UseInterceptors,
   ParseUUIDPipe,
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { TournamentsQueryService } from './tournaments-query.service';
-import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
@@ -22,8 +20,6 @@ export class TournamentsQueryController {
   constructor(private readonly queryService: TournamentsQueryService) {}
 
   @Get()
-  @UseInterceptors(CacheInterceptor)
-  @CacheTTL(30000)
   @ApiOperation({ summary: 'Отримати список всіх турнірів' })
   findAll(@Query() query: TournamentQueryDto) {
     return this.queryService.findAll(query);

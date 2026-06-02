@@ -1,12 +1,17 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GenerateTestTournamentDto } from './dto/generate-test-tournament.dto';
 import type { TournamentStatus, WorkflowMode } from './tournaments.types';
 import { TournamentsWorkflowLogic } from './tournaments-workflow.logic';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 
 @Injectable()
 export class TournamentsWorkflowService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+  ) {}
 
   async generateTestTournament(dto: GenerateTestTournamentDto, userId: string) {
     // 1. Отримуємо гру
@@ -34,6 +39,12 @@ export class TournamentsWorkflowService {
     const tournament = await this.prisma.tournament.create({
       data: payload,
     });
+
+    // Очищаємо кеш після створення тестового турніру
+    await this.cacheManager.del('/tournaments/workflow');
+    await this.cacheManager.del('/tournaments/workflow?workflow=generation');
+    await this.cacheManager.del('/tournaments/workflow?workflow=simulation');
+    await this.cacheManager.del('/tournaments');
 
     return {
       message: `Турнір '${payload.title}' на '${payload.maxParticipants}' команд успішно створено.`,

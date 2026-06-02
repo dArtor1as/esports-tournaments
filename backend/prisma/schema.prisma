@@ -219,6 +219,12 @@ model Tournament {
   updatedAt    DateTime @updatedAt
 
   isPublic     Boolean  @default(true) // тип реєстрації: true = відкрита, false = за інвайтами
+
+  // Окремі індекси для динамічних фільтрів
+  @@index([status])
+  @@index([tier])
+  @@index([region])
+  @@index([gameId])
   
   participants TournamentParticipant[]
   matches      Match[]

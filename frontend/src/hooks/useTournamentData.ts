@@ -3,8 +3,12 @@ import { api } from '@/lib/api';
 
 export function useTournamentDetailsData(tournamentId?: string) {
   // 1. Деталі турніру
-  const { data: tournament, isLoading: isTournamentLoading } = useQuery({
-    queryKey: ['tournamentDetails', tournamentId],
+  const {
+    data: tournament,
+    isLoading: isTournamentLoading,
+    refetch: refetchTournament,
+  } = useQuery({
+    queryKey: ['tournamentDetails', tournamentId], // Ось твій справжній ключ!
     queryFn: async () => (await api.get(`/tournaments/${tournamentId}`)).data,
     enabled: !!tournamentId,
   });
@@ -36,6 +40,7 @@ export function useTournamentDetailsData(tournamentId?: string) {
     participants,
     matches,
     refetchMatches,
+    refetchTournament,
     isLoading: isTournamentLoading || isParticipantsLoading || isMatchesLoading,
   };
 }

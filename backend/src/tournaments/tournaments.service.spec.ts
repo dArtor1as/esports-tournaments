@@ -3,7 +3,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Prisma, Role } from '@prisma/client';
 import { mock, MockProxy, mockDeep, DeepMockProxy } from 'jest-mock-extended';
-import type { Cache } from 'cache-manager';
 import { TournamentsService } from './tournaments.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AccessPolicyService } from '../auth/access-policy.service';
@@ -15,6 +14,7 @@ describe('TournamentsService', () => {
   let prisma: DeepMockProxy<PrismaService>;
   let accessPolicy: MockProxy<AccessPolicyService>;
   let statsService: MockProxy<StatsService>;
+  let cacheManager: MockProxy<Cache>;
 
   const user: JwtPayload = {
     userId: 'user-1',
@@ -26,6 +26,7 @@ describe('TournamentsService', () => {
     prisma = mockDeep<PrismaService>();
     accessPolicy = mock<AccessPolicyService>();
     statsService = mock<StatsService>();
+    cacheManager = mock<Cache>();
 
     prisma.$transaction.mockImplementation(async (callback) =>
       callback(prisma as never),
@@ -37,7 +38,7 @@ describe('TournamentsService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: AccessPolicyService, useValue: accessPolicy },
         { provide: StatsService, useValue: statsService },
-        { provide: CACHE_MANAGER, useValue: {} },
+        { provide: CACHE_MANAGER, useValue: cacheManager },
       ],
     }).compile();
 
@@ -50,7 +51,6 @@ describe('TournamentsService', () => {
 
   it('creates tournament when game exists', async () => {
     prisma.game.findUnique.mockResolvedValueOnce({ id: 'game-1' } as never);
-    // Виправлено: Мокаємо повернення створеного турніру
     prisma.tournament.create.mockResolvedValueOnce({ id: 't1' } as never);
     const createSpy = jest.spyOn(prisma.tournament, 'create');
 
@@ -61,7 +61,7 @@ describe('TournamentsService', () => {
           gameId: 'game-1',
           tier: 2,
           isPublic: true,
-          kFactor: 0.6, // Виправлено помилку типізації DTO
+          kFactor: 0.6,
         },
         'user-1',
       ),
@@ -91,7 +91,7 @@ describe('TournamentsService', () => {
           gameId: 'game-1',
           tier: 3,
           isPublic: true,
-          kFactor: 0.3, // Виправлено помилку типізації DTO
+          kFactor: 0.3,
         },
         'user-1',
       ),
@@ -156,7 +156,7 @@ describe('TournamentsService', () => {
       status: 'live',
       matches: [{ isProcessed: true }],
     } as never);
-    // Виправлено: Мокаємо повернення оновленого турніру
+    //  Мокаємо повернення оновленого турніру
     prisma.tournament.update.mockResolvedValueOnce({
       id: 't1',
       status: 'finished',
@@ -192,7 +192,7 @@ describe('TournamentsService', () => {
   it('throws when finishing an already finished or cancelled tournament', async () => {
     prisma.tournament.findUnique.mockResolvedValueOnce({
       id: 't1',
-      status: 'finished', // Покриваємо рядок 146
+      status: 'finished',
       matches: [],
     } as never);
 

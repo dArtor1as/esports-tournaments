@@ -9,7 +9,7 @@ import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
-import { MatchesGenerationLogic } from './matches-generation.logic'; // 👈 ІМПОРТ ЛОГІКИ
+import { MatchesGenerationLogic } from './matches-generation.logic';
 
 @Injectable()
 export class MatchesGeneratorService {
@@ -65,25 +65,26 @@ export class MatchesGeneratorService {
       tournamentId,
     );
 
-    // 3. Side-effects (Кеш)
+    // 3. Делегування (Router)
+    const result =
+      settingsData.bracketType === 'DOUBLE_ELIMINATION'
+        ? await this.doubleEliminationGenerator.generate(
+            tournamentId,
+            teamCount,
+            selectedParticipants,
+            tournament.format,
+          )
+        : await this.singleEliminationGenerator.generate(
+            tournamentId,
+            teamCount,
+            selectedParticipants,
+            tournament.format,
+          );
+
+    // 4. Очищаємо кеш після збереження в БД
     await this.clearGenerationCaches(tournamentId);
 
-    // 4. Делегування (Router)
-    if (settingsData.bracketType === 'DOUBLE_ELIMINATION') {
-      return this.doubleEliminationGenerator.generate(
-        tournamentId,
-        teamCount,
-        selectedParticipants,
-        tournament.format,
-      );
-    }
-
-    return this.singleEliminationGenerator.generate(
-      tournamentId,
-      teamCount,
-      selectedParticipants,
-      tournament.format,
-    );
+    return result;
   }
 
   // Делегує генерацію кругової системи (Round Robin) для групового етапу
@@ -125,16 +126,18 @@ export class MatchesGeneratorService {
 
     const selectedParticipants = participants.slice(0, teamCount);
 
-    // 3. Side-effects (Кеш)
-    await this.clearGenerationCaches(tournamentId);
-
-    // 4. Делегування (Router)
-    return this.groupStageGenerator.generate(
+    //3. Делегування (Router)
+    const result = await this.groupStageGenerator.generate(
       tournamentId,
       teamCount,
       selectedParticipants,
       tournament.format,
       effectiveGroupCount,
     );
+
+    // 4. Очищаємо кеш після збереження в БД
+    await this.clearGenerationCaches(tournamentId);
+
+    return result;
   }
 }

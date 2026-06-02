@@ -2,12 +2,15 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  Inject,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, Stage, Match } from '@prisma/client';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { MatchesProgressionLogic } from './matches-progression.logic';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 
 @Injectable()
 export class MatchesProgressionService {
@@ -15,7 +18,15 @@ export class MatchesProgressionService {
     private prisma: PrismaService,
     private accessPolicy: AccessPolicyService,
     private progressionLogic: MatchesProgressionLogic,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
+
+  private async clearTournamentCaches(tournamentId: string) {
+    await this.cacheManager.del(`/matches/tournament/${tournamentId}`);
+    await this.cacheManager.del(`/tournaments/${tournamentId}`);
+    await this.cacheManager.del('/tournaments/workflow?workflow=generation');
+    await this.cacheManager.del('/tournaments/workflow?workflow=simulation');
+  }
 
   public async finalizeMatchProgression(
     prismaTx: Prisma.TransactionClient,
@@ -142,6 +153,8 @@ export class MatchesProgressionService {
         });
       }),
     );
+
+    await this.clearTournamentCaches(tournamentId);
 
     return {
       message:

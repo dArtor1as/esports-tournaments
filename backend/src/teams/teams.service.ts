@@ -23,6 +23,14 @@ export class TeamsService {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
+  private async clearTeamCaches(teamId?: string) {
+    await this.cacheManager.del('all_teams');
+    await this.cacheManager.del('all_players');
+    if (teamId) {
+      await this.cacheManager.del(`/teams/${teamId}`);
+    }
+  }
+
   // метод для перерахунку прапора
   async recalculateTeamCountry(teamId: string) {
     const team = await this.prisma.team.findUnique({
@@ -97,6 +105,7 @@ export class TeamsService {
       throw new ConflictException('Команда з такою назвою або тегом вже існує');
 
     return this.prisma.$transaction(async (prisma) => {
+      const isSolo = captain.game.minTeamSize === 1;
       // Створюємо команду і записуємо капітана
       const newTeam = await prisma.team.create({
         data: {
@@ -105,10 +114,9 @@ export class TeamsService {
           gameId: captain.gameId,
           region: createTeamDto.region || 'GLOBAL',
           captainId: captain.id,
-          // беремо рейтинг капітана як початковий середній рейтинг команди
-          averageRating: captain.rating,
-          tier: TierHelper.calculateTier(captain.rating),
-          isComplete: captain.game.minTeamSize === 1,
+          averageRating: isSolo ? captain.rating : 0,
+          tier: isSolo ? TierHelper.calculateTier(captain.rating) : 3,
+          isComplete: isSolo,
         },
       });
 
@@ -118,7 +126,7 @@ export class TeamsService {
         data: { teamId: newTeam.id, teamRole: 'CAPTAIN' },
       });
 
-      await this.cacheManager.del('all_teams'); // Очищаємо кеш при створенні нової команди
+      await this.clearTeamCaches(); // Очищаємо кеш при створенні нової команди
 
       return newTeam;
     });
@@ -236,9 +244,36 @@ export class TeamsService {
       data: { teamRole: newRole },
     });
 
-    //очищаємо кеш, оскільки змінився склад команди
-    await this.cacheManager.del('all_teams');
-    await this.cacheManager.del('all_players');
+    // 2. ДІСТАЄМО ОНОВЛЕНИЙ СКЛАД І ПЕРЕВІРЯЄМО КІЛЬКІСТЬ
+    const updatedPlayers = await this.prisma.player.findMany({
+      where: { teamId },
+    });
+
+    const activeCount = updatedPlayers.filter(
+      (p) => p.teamRole === 'PLAYER' || p.teamRole === 'CAPTAIN',
+    ).length;
+
+    // Отримуємо гру, щоб знати minTeamSize (наприклад, 5 для CS2)
+    const teamData = await this.prisma.team.findUnique({
+      where: { id: teamId },
+      include: { game: true },
+    });
+
+    // 3. ЗМІНЮЄМО СТАТУС КОМАНДИ В БД
+    if (teamData) {
+      // Чи достатньо зараз гравців для повного складу?
+      const isNowComplete = activeCount >= teamData.game.minTeamSize;
+
+      // Якщо поточний статус в БД відрізняється від реального — оновлюємо
+      if (teamData.isComplete !== isNowComplete) {
+        await this.prisma.team.update({
+          where: { id: teamId },
+          data: { isComplete: isNowComplete },
+        });
+      }
+    }
+    // 4. Очищаємо кеш
+    await this.clearTeamCaches(teamId);
 
     return { message: 'Роль гравця успішно оновлена', newRole };
   }

@@ -13,14 +13,21 @@ import TournamentParticipantsTab from '@/components/tournament/TournamentPartici
 import TournamentGaSimulatorTab from '@/components/tournament/TournamentGaSimulatorTab';
 import GaResultsTab from '@/components/tournament/GaResultsTab';
 import { useMyProfilesData } from '@/hooks/useProfileData';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function TournamentDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
 
-  const { tournament, participants, matches, refetchMatches, isLoading } =
-    useTournamentDetailsData(id);
+  const {
+    tournament,
+    participants,
+    matches,
+    refetchMatches,
+    refetchTournament,
+    isLoading,
+  } = useTournamentDetailsData(id);
 
   const [activeTab, setActiveTab] = useState('bracket');
   const [populations, setPopulations] = useState('100');
@@ -80,6 +87,9 @@ export default function TournamentDetails() {
       });
 
       await refetchMatches();
+      await refetchTournament();
+      await queryClient.invalidateQueries({ queryKey: ['tournament', id] });
+      await queryClient.invalidateQueries({ queryKey: ['tournaments'] });
       toast.success('Турнірну сітку успішно сформовано!');
     } catch (err: any) {
       toast.error(
@@ -115,6 +125,9 @@ export default function TournamentDetails() {
       } else {
         toast.success('Матчі етапу успішно симульовано в LIVE!');
         await refetchMatches();
+        await refetchTournament();
+        await queryClient.invalidateQueries({ queryKey: ['tournament'] });
+        await queryClient.invalidateQueries({ queryKey: ['tournaments'] });
       }
 
       setActiveTab('ga-forecast-results'); // Завжди перекидаємо на вкладку результатів, щоб показати Фітнес
@@ -188,6 +201,8 @@ export default function TournamentDetails() {
       });
 
       await refetchMatches();
+      await refetchTournament();
+      await queryClient.invalidateQueries({ queryKey: ['tournament', id] });
       toast.success('Сітку Плей-оф успішно сформовано з лідерів груп!');
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Помилка переходу до Плей-оф');
@@ -199,8 +214,11 @@ export default function TournamentDetails() {
   const handleFinishTournament = async () => {
     try {
       await api.post(`/tournaments/${id}/finish`);
+      await refetchMatches();
+      await refetchTournament();
+      await queryClient.invalidateQueries({ queryKey: ['tournament', id] });
+      await queryClient.invalidateQueries({ queryKey: ['tournaments'] }); // щоб оновився і головний список
       toast.success('Турнір успішно завершено!');
-      window.location.reload();
     } catch (err: any) {
       toast.error(
         err.response?.data?.message || 'Помилка при завершенні турніру',
@@ -218,11 +236,17 @@ export default function TournamentDetails() {
     myTeamIds.includes(p.teamId),
   );
 
+  const queryClient = useQueryClient();
+
   // 1. МЕТОД ДЛЯ СКАСУВАННЯ (SOFT DELETE)
   const handleCancelTournament = async () => {
     try {
       await api.patch(`/tournaments/${tournament.id}/cancel`);
-
+      await refetchMatches();
+      await refetchTournament();
+      // Скидаємо кеш перед переходом
+      await queryClient.invalidateQueries({ queryKey: ['tournament', id] });
+      await queryClient.invalidateQueries({ queryKey: ['tournaments'] });
       toast.success('Турнір успішно скасовано. Незіграні матчі анульовано.');
       navigate('/'); // Редирект на головну сторінку
     } catch (err: any) {
