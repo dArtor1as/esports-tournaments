@@ -24,6 +24,11 @@ export type StageCountResult = {
   _count: { _all: number };
 };
 
+export type PlayedCountResult = {
+  tournamentId: string;
+  _count: { _all: number };
+};
+
 export class TournamentsWorkflowLogic {
   // 1. Білдер: Формує гігантський об'єкт для збереження турніру за 1 запит
   static buildTestTournamentPayload(
@@ -111,6 +116,7 @@ export class TournamentsWorkflowLogic {
   static formatWorkflowView(
     tournaments: TournamentWorkflowView[],
     stageCounts: StageCountResult[],
+    playedCounts: PlayedCountResult[] = [],
     workflow?: WorkflowMode,
   ) {
     const countsMap = new Map<
@@ -129,13 +135,27 @@ export class TournamentsWorkflowLogic {
       countsMap.set(row.tournamentId, existing);
     }
 
+    const playedMap = new Map<string, number>();
+    for (const row of playedCounts) {
+      playedMap.set(row.tournamentId, row._count._all);
+    }
     const workflowView = tournaments.map((tournament) => {
       const matches = countsMap.get(tournament.id) ?? {
         groupMatches: 0,
         playoffMatches: 0,
       };
+      const playedMatches = playedMap.get(tournament.id) ?? 0;
       const hasGeneratedGrid =
         matches.groupMatches + matches.playoffMatches > 0;
+
+      const isReadyForBracket =
+        tournament.status === 'planned' &&
+        tournament._count.participants >= tournament.maxParticipants;
+
+      const requiresTransitionToPlayoffs =
+        tournament.status === 'live' &&
+        matches.groupMatches > 0 &&
+        matches.playoffMatches === 0;
 
       return {
         id: tournament.id,
@@ -143,16 +163,21 @@ export class TournamentsWorkflowLogic {
         status: tournament.status,
         format: tournament.format,
         gameName: tournament.game.name,
+        createdAt: tournament.createdAt,
         participantsCount: tournament._count.participants,
+        maxParticipants: tournament.maxParticipants,
         totalMatches: tournament._count.matches,
+        playedMatches: playedMatches,
         groupMatches: matches.groupMatches,
         playoffMatches: matches.playoffMatches,
         canGenerateBracket:
-          tournament.status === 'planned' ||
-          (matches.groupMatches > 0 && matches.playoffMatches === 0),
+          (isReadyForBracket && !hasGeneratedGrid) ||
+          requiresTransitionToPlayoffs, // Можна генерувати, якщо готовий і ще не згенеровано
         hasGeneratedGrid,
         requiresTransitionToPlayoffs:
-          matches.groupMatches > 0 && matches.playoffMatches === 0,
+          tournament.status === 'live' &&
+          matches.groupMatches > 0 &&
+          matches.playoffMatches === 0,
       };
     });
 

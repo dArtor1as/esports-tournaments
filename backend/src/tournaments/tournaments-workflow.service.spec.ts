@@ -47,11 +47,13 @@ describe('TournamentsWorkflowService', () => {
         } as never,
       ]);
 
-      // Використовуємо jest.Mock, щоб обійти баг типізації Prisma groupBy
-      (prisma.match.groupBy as jest.Mock).mockResolvedValueOnce([
-        { tournamentId: 't1', stage: Stage.GROUP, _count: { _all: 24 } },
-        { tournamentId: 't1', stage: Stage.PLAYOFF, _count: { _all: 6 } },
-      ]);
+      // двічі викликаємо mockResolvedValueOnce
+      (prisma.match.groupBy as jest.Mock)
+        .mockResolvedValueOnce([
+          { tournamentId: 't1', stage: Stage.GROUP, _count: { _all: 24 } },
+          { tournamentId: 't1', stage: Stage.PLAYOFF, _count: { _all: 6 } },
+        ])
+        .mockResolvedValueOnce([{ tournamentId: 't1', _count: { _all: 30 } }]);
 
       const result = await service.findWorkflow('simulation');
 
@@ -78,9 +80,12 @@ describe('TournamentsWorkflowService', () => {
         } as never,
       ]);
 
-      (prisma.match.groupBy as jest.Mock).mockResolvedValueOnce([
-        { tournamentId: 't2', stage: Stage.GROUP, _count: { _all: 24 } },
-      ]);
+      // двічі викликаємо mockResolvedValueOnce
+      (prisma.match.groupBy as jest.Mock)
+        .mockResolvedValueOnce([
+          { tournamentId: 't2', stage: Stage.GROUP, _count: { _all: 24 } },
+        ])
+        .mockResolvedValueOnce([{ tournamentId: 't2', _count: { _all: 24 } }]);
 
       const result = await service.findWorkflow('generation');
 
@@ -93,13 +98,17 @@ describe('TournamentsWorkflowService', () => {
         playoffMatches: 0,
       });
     });
+
     it('filters by valid status without throwing', async () => {
       prisma.tournament.findMany.mockResolvedValueOnce([]);
-      (prisma.match.groupBy as jest.Mock).mockResolvedValueOnce([]);
+
+      // двічі викликаємо mockResolvedValueOnce
+      (prisma.match.groupBy as jest.Mock)
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
 
       const result = await service.findWorkflow(undefined, 'planned');
 
-      // Перевіряємо, що where сформувався правильно
       expect(prisma.tournament.findMany.mock.calls[0][0]).toMatchObject({
         where: { status: 'planned' },
       });
@@ -108,7 +117,11 @@ describe('TournamentsWorkflowService', () => {
 
     it('returns all when no filters applied', async () => {
       prisma.tournament.findMany.mockResolvedValueOnce([]);
-      (prisma.match.groupBy as jest.Mock).mockResolvedValueOnce([]);
+
+      // двічі викликаємо mockResolvedValueOnce
+      (prisma.match.groupBy as jest.Mock)
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
 
       await service.findWorkflow(undefined, undefined);
 

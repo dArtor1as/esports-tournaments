@@ -97,11 +97,24 @@ export class TournamentsWorkflowService {
             _count: { _all: true },
           })
         : [];
+    // Рахуємо тільки реально завершені (зіграні) матчі
+    const playedCounts =
+      tournamentIds.length > 0
+        ? await this.prisma.match.groupBy({
+            by: ['tournamentId'],
+            where: {
+              tournamentId: { in: tournamentIds },
+              matchStatus: 'COMPLETED',
+            },
+            _count: { _all: true },
+          })
+        : [];
 
     // 3. Делегуємо мапінг у чисту функцію
     return TournamentsWorkflowLogic.formatWorkflowView(
       tournaments,
       stageCounts,
+      playedCounts,
       workflow as WorkflowMode,
     );
   }

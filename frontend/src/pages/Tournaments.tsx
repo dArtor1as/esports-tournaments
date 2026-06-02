@@ -185,7 +185,6 @@ export default function Tournaments() {
 
           {/* Кнопки створення (Автофіл і Стандартний) */}
           <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            {isAdmin && <TournamentFormModal mode="test" />}
             {user && <TournamentFormModal mode="standard" />}
           </div>
         </div>

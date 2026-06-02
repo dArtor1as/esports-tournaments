@@ -12,9 +12,9 @@ import { TournamentsWorkflowLogic } from './tournaments-workflow.logic';
 @Module({
   imports: [StatsModule],
   controllers: [
+    TournamentsWorkflowController, // Адмін-логіка (Workflow, Test Gen)
     TournamentsController, // Мутації (Create, Update, Delete, Cancel)
     TournamentsQueryController, // Читання (Find, Search)
-    TournamentsWorkflowController, // Адмін-логіка (Workflow, Test Gen)
   ],
   providers: [
     TournamentsService,

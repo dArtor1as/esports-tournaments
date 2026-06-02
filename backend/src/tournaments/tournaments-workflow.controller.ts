@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Query,
-  UseGuards,
-  UseInterceptors,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -19,7 +11,6 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { GenerateTestTournamentDto } from './dto/generate-test-tournament.dto';
 import { Throttle } from '@nestjs/throttler';
-import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import type { WorkflowMode, TournamentStatus } from './tournaments.types';
 
 @ApiTags('Tournaments (Генерація та Аналітика)')
@@ -30,8 +21,6 @@ export class TournamentsWorkflowController {
   constructor(private readonly workflowService: TournamentsWorkflowService) {}
 
   @Get('workflow')
-  @UseInterceptors(CacheInterceptor)
-  @CacheTTL(30000)
   @ApiOperation({ summary: 'Агрегація даних для організатора (Workflow)' })
   @ApiQuery({
     name: 'workflow',
