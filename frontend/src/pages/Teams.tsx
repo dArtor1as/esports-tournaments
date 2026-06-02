@@ -88,7 +88,7 @@ export default function Teams() {
         <div className="flex items-center justify-between border-b border-slate-800 pb-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-esports-primary/10 rounded-lg">
-              <Trophy size={20} className="text-esports-primary" />
+              <Trophy size={20} className="text-yellow-500" />
             </div>
             <div>
               <h2 className="text-xl font-black text-white tracking-wide uppercase">

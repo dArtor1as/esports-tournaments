@@ -1,10 +1,12 @@
 // 1. Налаштування генератора та підключення до БД
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
   provider = "postgresql"
+  extensions = [pg_trgm]
 }
 
 // ------------------------------------------------------
@@ -117,6 +119,8 @@ model Player {
   inGameRole String? // Наприклад: "SNIPER", "IGL", "POS_1", "POS_5"
   teamRole    RosterRole? // "CAPTAIN", "PLAYER", "COACH", "SUBSTITUTE" - для турнірного складу
   stats Json? // Додаткові статистичні дані (кількість ігор, K/D, улюблені герої тощо)
+  @@index([gameId])
+  @@index([nickname(ops: raw("gin_trgm_ops"))], type: Gin)
 
   @@unique([userId, gameId]) // Юзер не може мати два профілі для однієї ігри!
   @@index([rating])
@@ -157,6 +161,15 @@ model Team {
   tournaments   TournamentParticipant[]
   matchesAsA    Match[] @relation("TeamAMatches")
   matchesAsB    Match[] @relation("TeamBMatches")
+
+  @@index([tier])
+  @@index([region])
+  @@index([status])
+  @@index([isComplete])
+  @@index([gameId])
+
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin)
+  @@index([tag(ops: raw("gin_trgm_ops"))], type: Gin)
 
   teamInvites         TeamInvitation[]       // Запрошення гравців у цю команду
   tournamentInvites   TournamentInvitation[] // Запрошення цієї команди на турніри
@@ -225,6 +238,7 @@ model Tournament {
   @@index([tier])
   @@index([region])
   @@index([gameId])
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin)
   
   participants TournamentParticipant[]
   matches      Match[]
