@@ -9,17 +9,33 @@ export class LeaderboardsService {
   constructor(private prisma: PrismaService) {}
 
   async getTeamsLeaderboard(query: LeaderboardQueryDto) {
-    const whereCondition = {
-      status: 'ACTIVE',
+    const whereCondition: Prisma.TeamWhereInput = {
+      status: 'ACTIVE', // Показуємо тільки активні команди
       ...(query.region && { region: query.region }),
       ...(query.gameSlug && { game: { slug: query.gameSlug } }),
+      ...(query.tier && { tier: query.tier }),
+      ...(query.isComplete !== undefined && {
+        isComplete: query.isComplete === 'true',
+      }),
     };
+
+    // Гнучкий пошук: шукаємо збіг або в імені, або в тегу
+    if (query.search) {
+      whereCondition.OR = [
+        { name: { contains: query.search, mode: 'insensitive' } },
+        { tag: { contains: query.search, mode: 'insensitive' } },
+      ];
+    }
 
     return paginate<Team>(
       this.prisma.team,
       whereCondition,
       query,
-      { game: true },
+      {
+        game: true,
+        // Додаємо селект гравців, щоб рахувати їх кількість на фронті
+        players: { select: { id: true, nickname: true, teamRole: true } },
+      },
       {
         averageRating: 'desc',
       },

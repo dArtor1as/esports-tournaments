@@ -326,16 +326,37 @@ describe('TeamsService', () => {
     });
 
     it('успішно оновлює роль гравця', async () => {
+      // 1. Перший виклик: пошук команди для перевірки доступу
       prisma.team.findUnique.mockResolvedValueOnce({
         id: 't1',
         captainId: 'p-capt',
         captain: { userId: 'u1' },
       } as never);
+
+      // 2. Пошук гравця
       prisma.player.findUnique.mockResolvedValueOnce({
         id: 'p1',
         teamId: 't1',
         teamRole: 'PLAYER',
       } as never);
+
+      prisma.player.update.mockResolvedValueOnce({} as never);
+
+      // 3. Мокаємо findMany для перерахунку активних гравців
+      prisma.player.findMany.mockResolvedValueOnce([
+        { id: 'p1', teamRole: 'SUBSTITUTE' },
+        { id: 'p-capt', teamRole: 'CAPTAIN' },
+      ] as never);
+
+      // 4. Другий виклик findUnique для отримання minTeamSize
+      prisma.team.findUnique.mockResolvedValueOnce({
+        id: 't1',
+        isComplete: true,
+        game: { minTeamSize: 5 },
+      } as never);
+
+      // Мокаємо update для команди, якщо раптом isComplete змінюється
+      prisma.team.update.mockResolvedValueOnce({} as never);
 
       await service.updatePlayerTeamRole(
         't1',

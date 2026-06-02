@@ -66,22 +66,20 @@ export class MatchesGeneratorService {
     );
 
     // 3. Делегування (Router)
-    let result;
-    if (settingsData.bracketType === 'DOUBLE_ELIMINATION') {
-      result = await this.doubleEliminationGenerator.generate(
-        tournamentId,
-        teamCount,
-        selectedParticipants,
-        tournament.format,
-      );
-    } else {
-      result = await this.singleEliminationGenerator.generate(
-        tournamentId,
-        teamCount,
-        selectedParticipants,
-        tournament.format,
-      );
-    }
+    const result =
+      settingsData.bracketType === 'DOUBLE_ELIMINATION'
+        ? await this.doubleEliminationGenerator.generate(
+            tournamentId,
+            teamCount,
+            selectedParticipants,
+            tournament.format,
+          )
+        : await this.singleEliminationGenerator.generate(
+            tournamentId,
+            teamCount,
+            selectedParticipants,
+            tournament.format,
+          );
 
     // 4. Очищаємо кеш після збереження в БД
     await this.clearGenerationCaches(tournamentId);
@@ -128,16 +126,15 @@ export class MatchesGeneratorService {
 
     const selectedParticipants = participants.slice(0, teamCount);
 
-    let result;
-
-    // 3. Делегування (Router)
-    result = await this.groupStageGenerator.generate(
+    //3. Делегування (Router)
+    const result = await this.groupStageGenerator.generate(
       tournamentId,
       teamCount,
       selectedParticipants,
       tournament.format,
       effectiveGroupCount,
     );
+
     // 4. Очищаємо кеш після збереження в БД
     await this.clearGenerationCaches(tournamentId);
 

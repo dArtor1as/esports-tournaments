@@ -11,7 +11,7 @@ export class LeaderboardsController {
 
   @Get('teams')
   @UseInterceptors(CacheInterceptor)
-  @CacheTTL(60000) // Кешуємо на 1 хвилину
+  @CacheTTL(3000) // Кешуємо на 3 секунди, щоб зменшити навантаження при частих запитах
   @ApiOperation({
     summary: 'Глобальний рейтинг команд (з пагінацією та фільтрами)',
   })
@@ -21,7 +21,7 @@ export class LeaderboardsController {
 
   @Get('players')
   @UseInterceptors(CacheInterceptor)
-  @CacheTTL(60000)
+  @CacheTTL(3000) // Кешуємо на 3 секунди, щоб зменшити навантаження при частих запитах
   @ApiOperation({
     summary: 'Глобальний рейтинг гравців (з пагінацією та фільтрами)',
   })

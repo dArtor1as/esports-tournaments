@@ -43,7 +43,13 @@ describe('LeaderboardsService', () => {
       // paginate(prisma.team, where, query, include, orderBy)
       const callArgs = paginateSpy.mock.calls[0];
       expect(callArgs[1]).toEqual({ status: 'ACTIVE' }); // where
-      expect(callArgs[3]).toEqual({ game: true }); // include
+
+      // уточнюємо, що include та orderBy передаються з правильними параметрами
+      expect(callArgs[3]).toEqual({
+        game: true,
+        players: { select: { id: true, nickname: true, teamRole: true } },
+      });
+
       expect(callArgs[4]).toEqual({ averageRating: 'desc' }); // orderBy
     });
 

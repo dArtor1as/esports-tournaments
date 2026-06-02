@@ -41,8 +41,17 @@ export default function TeamRosterCard({
       await api.patch(`/teams/${team.id}/players/${player.id}/role`, {
         teamRole: newRole,
       });
-      toast.success('Роль гравця успішно оновлено');
-      queryClient.invalidateQueries({ queryKey: ['teamProfile', team.id] });
+
+      // Оновлюємо поточну сторінку
+      await queryClient.invalidateQueries({
+        queryKey: ['teamProfile', team.id],
+      });
+      // оновлюємо список команд, щоб відобразити зміни в лідерборді
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['allTeams'] });
+      }, 3100);
+
+      toast.success('Роль гравця успішно оновлена');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Помилка при зміні ролі');
     }
