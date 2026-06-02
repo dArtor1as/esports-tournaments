@@ -14,6 +14,8 @@ import TournamentDetails from './pages/TournamentDetails';
 import MatchRoom from './pages/MatchRoom';
 import Inbox from './pages/Inbox';
 import Leaderboard from './pages/Leaderboard';
+import AdminWorkflow from './pages/AdminWorkflow';
+import MyTournaments from './pages/MyTournaments';
 
 function App() {
   return (
@@ -37,6 +39,8 @@ function App() {
               <Route path="profile/:id" element={<Profile />} />
               <Route path="invite/team" element={<AcceptTeamInvite />} />
               <Route path="invite/tournament" element={<Inbox />} />
+              <Route path="my-tournaments" element={<MyTournaments />} />
+              <Route path="admin/workflow" element={<AdminWorkflow />} />
             </Route>
           </Route>
         </Routes>

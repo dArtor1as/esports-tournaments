@@ -122,7 +122,7 @@ describe('TournamentsWorkflowLogic', () => {
         status: 'planned',
         format: 'TEAM' as TournamentFormat,
         game: { name: 'CS2' },
-        _count: { participants: 8, matches: 0 },
+        _count: { participants: 16, matches: 0 },
         gameId: 'g1',
         tier: 1,
         region: 'GLOBAL',
@@ -164,6 +164,7 @@ describe('TournamentsWorkflowLogic', () => {
       const result = TournamentsWorkflowLogic.formatWorkflowView(
         mockTournaments as unknown as TournamentWorkflowView[],
         mockCounts,
+        [],
         'generation',
       );
 
@@ -178,6 +179,7 @@ describe('TournamentsWorkflowLogic', () => {
       const result = TournamentsWorkflowLogic.formatWorkflowView(
         mockTournaments as unknown as TournamentWorkflowView[],
         mockCounts,
+        [],
       );
 
       expect(result).toHaveLength(2); // Має повернути всі без фільтрації
@@ -187,6 +189,7 @@ describe('TournamentsWorkflowLogic', () => {
       const result = TournamentsWorkflowLogic.formatWorkflowView(
         mockTournaments as unknown as TournamentWorkflowView[],
         mockCounts,
+        [],
         'simulation',
       );
 

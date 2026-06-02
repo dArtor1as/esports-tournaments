@@ -100,13 +100,15 @@ export default function TournamentFormModal({
 
       await api.post(endpoint, payload);
 
+      await queryClient.invalidateQueries({ queryKey: ['tournaments'] });
+      await queryClient.invalidateQueries({ queryKey: ['adminWorkflow'] });
+
       toast.success(
         isTest
           ? 'Тестовий турнір успішно згенеровано з командами!'
           : 'Турнір успішно створено!',
       );
       setIsOpen(false);
-      await queryClient.refetchQueries({ queryKey: ['tournaments'] });
       setTitle('');
     } catch (err: any) {
       toast.error(

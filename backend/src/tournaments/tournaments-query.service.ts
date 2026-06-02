@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { paginate } from 'common/utils/paginate.util';
-import { PaginationQueryDto } from 'common/dto/pagination-query.dto';
 import { TournamentQueryDto } from './dto/tournament-query.dto';
 import { Prisma } from '@prisma/client';
 
@@ -41,14 +40,26 @@ export class TournamentsQueryService {
   }
 
   // 2. Мої турніри (як Організатора)
-  async findMyTournaments(userId: string, query: PaginationQueryDto) {
+  async findMyTournaments(userId: string, query: TournamentQueryDto) {
+    // Формуємо гнучкий фільтр
+    const where: Prisma.TournamentWhereInput = {
+      creatorId: userId,
+      ...(query.status && query.status !== 'all' && { status: query.status }),
+    };
+
     return paginate(
       this.prisma.tournament,
-      { creatorId: userId },
+      where,
       query,
       {
         game: { select: { name: true, slug: true } },
         _count: { select: { participants: true, matches: true } },
+        // Шукаємо чи є конфліктні матчі (статус DISPUTED) для визначення прапорця "Потребує уваги"
+        matches: {
+          where: { matchStatus: 'DISPUTED' },
+          take: 1,
+          select: { id: true, matchStatus: true },
+        },
       },
       { createdAt: 'desc' },
     );

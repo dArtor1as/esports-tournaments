@@ -87,6 +87,11 @@ describe('TournamentsQueryService', () => {
       {
         game: { select: { name: true, slug: true } },
         _count: { select: { participants: true, matches: true } },
+        matches: {
+          where: { matchStatus: 'DISPUTED' },
+          take: 1,
+          select: { id: true, matchStatus: true },
+        },
       },
       { createdAt: 'desc' },
     );
