@@ -4,10 +4,15 @@ import { Stage } from '@prisma/client';
 import { TournamentsWorkflowService } from './tournaments-workflow.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 describe('TournamentsWorkflowService', () => {
   let service: TournamentsWorkflowService;
   let prisma: DeepMockProxy<PrismaService>;
+
+  const mockCacheManager = {
+    del: jest.fn().mockResolvedValue(undefined),
+  };
 
   beforeEach(async () => {
     prisma = mockDeep<PrismaService>();
@@ -16,6 +21,7 @@ describe('TournamentsWorkflowService', () => {
       providers: [
         TournamentsWorkflowService,
         { provide: PrismaService, useValue: prisma },
+        { provide: CACHE_MANAGER, useValue: mockCacheManager },
       ],
     }).compile();
 

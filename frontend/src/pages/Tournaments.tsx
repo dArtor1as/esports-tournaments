@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -11,9 +10,11 @@ import {
   Lock,
   Unlock,
   FilterX,
+  Search,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -22,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import TournamentFormModal from '@/components/tournament/TournamentFormModal';
+import { useState, useEffect } from 'react';
 
 type TournamentStatus = 'planned' | 'live' | 'finished' | 'cancelled';
 const REGIONS = ['EU', 'NA', 'CIS', 'ASIA', 'SA', 'GLOBAL'];
@@ -29,15 +31,46 @@ const REGIONS = ['EU', 'NA', 'CIS', 'ASIA', 'SA', 'GLOBAL'];
 export default function Tournaments() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // Стани фільтрів
-  const [statusFilter, setStatusFilter] = useState<TournamentStatus | 'all'>(
-    'planned',
-  );
-  const [gameSlug, setGameSlug] = useState<string>('all');
-  const [tier, setTier] = useState<string>('all');
-  const [region, setRegion] = useState<string>('all');
-  const [isPublic, setIsPublic] = useState<string>('all');
+  // Зчитуємо значення з URL, якщо їх немає — ставимо дефолтні
+  const statusFilter =
+    (searchParams.get('status') as TournamentStatus | 'all') || 'planned';
+  const gameSlug = searchParams.get('gameSlug') || 'all';
+  const tier = searchParams.get('tier') || 'all';
+  const region = searchParams.get('region') || 'all';
+  const isPublic = searchParams.get('isPublic') || 'all';
+  const titleParam = searchParams.get('title') || '';
+
+  // Єдина функція для оновлення параметрів в URL
+  const updateFilter = (key: string, value: string) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (value === 'all' && key !== 'status') {
+      newParams.delete(key); // видаляємо параметр, якщо обрано "Всі", щоб URL був чистим
+    } else {
+      newParams.set(key, value);
+    }
+    setSearchParams(newParams);
+  };
+
+  const [searchValue, setSearchValue] = useState(titleParam);
+
+  // Debounce: оновлюємо URL (і робимо запит) лише через 500мс після останнього натискання
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      updateFilter('title', searchValue);
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchValue]);
+
+  // Функція скидання додаткових фільтрів (зберігаючи поточну вкладку статусу)
+  const resetFilters = () => {
+    const newParams = new URLSearchParams();
+    newParams.set('status', statusFilter);
+    setSearchParams(newParams);
+    setSearchValue('');
+  };
 
   // Отримання списку ігор для фільтру
   const { data: games = [] } = useQuery({
@@ -54,7 +87,15 @@ export default function Tournaments() {
 
   // Головний запит турнірів з усіма параметрами
   const { data: tournamentsData, isLoading } = useQuery({
-    queryKey: ['tournaments', statusFilter, gameSlug, tier, region, isPublic],
+    queryKey: [
+      'tournaments',
+      statusFilter,
+      gameSlug,
+      tier,
+      region,
+      isPublic,
+      titleParam,
+    ],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.append('limit', '50');
@@ -63,6 +104,7 @@ export default function Tournaments() {
       if (tier !== 'all') params.append('tier', tier);
       if (region !== 'all') params.append('region', region);
       if (isPublic !== 'all') params.append('isPublic', isPublic);
+      if (titleParam) params.append('title', titleParam);
 
       const { data } = await api.get(`/tournaments?${params.toString()}`);
       return data;
@@ -101,13 +143,6 @@ export default function Tournaments() {
     }
   };
 
-  const resetFilters = () => {
-    setGameSlug('all');
-    setTier('all');
-    setRegion('all');
-    setIsPublic('all');
-  };
-
   const hasActiveFilters =
     gameSlug !== 'all' ||
     tier !== 'all' ||
@@ -143,7 +178,7 @@ export default function Tournaments() {
           {['all', 'planned', 'live', 'finished'].map((status) => (
             <button
               key={status}
-              onClick={() => setStatusFilter(status as any)}
+              onClick={() => updateFilter('status', status)}
               className={`px-4 py-2 text-xs font-black uppercase tracking-wider rounded-md transition-all ${
                 statusFilter === status
                   ? 'bg-esports-accent text-black shadow-[0_0_10px_rgba(242,167,27,0.3)]'
@@ -159,7 +194,24 @@ export default function Tournaments() {
 
         {/* Додаткові фільтри */}
         <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-800/60">
-          <Select value={gameSlug} onValueChange={setGameSlug}>
+          {/* ПОЛЕ ПОШУКУ */}
+          <div className="relative w-full md:w-[220px]">
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+              size={16}
+            />
+            <Input
+              placeholder="Пошук за назвою..."
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              className="pl-9 bg-slate-900 border-slate-700 text-white h-9 placeholder:text-slate-500 focus-visible:ring-esports-primary/50"
+            />
+          </div>
+
+          <Select
+            value={gameSlug}
+            onValueChange={(value) => updateFilter('gameSlug', value)}
+          >
             <SelectTrigger className="w-[160px] bg-slate-900 border-slate-700 text-slate-300 h-9">
               <SelectValue placeholder="Дисципліна" />
             </SelectTrigger>
@@ -173,7 +225,10 @@ export default function Tournaments() {
             </SelectContent>
           </Select>
 
-          <Select value={tier} onValueChange={setTier}>
+          <Select
+            value={tier}
+            onValueChange={(value) => updateFilter('tier', value)}
+          >
             <SelectTrigger className="w-[120px] bg-slate-900 border-slate-700 text-slate-300 h-9">
               <SelectValue placeholder="Тір" />
             </SelectTrigger>
@@ -185,7 +240,10 @@ export default function Tournaments() {
             </SelectContent>
           </Select>
 
-          <Select value={region} onValueChange={setRegion}>
+          <Select
+            value={region}
+            onValueChange={(value) => updateFilter('region', value)}
+          >
             <SelectTrigger className="w-[140px] bg-slate-900 border-slate-700 text-slate-300 h-9">
               <SelectValue placeholder="Регіон" />
             </SelectTrigger>
@@ -199,7 +257,10 @@ export default function Tournaments() {
             </SelectContent>
           </Select>
 
-          <Select value={isPublic} onValueChange={setIsPublic}>
+          <Select
+            value={isPublic}
+            onValueChange={(value) => updateFilter('isPublic', value)}
+          >
             <SelectTrigger className="w-[160px] bg-slate-900 border-slate-700 text-slate-300 h-9">
               <SelectValue placeholder="Тип доступу" />
             </SelectTrigger>

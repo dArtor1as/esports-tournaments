@@ -13,6 +13,7 @@ import TournamentParticipantsTab from '@/components/tournament/TournamentPartici
 import TournamentGaSimulatorTab from '@/components/tournament/TournamentGaSimulatorTab';
 import GaResultsTab from '@/components/tournament/GaResultsTab';
 import { useMyProfilesData } from '@/hooks/useProfileData';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function TournamentDetails() {
   const { id } = useParams<{ id: string }>();
@@ -218,10 +219,15 @@ export default function TournamentDetails() {
     myTeamIds.includes(p.teamId),
   );
 
+  const queryClient = useQueryClient();
+
   // 1. МЕТОД ДЛЯ СКАСУВАННЯ (SOFT DELETE)
   const handleCancelTournament = async () => {
     try {
       await api.patch(`/tournaments/${tournament.id}/cancel`);
+
+      // Скидаємо кеш перед переходом
+      await queryClient.invalidateQueries({ queryKey: ['tournaments'] });
 
       toast.success('Турнір успішно скасовано. Незіграні матчі анульовано.');
       navigate('/'); // Редирект на головну сторінку

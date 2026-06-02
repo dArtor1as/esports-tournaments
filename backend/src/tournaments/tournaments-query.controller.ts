@@ -22,8 +22,6 @@ export class TournamentsQueryController {
   constructor(private readonly queryService: TournamentsQueryService) {}
 
   @Get()
-  @UseInterceptors(CacheInterceptor)
-  @CacheTTL(30000)
   @ApiOperation({ summary: 'Отримати список всіх турнірів' })
   findAll(@Query() query: TournamentQueryDto) {
     return this.queryService.findAll(query);
