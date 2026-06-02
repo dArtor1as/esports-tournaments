@@ -157,7 +157,7 @@ export default function Tournaments() {
         <div className="absolute top-0 right-0 w-96 h-full bg-gradient-to-l from-esports-primary/10 to-transparent pointer-events-none"></div>
         <div className="relative z-10">
           <h1 className="text-4xl font-black text-white flex items-center gap-3 tracking-tight">
-            <Trophy className="text-esports-primary" size={36} />
+            <Trophy className="text-yellow-500" size={36} />
             Турнірний Хаб
           </h1>
           <p className="text-slate-400 mt-2 max-w-lg">
