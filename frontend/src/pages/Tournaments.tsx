@@ -12,6 +12,7 @@ import {
   FilterX,
   Search,
   Calendar,
+  Settings,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,7 @@ const REGIONS = ['EU', 'NA', 'CIS', 'ASIA', 'SA', 'GLOBAL'];
 export default function Tournaments() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Зчитуємо значення з URL, якщо їх немає — ставимо дефолтні
@@ -153,8 +155,10 @@ export default function Tournaments() {
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500">
       {/* HEADER */}
-      <div className="bg-slate-900 p-6 md:p-8 rounded-xl border border-slate-800 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden">
+      <div className="bg-slate-900 p-6 md:p-8 rounded-xl border border-slate-800 shadow-xl flex flex-col md:flex-row justify-between items-start gap-6 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-full bg-gradient-to-l from-esports-primary/10 to-transparent pointer-events-none"></div>
+
+        {/* ЛІВА ЧАСТИНА: Заголовок і текст */}
         <div className="relative z-10">
           <h1 className="text-4xl font-black text-white flex items-center gap-3 tracking-tight">
             <Trophy className="text-yellow-500" size={36} />
@@ -166,9 +170,24 @@ export default function Tournaments() {
           </p>
         </div>
 
-        <div className="relative z-10 flex flex-col sm:flex-row gap-3">
-          {user?.role === 'ADMIN' && <TournamentFormModal mode="test" />}
-          {user && <TournamentFormModal mode="standard" />}
+        {/* ПРАВА ЧАСТИНА: Кнопки адміна і створення турнірів */}
+        <div className="relative z-10 flex flex-col items-end gap-3 w-full md:w-auto">
+          {/* Кнопка Workflow Control (На рівні з заголовком) */}
+          {isAdmin && (
+            <Button
+              onClick={() => navigate('/admin/workflow')}
+              className="bg-slate-950 border border-slate-700 text-esports-accent hover:bg-slate-800 hover:border-esports-accent transition-all uppercase text-[10px] font-black tracking-widest w-full sm:w-auto h-9"
+            >
+              <Settings size={14} className="mr-1.5" />
+              Workflow Control
+            </Button>
+          )}
+
+          {/* Кнопки створення (Автофіл і Стандартний) */}
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            {isAdmin && <TournamentFormModal mode="test" />}
+            {user && <TournamentFormModal mode="standard" />}
+          </div>
         </div>
       </div>
 

@@ -11,7 +11,6 @@ import { TournamentsQueryService } from './tournaments-query.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
-import { PaginationQueryDto } from 'common/dto/pagination-query.dto';
 import { TournamentQueryDto } from './dto/tournament-query.dto';
 
 @ApiTags('Tournaments (Пошук та Читання)')
@@ -32,7 +31,7 @@ export class TournamentsQueryController {
   })
   findMyTournaments(
     @CurrentUser() user: JwtPayload,
-    @Query() query: PaginationQueryDto,
+    @Query() query: TournamentQueryDto,
   ) {
     return this.queryService.findMyTournaments(user.userId, query);
   }

@@ -4,7 +4,7 @@ import { api } from '../lib/api';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { UserCircle, Swords } from 'lucide-react';
+import { UserCircle, Swords, Trophy } from 'lucide-react';
 import CreatePlayerModal from '@/components/CreatePlayerModal';
 import EditProfileModal from '@/components/EditProfileModal';
 import PlayerProfileCard from '@/components/PlayerProfileCard';
@@ -130,7 +130,15 @@ export default function Profile() {
             </p>
           </div>
           {isMyProfile && (
-            <EditProfileModal user={userData} onSuccess={refreshData} />
+            <div className="flex flex-col gap-3">
+              <EditProfileModal user={userData} onSuccess={refreshData} />
+              <button
+                onClick={() => navigate('/my-tournaments')}
+                className="flex items-center justify-center w-full px-4 py-2 bg-slate-950 border border-esports-primary/30 text-esports-primary rounded-md text-sm font-bold hover:bg-esports-primary/10 transition-colors"
+              >
+                <Trophy size={16} className="mr-2" /> Мої турніри
+              </button>
+            </div>
           )}
         </CardContent>
       </Card>
