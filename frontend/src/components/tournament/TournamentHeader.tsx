@@ -1,4 +1,4 @@
-import { Trophy, Trash2, X } from 'lucide-react';
+import { Trophy, Trash2, X, CalendarCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -28,6 +28,18 @@ export default function TournamentHeader({
 
   const canManage =
     tournament.status !== 'finished' && tournament.status !== 'cancelled';
+
+  // Форматуємо дату завершення, якщо турнір закінчився
+  const finishedDate =
+    tournament.status === 'finished' && tournament.updatedAt
+      ? new Date(tournament.updatedAt).toLocaleDateString('uk-UA', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : null;
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-2xl relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
@@ -115,6 +127,12 @@ export default function TournamentHeader({
         <Badge className="bg-esports-primary/20 text-esports-light border-esports-primary/30 uppercase font-black tracking-widest text-xs px-3 py-1 text-center justify-center w-full sm:w-auto">
           {tournament.status.toUpperCase()}
         </Badge>
+        {finishedDate && (
+          <div className="flex items-center gap-1.5 text-[12px] text-slate-400 font-bold uppercase tracking-wider">
+            <CalendarCheck size={12} className="text-emerald-500" />
+            Завершено: {finishedDate}
+          </div>
+        )}
       </div>
     </div>
   );

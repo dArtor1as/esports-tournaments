@@ -11,6 +11,7 @@ import {
   Unlock,
   FilterX,
   Search,
+  Calendar,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -298,7 +299,14 @@ export default function Tournaments() {
             const isFull =
               tournament._count?.participants >= tournament.maxParticipants;
             const isOpen = tournament.isPublic;
-
+            // Форматування дати створення турніру
+            const formattedDate = new Date(
+              tournament.createdAt,
+            ).toLocaleDateString('uk-UA', {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+            });
             return (
               <div
                 key={tournament.id}
@@ -343,6 +351,11 @@ export default function Tournaments() {
                     >
                       Tier {tournament.tier}
                     </Badge>
+                    {/* БЛОК З ДАТОЮ */}
+                    <div className="flex items-center gap-1 text-slate-500 text-[14px] uppercase font-bold ml-auto">
+                      <Calendar size={12} className="text-slate-600" />
+                      {formattedDate}
+                    </div>
                   </div>
                 </div>
 

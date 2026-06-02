@@ -52,7 +52,6 @@ export class GeneticSimulatorService {
         context.tournament.creatorId as string,
         user,
       );
-      await this.clearSimulationCaches(dto.tournamentId);
       await this.checkManualMatchesCollision(dto.tournamentId, targetStage);
     }
 
@@ -80,6 +79,8 @@ export class GeneticSimulatorService {
         result,
       );
       await this.statsService.processTournamentStats(dto.tournamentId, user);
+
+      await this.clearSimulationCaches(dto.tournamentId);
     }
 
     return {
@@ -109,7 +110,6 @@ export class GeneticSimulatorService {
         context.tournament.creatorId as string,
         user,
       );
-      await this.clearSimulationCaches(dto.tournamentId);
       await this.checkManualMatchesCollision(dto.tournamentId, targetStage);
     }
 
@@ -134,6 +134,7 @@ export class GeneticSimulatorService {
         result,
       );
       await this.statsService.processTournamentStats(dto.tournamentId, user);
+      await this.clearSimulationCaches(dto.tournamentId);
     }
 
     return {

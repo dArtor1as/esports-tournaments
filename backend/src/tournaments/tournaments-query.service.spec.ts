@@ -64,6 +64,7 @@ describe('TournamentsQueryService', () => {
         game: { select: { name: true, slug: true } },
         _count: { select: { participants: true } },
       },
+      { createdAt: 'desc' },
     );
     expect(Array.isArray(result.data)).toBe(true);
   });
@@ -87,6 +88,7 @@ describe('TournamentsQueryService', () => {
         game: { select: { name: true, slug: true } },
         _count: { select: { participants: true, matches: true } },
       },
+      { createdAt: 'desc' },
     );
     expect(typeof result.meta.total).toBe('number');
   });

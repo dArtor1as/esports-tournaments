@@ -28,18 +28,30 @@ export class TournamentsQueryService {
       };
     }
 
-    return paginate(this.prisma.tournament, where, query, {
-      game: { select: { name: true, slug: true } },
-      _count: { select: { participants: true } },
-    });
+    return paginate(
+      this.prisma.tournament,
+      where,
+      query,
+      {
+        game: { select: { name: true, slug: true } },
+        _count: { select: { participants: true } },
+      },
+      { createdAt: 'desc' },
+    );
   }
 
   // 2. Мої турніри (як Організатора)
   async findMyTournaments(userId: string, query: PaginationQueryDto) {
-    return paginate(this.prisma.tournament, { creatorId: userId }, query, {
-      game: { select: { name: true, slug: true } },
-      _count: { select: { participants: true, matches: true } },
-    });
+    return paginate(
+      this.prisma.tournament,
+      { creatorId: userId },
+      query,
+      {
+        game: { select: { name: true, slug: true } },
+        _count: { select: { participants: true, matches: true } },
+      },
+      { createdAt: 'desc' },
+    );
   }
   // 3. Деталі турніру
   async findOne(id: string) {
