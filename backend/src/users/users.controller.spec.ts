@@ -89,10 +89,25 @@ describe('UsersController', () => {
   it('remove delegates to service', async () => {
     const user = { userId: 'u1', role: Role.ADMIN } as JwtPayload;
     const removeSpy = jest.spyOn(usersService, 'remove');
-    usersService.remove.mockResolvedValueOnce({ id: 'u1' } as never);
+    usersService.remove.mockResolvedValueOnce({ message: 'ok' } as never);
 
-    await expect(controller.remove('u1', user)).resolves.toEqual({ id: 'u1' });
+    await expect(controller.remove('u1', user, '123456')).resolves.toEqual({
+      message: 'ok',
+    });
 
-    expect(removeSpy).toHaveBeenCalledWith('u1', user);
+    // Очікуваний виклик до сервісу (саме в такому порядку Jest отримав аргументи)
+    expect(removeSpy).toHaveBeenCalledWith('u1', user, '123456');
+  });
+
+  it('requestDeletionCode delegates to service', async () => {
+    const user = { userId: 'u1' } as JwtPayload;
+    const requestSpy = jest.spyOn(usersService, 'requestDeletionCode');
+    usersService.requestDeletionCode.mockResolvedValueOnce({ message: 'ok' });
+
+    await expect(controller.requestDeletionCode('u1', user)).resolves.toEqual({
+      message: 'ok',
+    });
+
+    expect(requestSpy).toHaveBeenCalledWith('u1', user);
   });
 });

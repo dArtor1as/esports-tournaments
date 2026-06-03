@@ -1,27 +1,41 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { DeepMockProxy, mockDeep, MockProxy } from 'jest-mock-extended';
+import { DeepMockProxy, mock, mockDeep, MockProxy } from 'jest-mock-extended';
 import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { Role } from '@prisma/client';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
+import { MailService } from 'src/mail/mail.service';
+import type { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 
 describe('UsersService', () => {
   let service: UsersService;
   let prisma: DeepMockProxy<PrismaService>;
   let accessPolicy: MockProxy<AccessPolicyService>;
+  let cacheManager: MockProxy<Cache>;
+  let mailService: MockProxy<MailService>;
 
   beforeEach(async () => {
     prisma = mockDeep<PrismaService>();
     accessPolicy = mockDeep<AccessPolicyService>();
+    cacheManager = mock<Cache>();
+    mailService = mock<MailService>();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
         { provide: PrismaService, useValue: prisma },
         { provide: AccessPolicyService, useValue: accessPolicy },
+        { provide: CACHE_MANAGER, useValue: cacheManager },
+        { provide: MailService, useValue: mailService },
       ],
     }).compile();
 
@@ -159,32 +173,49 @@ describe('UsersService', () => {
   });
 
   describe('remove', () => {
+    const mockUser = { userId: 'u1', role: Role.USER } as unknown as JwtPayload;
+
+    it('throws when code is invalid', async () => {
+      // Спочатку перевіряємо невірний код (кеш повертає null або інший код)
+      cacheManager.get.mockResolvedValueOnce('wrong-code');
+
+      await expect(service.remove('u1', mockUser, '123456')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
     it('throws when user not found', async () => {
+      // Щоб дійти до перевірки юзера в БД, кеш має повернути правильний код
+      cacheManager.get.mockResolvedValueOnce('123456');
       prisma.user.findUnique.mockResolvedValueOnce(null);
 
-      await expect(service.remove('u1', { id: 'u1' } as never)).rejects.toThrow(
+      await expect(service.remove('u1', mockUser, '123456')).rejects.toThrow(
         NotFoundException,
       );
     });
 
-    it('checks access and deletes user', async () => {
+    it('checks access and anonymizes user', async () => {
       const checkSelfOrAdminSpy = jest.spyOn(accessPolicy, 'checkSelfOrAdmin');
-      const deleteSpy = jest.spyOn(prisma.user, 'delete');
-      prisma.user.findUnique.mockResolvedValueOnce({ id: 'u1' } as never);
-      prisma.user.delete.mockResolvedValueOnce({ id: 'u1' } as never);
 
-      await expect(
-        service.remove('u1', {
-          id: 'u1',
-          role: Role.ADMIN,
-        } as never),
-      ).resolves.toEqual({ id: 'u1' });
+      // Використовуємо mockResolvedValue
+      // бо кеш викликається двічі для не-адмінів
+      cacheManager.get.mockResolvedValue('123456');
 
-      expect(checkSelfOrAdminSpy).toHaveBeenCalledWith('u1', {
+      //  Додаємо players
+      prisma.user.findUnique.mockResolvedValueOnce({
         id: 'u1',
-        role: Role.ADMIN,
+        players: [],
+      } as never);
+
+      prisma.$transaction.mockImplementation(async (cb) => cb(prisma as never));
+      prisma.user.update.mockResolvedValueOnce({ id: 'u1' } as never);
+
+      await expect(service.remove('u1', mockUser, '123456')).resolves.toEqual({
+        //  Точний текст повідомлення
+        message: 'Акаунт успішно анонімізовано',
       });
-      expect(deleteSpy).toHaveBeenCalledWith({ where: { id: 'u1' } });
+
+      expect(checkSelfOrAdminSpy).toHaveBeenCalledWith('u1', mockUser);
     });
   });
 });

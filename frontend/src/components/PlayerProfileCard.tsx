@@ -48,7 +48,9 @@ export default function PlayerProfileCard({
               </Badge>
             )}
             {(isMyProfile || isAdmin) && (
-              <EditPlayerModal player={player} onSuccess={refreshData} />
+              <div onClick={(e) => e.stopPropagation()}>
+                <EditPlayerModal player={player} onSuccess={refreshData} />
+              </div>
             )}
           </div>
         </div>

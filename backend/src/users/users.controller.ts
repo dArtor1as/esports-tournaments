@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   ParseUUIDPipe,
+  Query,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -69,16 +70,28 @@ export class UsersController {
     return this.usersService.update(id, updateUserDto, user);
   }
 
+  @Post(':id/delete-code')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Запросити код для видалення акаунту' })
+  requestDeletionCode(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.usersService.requestDeletionCode(id, user);
+  }
+
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
-    summary: 'Видалити користувача (тільки свій профіль або Адмін)',
+    summary: 'Анонімізувати користувача та всі його профілі (Soft Delete)',
   })
   remove(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: JwtPayload,
+    @Query('code') code?: string,
   ) {
-    return this.usersService.remove(id, user);
+    return this.usersService.remove(id, user, code);
   }
 }

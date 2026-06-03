@@ -126,7 +126,6 @@ model Player {
   @@index([gameId])
   @@index([nickname(ops: raw("gin_trgm_ops"))], type: Gin)
 
-  @@unique([userId, gameId]) // Юзер не може мати два профілі для однієї ігри!
   @@index([rating])
 
   tournamentRosters TournamentRoster[]

@@ -156,7 +156,6 @@ describe('PlayersService', () => {
     it('throws when profile not found', async () => {
       prisma.player.findUnique.mockResolvedValueOnce(null);
 
-      // ВИПРАВЛЕНО: Передаємо об'єкт mockUser
       await expect(service.remove('p1', mockUser)).rejects.toThrow(
         NotFoundException,
       );
@@ -168,7 +167,6 @@ describe('PlayersService', () => {
         userId: 'u2',
       } as never);
 
-      // ВИПРАВЛЕНО: Примушуємо мок викинути помилку доступу!
       accessPolicy.checkSelfOrAdmin.mockImplementation(() => {
         throw new ForbiddenException();
       });
@@ -178,21 +176,23 @@ describe('PlayersService', () => {
       );
     });
 
-    it('deletes profile and clears cache', async () => {
-      const deleteSpy = jest.spyOn(prisma.player, 'delete');
+    it('anonymizes profile and clears cache', async () => {
       const cacheDelSpy = jest.spyOn(cacheManager, 'del');
 
       prisma.player.findUnique.mockResolvedValueOnce({
         id: 'p1',
         userId: 'u1',
       } as never);
-      prisma.player.delete.mockResolvedValueOnce({ id: 'p1' } as never);
+
+      // Імітуємо виконання транзакції
+      prisma.$transaction.mockImplementation(async (cb) => cb(prisma as never));
+      // Імітуємо оновлення (софт-деліт)
+      prisma.player.update.mockResolvedValueOnce({ id: 'p1' } as never);
 
       await expect(service.remove('p1', mockUser)).resolves.toEqual({
-        message: 'Ігровий профіль успішно видалено',
+        message: 'Ігровий профіль успішно анонімізовано',
       });
 
-      expect(deleteSpy).toHaveBeenCalledWith({ where: { id: 'p1' } });
       expect(cacheDelSpy).toHaveBeenCalledWith('all_players');
     });
   });
