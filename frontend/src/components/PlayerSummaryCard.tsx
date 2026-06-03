@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 interface PlayerSummaryCardProps {
   player: any;
   age: number | null;
@@ -30,15 +32,24 @@ export default function PlayerSummaryCard({
             </div>
           )}
         </div>
-        <div className="w-40 h-40 rounded-full border-4 border-slate-800 bg-slate-950 flex items-center justify-center mb-4 shadow-xl">
-          <span className="text-6xl font-black text-slate-800 uppercase">
-            {player.nickname[0]}
-          </span>
+        <div className="w-40 h-40 rounded-full border-4 border-slate-800 bg-slate-950 flex items-center justify-center mb-4 overflow-hidden shadow-inner relative">
+          <div className="text-5xl font-black text-slate-700 tracking-tighter uppercase opacity-50">
+            {player.nickname.slice(0, 3)}
+          </div>
         </div>
-        <h1 className="text-4xl font-black text-white tracking-tight mb-1">
+        <h2 className="text-3xl font-black text-white uppercase tracking-wider mb-1">
           {player.nickname}
-        </h1>
-        <p className="text-sm text-esports-muted font-medium mb-6">
+        </h2>
+        {/* КЛІКАБЕЛЬНИЙ ПРОФІЛЬ КОРИСТУВАЧА */}
+        <div className="flex items-center justify-center gap-1.5 text-slate-400 font-medium mb-6">
+          <Link
+            to={`/profile/${player.userId}`}
+            className="hover:text-esports-light hover:underline transition-all"
+          >
+            @{player.user?.username}
+          </Link>
+        </div>
+        <p className="text-slate-400 font-medium mb-6">
           {player.user?.username} {age ? `• ${age} років` : ''}
         </p>
         <div className="w-full bg-slate-950/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-2">
@@ -58,7 +69,7 @@ export default function PlayerSummaryCard({
               {player.rating}
             </span>
           </div>
-          <div className="flex justify-between items-center pt-1">
+          <div className="flex justify-between items-center pt-1 border-b border-slate-800/60 py-2">
             <span className="text-xs text-slate-500 font-bold uppercase">
               K/D Ratio
             </span>
@@ -68,8 +79,41 @@ export default function PlayerSummaryCard({
               {kd}
             </span>
           </div>
+          <div className="flex justify-between items-center pt-1">
+            <span className="text-xs text-slate-500 font-bold uppercase">
+              Команда
+            </span>
+            {player.team ? (
+              <Link
+                to={`/team/${player.team.id}`}
+                className="text-sm font-bold text-white flex items-center gap-2 hover:text-esports-light transition-colors group"
+              >
+                <span className="text-esports-accent font-black text-xs uppercase bg-slate-900 border border-slate-800 px-1.5 py-0.5 rounded group-hover:bg-slate-800 transition-colors">
+                  [{player.team.tag}]
+                </span>
+                <span className="group-hover:underline">
+                  {player.team.name}
+                </span>
+              </Link>
+            ) : (
+              <span className="text-sm italic text-slate-500">
+                Вільний агент
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
+/*<div className="flex justify-between items-center pt-1">
+            <span className="text-xs text-slate-500 font-bold uppercase">
+              K/D Ratio
+            </span>
+            <span
+              className={`text-sm font-black ${Number(kd) >= 1.0 ? 'text-green-400' : 'text-red-400'}`}
+            >
+              {kd}
+            </span>
+          </div> */

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { api } from '@/lib/api';
-import { useAuth } from '@/context/AuthContext'; // <--- Імпортуємо
+import { useAuth } from '@/context/AuthContext';
 import {
   Dialog,
   DialogContent,
@@ -23,7 +23,7 @@ export default function EditProfileModal({
 }: EditProfileModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { updateUser } = useAuth(); // <--- Витягуємо функцію
+  const { user: currentUser, updateUser } = useAuth();
 
   const [username, setUsername] = useState(user.username);
   const [countryCode, setCountryCode] = useState(user.countryCode || '');
@@ -43,7 +43,9 @@ export default function EditProfileModal({
       });
 
       // Оновлюємо ім'я у шапці глобально!
-      updateUser({ username });
+      if (currentUser?.id === user.id) {
+        updateUser({ username, countryCode: formattedCountryCode });
+      }
 
       setIsOpen(false);
       onSuccess();

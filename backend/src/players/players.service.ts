@@ -1,6 +1,5 @@
 import {
   ConflictException,
-  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -12,12 +11,15 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { GameSlug } from './player.enums';
 import { assertRoleAllowedForGame } from './players-role.policy';
+import { AccessPolicyService } from 'src/auth/access-policy.service';
+import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 
 @Injectable()
 export class PlayersService {
   constructor(
     private prisma: PrismaService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private accessPolicy: AccessPolicyService,
   ) {}
 
   async create(createPlayerDto: CreatePlayerDto, userId: string) {
@@ -65,12 +67,14 @@ export class PlayersService {
     return newPlayer;
   }
 
-  findAll() {
+  findAll(userId?: string) {
     // Завдяки зв'язкам, ми можемо одразу витягнути дані гри та юзера
     return this.prisma.player.findMany({
+      where: userId ? { userId } : undefined,
       include: {
         game: { select: { name: true } },
         user: { select: { username: true } },
+        team: { select: { id: true, name: true, tag: true } },
       },
     });
   }
@@ -98,7 +102,7 @@ export class PlayersService {
     });
   }
 
-  async update(id: string, updatePlayerDto: UpdatePlayerDto, userId: string) {
+  async update(id: string, updatePlayerDto: UpdatePlayerDto, user: JwtPayload) {
     // 1. Шукаємо профіль разом із грою (нам потрібен slug гри для валідації ролі)
     const player = await this.prisma.player.findUnique({
       where: { id },
@@ -107,11 +111,7 @@ export class PlayersService {
     if (!player) throw new NotFoundException('Ігровий профіль не знайдено');
 
     // 2.Перевіряємо, чи не намагається юзер змінити чужий профіль?
-    if (player.userId !== userId) {
-      throw new ForbiddenException(
-        'Ви не можете редагувати чужий ігровий профіль',
-      );
-    }
+    this.accessPolicy.checkSelfOrAdmin(player.userId, user);
 
     // 3.Якщо змінюється роль, перевіряємо її сумісність з грою профілю
     if (updatePlayerDto.inGameRole) {
@@ -132,17 +132,13 @@ export class PlayersService {
     return updatedPlayer;
   }
 
-  async remove(id: string, userId: string) {
+  async remove(id: string, user: JwtPayload) {
     // 1. Перевіряємо, чи існує гравець
     const player = await this.prisma.player.findUnique({ where: { id } });
     if (!player) throw new NotFoundException('Ігровий профіль не знайдено');
 
     // 2.Перевіряємо гравця на належність до юзера, який робить запит
-    if (player.userId !== userId) {
-      throw new ForbiddenException(
-        'Ви не можете видалити чужий ігровий профіль',
-      );
-    }
+    this.accessPolicy.checkSelfOrAdmin(player.userId, user);
 
     // 3. Видаляємо
     await this.prisma.player.delete({ where: { id } });

@@ -9,6 +9,7 @@ import {
   UseGuards,
   UseInterceptors,
   ParseUUIDPipe,
+  Query,
 } from '@nestjs/common';
 import { PlayersService } from './players.service';
 import { CreatePlayerDto } from './dto/create-player.dto';
@@ -43,12 +44,12 @@ export class PlayersController {
   @Get()
   @UseInterceptors(CacheInterceptor)
   @CacheKey('all_players')
-  @CacheTTL(30000) // Кешуємо на 30 секунд
+  @CacheTTL(3000) // Кешуємо на 3 секунди
   @ApiOperation({
     summary: 'Отримати список всіх гравців (з їхніми іграми та юзерами)',
   })
-  findAll() {
-    return this.playersService.findAll();
+  findAll(@Query('userId') userId?: string) {
+    return this.playersService.findAll(userId);
   }
 
   @Get('me')
@@ -83,7 +84,7 @@ export class PlayersController {
     @Body() updatePlayerDto: UpdatePlayerDto,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.playersService.update(id, updatePlayerDto, user.userId);
+    return this.playersService.update(id, updatePlayerDto, user);
   }
 
   @Delete(':id')
@@ -94,6 +95,6 @@ export class PlayersController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: JwtPayload,
   ) {
-    return this.playersService.remove(id, user.userId);
+    return this.playersService.remove(id, user);
   }
 }

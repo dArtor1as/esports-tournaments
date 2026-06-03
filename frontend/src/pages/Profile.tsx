@@ -4,12 +4,12 @@ import { api } from '../lib/api';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { UserCircle, Swords, Trophy } from 'lucide-react';
+import { UserCircle, Swords, Trophy, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import CreatePlayerModal from '@/components/CreatePlayerModal';
 import EditProfileModal from '@/components/EditProfileModal';
 import PlayerProfileCard from '@/components/PlayerProfileCard';
 
-// ХЕЛПЕР ДЛЯ ВІКУ
 const calculateAge = (dateString?: string) => {
   if (!dateString) return null;
   const today = new Date();
@@ -29,8 +29,9 @@ export default function Profile() {
   const queryClient = useQueryClient();
 
   const isMyProfile = currentUser?.id === id;
+  const isAdmin = currentUser?.role === 'ADMIN';
+  const canEditProfile = isMyProfile || isAdmin;
 
-  // 1. Запит для даних користувача (User)
   const {
     data: userData,
     isLoading: isUserLoading,
@@ -42,23 +43,21 @@ export default function Profile() {
       const { data } = await api.get(endpoint);
       return data;
     },
-    enabled: !!id, // Запускати запит тільки якщо є id
+    enabled: !!id,
   });
 
-  // 2. Запит для ігрових профілів (Players)
   const { data: playerProfiles = [], isLoading: isPlayersLoading } = useQuery({
     queryKey: ['players', id],
     queryFn: async () => {
-      if (!isMyProfile) return [];
-      const { data } = await api.get('/players/me');
-      return data;
+      // РОЗБЛОКОВАНО: Тепер ми беремо профілі для будь-якого юзера
+      const { data } = await api.get(`/players?userId=${id}`);
+      return Array.isArray(data) ? data : data.data || [];
     },
-    enabled: !!id && isMyProfile, // Запускати тільки для свого профілю
+    enabled: !!id,
   });
 
   const isLoading = isUserLoading || isPlayersLoading;
 
-  // Функція для оновлення даних після редагування (інвалідація кешу)
   const refreshData = () => {
     queryClient.invalidateQueries({ queryKey: ['user', id] });
     queryClient.invalidateQueries({ queryKey: ['players', id] });
@@ -86,6 +85,16 @@ export default function Profile() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
+      {/* КНОПКА НАЗАД */}
+      <div className="-mb-4">
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
+          className="text-slate-400 hover:text-white px-0"
+        >
+          <ArrowLeft size={16} className="mr-2" /> Назад
+        </Button>
+      </div>
       <Card className="bg-slate-900 border-slate-800 text-white shadow-lg relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-esports-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
 
@@ -97,7 +106,6 @@ export default function Profile() {
           />
           <div className="flex-1">
             <h1 className="text-4xl font-bold text-esports-light flex items-center gap-3">
-              {/* ПРАПОР ПЕРЕД НІКНЕЙМОМ */}
               {userData.countryCode && (
                 <img
                   src={`https://flagcdn.com/w40/${userData.countryCode.toLowerCase()}.png`}
@@ -116,7 +124,6 @@ export default function Profile() {
               )}
             </h1>
 
-            {/* EMAIL І ВІК */}
             <p className="text-esports-muted mt-2 font-medium flex items-center gap-2">
               {userData.email}
               {userData.birthDate && (
@@ -129,15 +136,21 @@ export default function Profile() {
               )}
             </p>
           </div>
-          {isMyProfile && (
+
+          {/* Кнопку редагування бачить власник або адмін */}
+          {canEditProfile && (
             <div className="flex flex-col gap-3">
               <EditProfileModal user={userData} onSuccess={refreshData} />
-              <button
-                onClick={() => navigate('/my-tournaments')}
-                className="flex items-center justify-center w-full px-4 py-2 bg-slate-950 border border-esports-primary/30 text-esports-primary rounded-md text-sm font-bold hover:bg-esports-primary/10 transition-colors"
-              >
-                <Trophy size={16} className="mr-2" /> Мої турніри
-              </button>
+
+              {/*  кнопку "Мої турніри" бачить тільки власник */}
+              {isMyProfile && (
+                <button
+                  onClick={() => navigate('/my-tournaments')}
+                  className="flex items-center justify-center w-full px-4 py-2 bg-slate-950 border border-esports-primary/30 text-esports-primary rounded-md text-sm font-bold hover:bg-esports-primary/10 transition-colors"
+                >
+                  <Trophy size={16} className="mr-2" /> Мої турніри
+                </button>
+              )}
             </div>
           )}
         </CardContent>
@@ -149,6 +162,7 @@ export default function Profile() {
             <Swords className="text-esports-primary" />
             Ігрові профілі
           </h2>
+          {/* СТВОРЮВАТИ нові профілі може тільки власник */}
           {isMyProfile && <CreatePlayerModal onSuccess={refreshData} />}
         </div>
 
@@ -166,6 +180,7 @@ export default function Profile() {
                 key={player.id}
                 player={player}
                 isMyProfile={isMyProfile}
+                isAdmin={isAdmin}
                 refreshData={refreshData}
               />
             ))}
