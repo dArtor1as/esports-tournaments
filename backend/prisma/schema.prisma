@@ -87,6 +87,8 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  deletedAt DateTime?
+
   birthDate    DateTime? 
   countryCode  String?   // Наприклад: "UA", "PL", "US"
 
@@ -109,6 +111,8 @@ model Player {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  deletedAt DateTime?
 
   captainedTeams Team[]  @relation("TeamCaptain")
   teamTransfers TeamTransfer[]

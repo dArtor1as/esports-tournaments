@@ -146,7 +146,7 @@ export class Cs2SimulatorService implements IMatchSimulator {
         role = fallbackRoles[index] || 'RIFLER';
       }
 
-      const effectiveRating = Math.pow(participant.rating * dailyForm, 1.2);
+      const effectiveRating = Math.pow(participant.rating * dailyForm, 0.8);
       return { id: participant.id, effectiveRating, role };
     });
     const totalEffective = playersWithForm.reduce(
