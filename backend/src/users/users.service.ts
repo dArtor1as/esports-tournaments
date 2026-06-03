@@ -2,19 +2,27 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Inject,
+  BadRequestException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { AccessPolicyService } from 'src/auth/access-policy.service';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
+import { MailService } from 'src/mail/mail.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     private prisma: PrismaService,
     private accessPolicy: AccessPolicyService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private mailService: MailService,
   ) {}
 
   async create(createUserDto: CreateUserDto) {
@@ -67,7 +75,6 @@ export class UsersService {
         role: true,
         countryCode: true,
         birthDate: true,
-        // Можна додати короткий список профілів
         players: {
           select: { id: true, gameId: true, nickname: true },
         },
@@ -115,12 +122,124 @@ export class UsersService {
     });
   }
 
-  async remove(id: string, user: JwtPayload) {
+  async requestDeletionCode(id: string, currentUser: JwtPayload) {
     const targetUser = await this.prisma.user.findUnique({ where: { id } });
     if (!targetUser) throw new NotFoundException('Користувача не знайдено');
+    this.accessPolicy.checkSelfOrAdmin(targetUser.id, currentUser);
 
-    this.accessPolicy.checkSelfOrAdmin(targetUser.id, user);
+    // Генеруємо 6-значний код
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
 
-    return this.prisma.user.delete({ where: { id } });
+    // Зберігаємо в кеш на 15 хвилин (900000 мс)
+    await this.cacheManager.set(`delete_code_${id}`, code, 900000);
+
+    // Відправляємо на пошту
+    await this.mailService.sendAccountDeletionCode(targetUser.email, code);
+
+    return { message: 'Код відправлено на пошту' };
+  }
+
+  async remove(id: string, currentUser: JwtPayload, code?: string) {
+    const savedCode = await this.cacheManager.get(`delete_code_${id}`);
+    if (!savedCode || savedCode !== code) {
+      throw new BadRequestException(
+        'Недійсний або прострочений код підтвердження',
+      );
+    }
+
+    const targetUser = await this.prisma.user.findUnique({
+      where: { id },
+      include: { players: true }, // Підтягуємо всі ігрові профілі
+    });
+
+    if (!targetUser) throw new NotFoundException('Користувача не знайдено');
+    if (targetUser.deletedAt)
+      throw new ConflictException('Акаунт вже видалено');
+
+    this.accessPolicy.checkSelfOrAdmin(targetUser.id, currentUser);
+    const isAdmin = currentUser.role === 'ADMIN';
+
+    if (!isAdmin) {
+      if (!code)
+        throw new BadRequestException("Код підтвердження є обов'язковим");
+      const savedCode = await this.cacheManager.get(`delete_code_${id}`);
+      if (!savedCode || savedCode !== code) {
+        throw new BadRequestException(
+          'Недійсний або прострочений код підтвердження',
+        );
+      }
+    }
+
+    const randomHex = crypto.randomBytes(4).toString('hex');
+
+    await this.prisma.$transaction(async (prismaTx) => {
+      // 1. Анонімізуємо основний акаунт (User)
+      await prismaTx.user.update({
+        where: { id },
+        data: {
+          username: `deleted_user_${randomHex}`,
+          email: `deleted_${randomHex}@anonymized.local`,
+          passwordHash: 'DELETED',
+          birthDate: null,
+          countryCode: null,
+          deletedAt: new Date(),
+        },
+      });
+
+      // 2. Обробляємо кожен ігровий профіль юзера
+      for (const player of targetUser.players) {
+        // Якщо гравець був у команді, обробляємо логіку команди
+        if (player.teamId) {
+          const team = await prismaTx.team.findUnique({
+            where: { id: player.teamId },
+            include: { players: { where: { deletedAt: null } } },
+          });
+
+          if (team) {
+            const isCaptain = team.captainId === player.id;
+            const otherPlayers = team.players.filter((p) => p.id !== player.id);
+
+            if (isCaptain) {
+              if (otherPlayers.length > 0) {
+                // Віддаємо капітанство першому ліпшому гравцеві
+                const newCaptain = otherPlayers[0];
+                await prismaTx.team.update({
+                  where: { id: team.id },
+                  data: { captainId: newCaptain.id },
+                });
+                await prismaTx.player.update({
+                  where: { id: newCaptain.id },
+                  data: { teamRole: 'CAPTAIN' },
+                });
+              } else {
+                // Якщо був останній у команді - розпускаємо
+                await prismaTx.team.update({
+                  where: { id: team.id },
+                  data: { status: 'DISBANDED' }, // Припускаємо, що у тебе є статус DISBANDED
+                });
+              }
+            }
+          }
+        }
+
+        // Анонімізуємо сам ігровий профіль (Player) і відв'язуємо від команди
+        const playerRandom = crypto.randomBytes(2).toString('hex');
+        await prismaTx.player.update({
+          where: { id: player.id },
+          data: {
+            nickname: `Anonymous_${playerRandom}`,
+            teamId: null,
+            teamRole: null,
+            deletedAt: new Date(),
+          },
+        });
+      }
+    });
+
+    if (!isAdmin) {
+      await this.cacheManager.del(`delete_code_${id}`);
+    }
+
+    return { message: 'Акаунт успішно анонімізовано' };
   }
 }

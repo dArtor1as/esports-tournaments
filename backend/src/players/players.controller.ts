@@ -90,7 +90,7 @@ export class PlayersController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Видалити ігровий профіль' })
+  @ApiOperation({ summary: 'Видалити(анонімізувати) ігровий профіль' })
   remove(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: JwtPayload,

@@ -136,7 +136,7 @@ export class Dota2SimulatorService implements IMatchSimulator {
         role = fallbackRoles[index] || 'POS_5';
       }
 
-      const effectiveRating = Math.pow(playerRating * dailyForm, 1.2);
+      const effectiveRating = Math.pow(playerRating * dailyForm, 0.9);
       return { id: participant.id, effectiveRating, role };
     });
 

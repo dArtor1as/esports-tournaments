@@ -24,6 +24,12 @@ export default function PlayerStatsPanel({
   hasStats,
   isCS2,
 }: PlayerStatsPanelProps) {
+  // Рахуємо відсоток хс: (всі хедшоти / всі кіли) * 100
+  const HsPercentage =
+    stats.total_kills > 0
+      ? ((stats.total_headshots / stats.total_kills) * 100).toFixed(1)
+      : '0.0';
+
   if (!hasStats) {
     return (
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 shadow-xl min-h-[346px] flex flex-col items-center justify-center">
@@ -209,7 +215,7 @@ export default function PlayerStatsPanel({
               Відсоток Headshots
             </span>
             <span className="font-bold text-white">
-              {stats.avg_headshots ? `${stats.avg_headshots}%` : '0%'}
+              {HsPercentage ? `${HsPercentage}%` : '0%'}
             </span>
           </div>
         )}

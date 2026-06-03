@@ -74,4 +74,18 @@ export class MailService {
       `,
     });
   }
+
+  async sendAccountDeletionCode(email: string, code: string) {
+    await this.mailerService.sendMail({
+      to: email,
+      subject: `Код підтвердження видалення акаунту`,
+      html: `
+        <h2>Увага! Запит на видалення акаунту</h2>
+        <p>Ви надіслали запит на безповоротне видалення вашого акаунту.</p>
+        <p>Ваш код підтвердження: <b style="font-size: 24px; color: #dc3545; padding: 10px; border: 1px solid #dc3545; display: inline-block; margin-top: 10px;">${code}</b></p>
+        <p>Код дійсний 15 хвилин. Нікому його не передавайте!</p>
+        <p><small>Якщо це були не ви, проігноруйте цей лист. І радимо змінити пароль вашого акаунту.</small></p>
+      `,
+    });
+  }
 }

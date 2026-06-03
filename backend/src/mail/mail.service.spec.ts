@@ -95,4 +95,16 @@ describe('MailService', () => {
       );
     });
   });
+  describe('sendAccountDeletionCode', () => {
+    it('відправляє лист із кодом підтвердження видалення акаунту', async () => {
+      await service.sendAccountDeletionCode('user@test.com', '123456');
+
+      expect(mailerServiceMock.sendMail).toHaveBeenCalledTimes(1);
+
+      const args = mailerServiceMock.sendMail.mock.calls[0][0];
+      expect(args.to).toBe('user@test.com');
+      expect(args.subject).toContain('Код підтвердження видалення акаунту');
+      expect(args.html).toContain('123456');
+    });
+  });
 });

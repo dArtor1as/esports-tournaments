@@ -137,7 +137,7 @@ export async function seedCS2(prisma: PrismaClient, admin: User, game: Game) {
     }[] = [];
 
     // Капітан
-    const capRating = getRandomRating(2800, 3400);
+    const capRating = getRandomRating(2950, 3050);
     totalElo += capRating;
 
     // Унікальна пошта та юзернейм з використанням game.slug
@@ -193,7 +193,7 @@ export async function seedCS2(prisma: PrismaClient, admin: User, game: Game) {
 
     // 4 Гравці
     for (let j = 1; j <= 4; j++) {
-      const pRating = getRandomRating(2500, 3200);
+      const pRating = getRandomRating(2750, 2850);
       const playerRole = cs2Roles[j - 1];
       totalElo += pRating;
 
