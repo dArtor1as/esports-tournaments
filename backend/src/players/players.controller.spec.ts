@@ -115,21 +115,21 @@ describe('PlayersController', () => {
       id: 'p1',
     });
 
-    expect(updateSpy).toHaveBeenCalledWith('p1', dto, 'u1');
+    // очікуємо об'єкт user
+    expect(updateSpy).toHaveBeenCalledWith('p1', dto, user);
   });
 
   it('remove delegates to service', async () => {
     const user = { userId: 'u1' } as JwtPayload;
     const removeSpy = jest.spyOn(playersService, 'remove');
 
-    playersService.remove.mockResolvedValueOnce({
-      message: 'Ігровий профіль успішно видалено',
-    } as never);
+    playersService.remove.mockResolvedValueOnce({ id: 'p1' } as never);
 
     await expect(controller.remove('p1', user)).resolves.toEqual({
-      message: 'Ігровий профіль успішно видалено',
+      id: 'p1',
     });
 
-    expect(removeSpy).toHaveBeenCalledWith('p1', 'u1');
+    // очікуємо об'єкт user
+    expect(removeSpy).toHaveBeenCalledWith('p1', user);
   });
 });

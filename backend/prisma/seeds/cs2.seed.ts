@@ -94,7 +94,11 @@ export async function seedCS2(prisma: PrismaClient, admin: User, game: Game) {
     accessPolicy,
     dummyCache,
   );
-  const playersService = new PlayersService(prisma as any, dummyCache);
+  const playersService = new PlayersService(
+    prisma as any,
+    dummyCache,
+    accessPolicy,
+  );
   const eloCalculator = new EloCalculatorService();
   const statsAggregator = new PlayerStatsAggregatorService();
   const statsTransactionBuilder = new StatsTransactionBuilder(

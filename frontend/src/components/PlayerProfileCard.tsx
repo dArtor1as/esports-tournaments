@@ -14,12 +14,14 @@ import CreateTeamModal from './CreateTeamModal';
 interface PlayerProfileCardProps {
   player: any;
   isMyProfile: boolean;
+  isAdmin?: boolean;
   refreshData: () => void;
 }
 
 export default function PlayerProfileCard({
   player,
   isMyProfile,
+  isAdmin = false,
   refreshData,
 }: PlayerProfileCardProps) {
   const navigate = useNavigate();
@@ -45,7 +47,7 @@ export default function PlayerProfileCard({
                 {player.inGameRole}
               </Badge>
             )}
-            {isMyProfile && (
+            {(isMyProfile || isAdmin) && (
               <EditPlayerModal player={player} onSuccess={refreshData} />
             )}
           </div>
@@ -90,6 +92,7 @@ export default function PlayerProfileCard({
               </div>
             )}
           </div>
+          {/* СТВОРЕННЯ КОМАНДИ */}
           {!player.team && isMyProfile && (
             <div onClick={(e) => e.stopPropagation()}>
               <CreateTeamModal player={player} onSuccess={refreshData} />
