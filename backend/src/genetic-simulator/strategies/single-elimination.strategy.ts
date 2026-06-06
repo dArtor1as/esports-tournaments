@@ -17,11 +17,13 @@ export class SingleEliminationStrategy extends BaseGeneticStrategy {
   execute(
     simulationContext: SimulationContext,
     populations: number,
+    generations: number,
   ): StrategyResult {
     const startedAt = Date.now();
 
     const bestIndividual = this.evolvePopulation<Individual>(
       populations,
+      generations,
       simulationContext.estimatedGenesNeeded,
       (genes) => this.evaluatePlayoffIndividual(genes, simulationContext),
     );
@@ -33,7 +35,7 @@ export class SingleEliminationStrategy extends BaseGeneticStrategy {
       bracket: bestIndividual.bracket,
       algorithmType: 'SINGLE_ELIMINATION',
       executionTimeMs,
-      generations: this.generations,
+      generations: generations,
     };
   }
 }

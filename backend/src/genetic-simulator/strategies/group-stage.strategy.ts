@@ -21,11 +21,13 @@ export class GroupStageStrategy extends BaseGeneticStrategy {
   execute(
     simulationContext: SimulationContext,
     populations: number,
+    generations: number,
   ): StrategyResult {
     const startedAt = Date.now();
 
     const bestIndividual = this.evolvePopulation<GroupIndividual>(
       populations,
+      generations,
       simulationContext.estimatedGenesNeeded,
       (genes) => this.evaluateGroupIndividual(genes, simulationContext),
     );
@@ -38,7 +40,7 @@ export class GroupStageStrategy extends BaseGeneticStrategy {
       standings: bestIndividual.standings,
       algorithmType: 'GROUP_STAGE',
       executionTimeMs,
-      generations: this.generations,
+      generations: generations,
     };
   }
 

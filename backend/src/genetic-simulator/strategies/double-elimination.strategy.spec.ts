@@ -74,7 +74,7 @@ describe('DoubleEliminationStrategy', () => {
       stats: {},
     });
 
-    const result = strategy.execute(buildContext(), 1);
+    const result = strategy.execute(buildContext(), 10, 1);
 
     expect(result.algorithmType).toBe('DOUBLE_ELIMINATION');
     expect(result.bracket[0]).toMatchObject({

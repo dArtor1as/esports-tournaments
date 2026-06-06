@@ -45,6 +45,7 @@ export class GeneticSimulatorService {
       );
 
     const isDryRun = dto.isDryRun ?? true;
+    const generations = dto.generations || 20;
 
     // 2. Валідація та кеш (Оркестрація Side-effects)
     if (!isDryRun) {
@@ -62,8 +63,16 @@ export class GeneticSimulatorService {
 
     // 3. ВИКЛИКАЄМО ЧИСТУ СТРАТЕГІЮ
     const result: StrategyResult = isDoubleElim
-      ? this.doubleEliminationStrategy.execute(context, dto.populations)
-      : this.singleEliminationStrategy.execute(context, dto.populations);
+      ? this.doubleEliminationStrategy.execute(
+          context,
+          dto.populations,
+          generations,
+        )
+      : this.singleEliminationStrategy.execute(
+          context,
+          dto.populations,
+          generations,
+        );
 
     // 4. ДЕЛЕГУЄМО ЗБЕРЕЖЕННЯ (Persistence)
     if (isDryRun) {
@@ -103,6 +112,7 @@ export class GeneticSimulatorService {
       );
 
     const isDryRun = dto.isDryRun ?? true;
+    const generations = dto.generations || 20;
 
     // 1. Валідація та кеш
     if (!isDryRun) {
@@ -117,6 +127,7 @@ export class GeneticSimulatorService {
     const result: StrategyResult = this.groupStageStrategy.execute(
       context,
       dto.populations,
+      generations,
     );
 
     // 3. ДЕЛЕГУЄМО ЗБЕРЕЖЕННЯ

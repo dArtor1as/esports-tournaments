@@ -8,7 +8,6 @@ import {
 } from '../genetic-simulator.types';
 
 export abstract class BaseGeneticStrategy {
-  protected readonly generations: number = 20;
   protected readonly mutationRate: number = 0.05;
 
   constructor(protected probabilityCalc: ProbabilityCalculatorService) {}
@@ -17,10 +16,12 @@ export abstract class BaseGeneticStrategy {
   abstract execute(
     context: SimulationContext,
     populations: number,
+    generations: number,
   ): StrategyResult;
 
   protected evolvePopulation<T extends BaseIndividual>(
     populations: number,
+    generations: number,
     estimatedGenesNeeded: number,
     evaluatorFunc: (genes: number[]) => T,
   ): T {
@@ -33,7 +34,7 @@ export abstract class BaseGeneticStrategy {
       population.push(evaluatorFunc(randomGenes));
     }
 
-    for (let gen = 0; gen < this.generations; gen++) {
+    for (let gen = 0; gen < generations; gen++) {
       population.sort((a, b) => b.fitness - a.fitness);
       const nextGeneration: T[] = [];
       const eliteCount = Math.floor(populations * 0.1);
