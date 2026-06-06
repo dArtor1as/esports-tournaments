@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { getAgeWord } from '@/lib/helpers';
 
 interface PlayerSummaryCardProps {
   player: any;
@@ -50,7 +51,7 @@ export default function PlayerSummaryCard({
           </Link>
         </div>
         <p className="text-slate-400 font-medium mb-6">
-          {player.user?.username} {age ? `• ${age} років` : ''}
+          {player.user?.username} {age ? `• ${age} ${getAgeWord(age)}` : ''}
         </p>
         <div className="w-full bg-slate-950/80 rounded-xl border border-slate-800 p-4 flex flex-col gap-2">
           <div className="flex justify-between items-center border-b border-slate-800/60 pb-2">

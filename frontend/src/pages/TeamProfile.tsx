@@ -74,8 +74,15 @@ export default function TeamProfile() {
   const handleDisband = async () => {
     try {
       await api.delete(`/teams/${id}`);
+      // Глобальне очищення кешів гравців
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['player'] });
+      await queryClient.invalidateQueries({ queryKey: ['playerStats'] });
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['allTeams'] });
+      }, 3100);
       toast.success('Команду успішно розформовано');
-      navigate('/teams');
+      navigate(-1);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Помилка при видаленні');
     }
@@ -103,10 +110,13 @@ export default function TeamProfile() {
       await api.delete(`/teams/${id}/leave/${playerId}`);
       await queryClient.invalidateQueries({ queryKey: ['teamProfile', id] });
       await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['player'] });
+      await queryClient.invalidateQueries({ queryKey: ['playerStats'] });
+
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['allTeams'] });
       }, 3100);
-      navigate('/teams');
+      navigate(-1);
       toast.success('Ви успішно покинули команду');
     } catch (err: any) {
       toast.error(

@@ -152,7 +152,7 @@ describe('MatchesProgressionService', () => {
 
     await expect(service.transitionToPlayoffs('t1', user)).resolves.toEqual({
       message:
-        'Перехід до плей-оф виконано. Топ-8 команд отримали нові посіви.',
+        'Перехід до плей-оф виконано. Топ-2 команд отримали нові посіви.',
       playoffTeams: [
         { seed: 1, teamId: 'team-a', tag: 'A', points: 3 },
         { seed: 2, teamId: 'team-b', tag: 'B', points: 0 },

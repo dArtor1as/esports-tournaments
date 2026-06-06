@@ -86,8 +86,17 @@ export class MatchesGenerationLogic {
         'Для групового етапу потрібно мінімум 4 команди',
       );
     }
+
     //  визначаємо кількість груп
     const effectiveGroupCount = requestedGroupCount ?? settingsGroupCount ?? 2;
+    const teamsPerGroup = teamCount / effectiveGroupCount;
+
+    //  Мінімум 2 команди в одній групі
+    if (teamsPerGroup < 2) {
+      throw new BadRequestException(
+        `Зараз виходить ${teamsPerGroup} команд(и) у групі. Груповий етап не має сенсу. Будь ласка, оберіть меншу кількість груп (щоб було мінімум 4 команди на групу).`,
+      );
+    }
 
     //  перевірка на ділимість та парність у групах
     if (

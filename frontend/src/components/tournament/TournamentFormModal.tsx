@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import {
@@ -57,6 +57,18 @@ export default function TournamentFormModal({
       }
     },
   });
+
+  // ДИНАМІЧНИЙ ПІДРАХУНОК: Які групи доступні для поточної кількості команд?
+  const validGroupOptions = [1, 2, 4, 8].filter((g) => {
+    const t = parseInt(teamCount);
+    // Правило: ділиться порівну, мінімум 2 в групі, і парна кількість в групі
+    return t % g === 0 && t / g >= 2 && (t / g) % 2 === 0;
+  });
+  useEffect(() => {
+    if (!validGroupOptions.includes(parseInt(groupCount))) {
+      setGroupCount(String(validGroupOptions[0] || 1));
+    }
+  }, [teamCount, groupCount, validGroupOptions]);
 
   const isTest = mode === 'test';
 
@@ -225,15 +237,18 @@ export default function TournamentFormModal({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-800 border-slate-700 text-white">
-                    <SelectItem value="1">1 група</SelectItem>
-                    <SelectItem value="2">2 групи</SelectItem>
-                    <SelectItem value="4">4 групи</SelectItem>
-                    <SelectItem value="8">8 груп</SelectItem>
+                    {/* РЕНДЕРИМО ТІЛЬКИ ВАЛІДНІ ОПЦІЇ */}
+                    {validGroupOptions.map((num) => (
+                      <SelectItem key={num} value={String(num)}>
+                        {num} {num === 1 ? 'група' : num < 5 ? 'групи' : 'груп'}{' '}
+                        ({parseInt(teamCount) / num} команд у групі)
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <p className="text-[10px] text-slate-500 mt-1">
-                  Увага: кількість команд ({teamCount}) має ділитися на
-                  кількість груп порівну.
+                  Формат: {parseInt(teamCount) / parseInt(groupCount)} команд у
+                  групі. З кожної групи виходить Топ-2.
                 </p>
               </div>
             )}

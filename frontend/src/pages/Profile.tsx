@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import CreatePlayerModal from '@/components/CreatePlayerModal';
 import EditProfileModal from '@/components/EditProfileModal';
 import PlayerProfileCard from '@/components/PlayerProfileCard';
+import { getAgeWord } from '@/lib/helpers';
 
 const calculateAge = (dateString?: string) => {
   if (!dateString) return null;
@@ -125,15 +126,20 @@ export default function Profile() {
             </h1>
 
             <p className="text-esports-muted mt-2 font-medium flex items-center gap-2">
-              {userData.email}
-              {userData.birthDate && (
-                <>
-                  <span className="text-slate-600">•</span>
-                  <span className="text-slate-400">
-                    {calculateAge(userData.birthDate)} years
-                  </span>
-                </>
-              )}
+              {/* Емейл бачить тільки власник або Адмін */}
+              {canEditProfile && <span>{userData.email}</span>}
+              {userData.birthDate &&
+                (() => {
+                  const age = calculateAge(userData.birthDate);
+                  return age !== null ? (
+                    <>
+                      <span className="text-slate-600">•</span>
+                      <span className="text-slate-400">
+                        {age} {getAgeWord(age)}
+                      </span>
+                    </>
+                  ) : null;
+                })()}
             </p>
           </div>
 

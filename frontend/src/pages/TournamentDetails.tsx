@@ -5,7 +5,7 @@ import { useTournamentDetailsData } from '@/hooks/useTournamentData';
 import { api } from '@/lib/api';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Cpu, Sparkles, X, ArrowLeft } from 'lucide-react';
+import { Cpu, Sparkles, X, ArrowLeft, History } from 'lucide-react';
 import { toast } from 'sonner';
 import TournamentHeader from '@/components/tournament/TournamentHeader';
 import TournamentBracketTab from '@/components/tournament/TournamentBracketTab';
@@ -14,6 +14,7 @@ import TournamentGaSimulatorTab from '@/components/tournament/TournamentGaSimula
 import GaResultsTab from '@/components/tournament/GaResultsTab';
 import { useMyProfilesData } from '@/hooks/useProfileData';
 import { useQueryClient } from '@tanstack/react-query';
+import TournamentGaHistoryTab from '@/components/tournament/TournamentGaHistoryTab';
 
 export default function TournamentDetails() {
   const { id } = useParams<{ id: string }>();
@@ -313,6 +314,15 @@ export default function TournamentDetails() {
               <Cpu size={14} /> ГА-Лабораторія
             </TabsTrigger>
           )}
+          {/* вкладка га результатів */}
+          {(isCreator || isAdmin) && (
+            <TabsTrigger
+              value="ga-history"
+              className="px-6 py-2 text-xs font-black uppercase tracking-wider flex items-center gap-1.5 text-slate-400 data-[state=active]:text-white"
+            >
+              <History size={14} /> Логи ГА
+            </TabsTrigger>
+          )}
 
           {(isCreator || isAdmin) && predictionResult && (
             <TabsTrigger
@@ -372,6 +382,9 @@ export default function TournamentDetails() {
             isAdmin={isAdmin}
             onRunAlgorithm={runGeneticAlgorithm}
           />
+        </TabsContent>
+        <TabsContent value="ga-history">
+          <TournamentGaHistoryTab tournamentId={tournament.id} />
         </TabsContent>
 
         {predictionResult && (
