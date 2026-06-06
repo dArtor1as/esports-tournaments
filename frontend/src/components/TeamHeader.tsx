@@ -10,6 +10,7 @@ interface TeamHeaderProps {
   team: any;
   teamFlag: string | null;
   isCaptain: boolean;
+  isAdmin?: boolean;
   onDisband: () => void;
   onTransferSuccess: () => void;
 }
@@ -18,6 +19,7 @@ export default function TeamHeader({
   team,
   teamFlag,
   isCaptain,
+  isAdmin = false,
   onDisband,
   onTransferSuccess,
 }: TeamHeaderProps) {
@@ -75,7 +77,7 @@ export default function TeamHeader({
           </div>
         </div>
 
-        {isCaptain && (
+        {(isCaptain || isAdmin) && (
           <div className="flex flex-col gap-2 relative z-10">
             <TransferLeadershipModal
               teamId={team.id}

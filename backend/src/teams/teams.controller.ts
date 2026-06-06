@@ -20,6 +20,7 @@ import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { CacheInterceptor, CacheKey, CacheTTL } from '@nestjs/cache-manager';
 import { TeamTransfersService } from './team-transfers.service';
 import { RosterRole } from 'node_modules/@prisma/client/default';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('Teams (Команди)')
 @Controller('teams')
@@ -138,6 +139,7 @@ export class TeamsController {
   }
 
   @Get(':id/transfers')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @ApiOperation({ summary: 'Отримати лог трансферів команди' })
   getTeamTransfers(@Param('id', ParseUUIDPipe) id: string) {
     return this.transfersService.getTeamTransfers(id);

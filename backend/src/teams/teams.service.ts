@@ -150,6 +150,7 @@ export class TeamsService {
         players: {
           select: {
             id: true,
+            userId: true,
             nickname: true,
             inGameRole: true,
             rating: true,

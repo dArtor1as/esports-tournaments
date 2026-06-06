@@ -13,6 +13,7 @@ import TeamHeader from '@/components/TeamHeader';
 import TeamRosterTab from '@/components/TeamRosterTab';
 import TeamMatchesTab from '@/components/TeamMatchesTab';
 import EloRatingChart from '@/components/EloRatingChart';
+import TeamTransfersTab from '@/components/TeamTransfersTab';
 
 export default function TeamProfile() {
   const { id } = useParams<{ id: string }>();
@@ -57,14 +58,15 @@ export default function TeamProfile() {
   const allSubstitutes =
     team.players?.filter((p: any) => p.teamRole === 'SUBSTITUTE') || [];
 
-  // 2. перевірка чи є юзер тренером цієї команди
-  const isCoach = team.players?.some(
-    (p: any) => p.userId === currentUser?.id && p.teamRole === 'COACH',
+  // 2. перевірка чи є юзер учасником цієї команди
+  const isTeamMember = team.players?.some(
+    (p: any) => p.userId === currentUser?.id,
   );
 
-  const canSeeSubstitutes = isCaptain || isAdmin || isCoach;
+  // 3. Запасних бачать Адміни та всі учасники команди (гравці, тренери, самі запасні)
+  const canSeeSubstitutes = isAdmin || isTeamMember;
 
-  // 3. приховуємо запасних якщо немає прав, передаємо порожній масив
+  // 4. приховуємо запасних якщо немає прав, передаємо порожній масив
   const substitutes = canSeeSubstitutes ? allSubstitutes : [];
 
   const teamFlag = getFlagUrl(team.countryCode, 'w40');
@@ -84,6 +86,8 @@ export default function TeamProfile() {
       await api.delete(`/teams/${id}/kick/${playerId}`);
       // Оновлюємо поточну сторінку команди (склад і статус isComplete)
       await queryClient.invalidateQueries({ queryKey: ['teamProfile', id] });
+      // Оновлюємо глобальний список гравців, щоб статус змінився на "Вільний агент"
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
       // Оновлюємо загальний список команд, бо статус змінився
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['allTeams'] });
@@ -98,6 +102,7 @@ export default function TeamProfile() {
     try {
       await api.delete(`/teams/${id}/leave/${playerId}`);
       await queryClient.invalidateQueries({ queryKey: ['teamProfile', id] });
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['allTeams'] });
       }, 3100);
@@ -124,6 +129,7 @@ export default function TeamProfile() {
         team={team}
         teamFlag={teamFlag}
         isCaptain={isCaptain}
+        isAdmin={isAdmin}
         onDisband={handleDisband}
         onTransferSuccess={handleTransferSuccess}
       />
@@ -135,6 +141,12 @@ export default function TeamProfile() {
             className="flex-1 md:flex-none px-6 py-2 text-xs font-black uppercase tracking-wider"
           >
             Склад ростера
+          </TabsTrigger>
+          <TabsTrigger
+            value="transfers"
+            className="flex-1 md:flex-none px-6 py-2 text-xs font-black uppercase tracking-wider"
+          >
+            Трансфери
           </TabsTrigger>
           <TabsTrigger
             value="matches"
@@ -161,6 +173,11 @@ export default function TeamProfile() {
             onLeave={handleLeave}
             substitutes={substitutes}
           />
+        </TabsContent>
+
+        <TabsContent value="transfers">
+          {' '}
+          <TeamTransfersTab teamId={team.id} />{' '}
         </TabsContent>
 
         <TabsContent value="matches">
