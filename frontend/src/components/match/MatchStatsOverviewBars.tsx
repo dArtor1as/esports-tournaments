@@ -5,6 +5,9 @@ interface MatchStatsOverviewBarsProps {
   totalsA: any;
   totalsB: any;
   isCS2: boolean;
+  scoreA?: number;
+  scoreB?: number;
+  title?: string;
 }
 
 export default function MatchStatsOverviewBars({
@@ -12,6 +15,9 @@ export default function MatchStatsOverviewBars({
   totalsA,
   totalsB,
   isCS2,
+  scoreA,
+  scoreB,
+  title = 'Performance overview',
 }: MatchStatsOverviewBarsProps) {
   const ComparisonBar = ({
     label,
@@ -60,7 +66,7 @@ export default function MatchStatsOverviewBars({
     <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
       <div className="p-3.5 border-b border-slate-800 bg-slate-950/40">
         <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-          <Activity size={14} className="text-amber-500" /> Performance overview
+          <Activity size={14} className="text-amber-500" /> {title}
         </h3>
       </div>
       <div className="p-6">
@@ -69,6 +75,20 @@ export default function MatchStatsOverviewBars({
             <span className="text-amber-500">[{match.teamA?.tag}]</span>{' '}
             {match.teamA?.name}
           </div>
+
+          {/* Виведення рахунку по центру */}
+          {scoreA !== undefined && scoreB !== undefined && (
+            <div className="text-2xl font-black text-white px-4 py-1 bg-slate-950 rounded-lg border border-slate-800 shadow-inner">
+              <span className={scoreA > scoreB ? 'text-emerald-400' : ''}>
+                {scoreA}
+              </span>
+              <span className="text-slate-600 mx-2">:</span>
+              <span className={scoreB > scoreA ? 'text-emerald-400' : ''}>
+                {scoreB}
+              </span>
+            </div>
+          )}
+
           <div className="flex items-center gap-2 font-black text-white text-base">
             {match.teamB?.name}{' '}
             <span className="text-slate-500">[{match.teamB?.tag}]</span>

@@ -126,8 +126,14 @@ export default function MatchStatsTeamTable({
                         {Math.round(pStat.adr || 0) || '-'}
                       </td>
                       <td className="px-4 py-3 text-center text-slate-400 font-mono">
-                        {pStat.headshots
-                          ? `${Math.round(pStat.headshots)}%`
+                        {pStat.headshots !== undefined
+                          ? `${
+                              pStat.kills > 0
+                                ? Math.round(
+                                    (pStat.headshots / pStat.kills) * 100,
+                                  )
+                                : 0
+                            }%`
                           : '-'}
                       </td>
                     </>

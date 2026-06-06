@@ -6,6 +6,7 @@ import {
   Tooltip,
   CartesianGrid,
   ResponsiveContainer,
+  Label,
 } from 'recharts';
 import { TrendingUp } from 'lucide-react';
 
@@ -82,11 +83,12 @@ export default function EloRatingChart({
       <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
         <TrendingUp className="text-esports-accent" size={20} /> {title}
       </h3>
-      <div className="h-72 w-full pt-4">
+      <div className="h-80 w-full pt-4 pb-2">
+        {' '}
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={chartData}
-            margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+            margin={{ top: 10, right: 30, left: 20, bottom: 20 }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
             <XAxis
@@ -94,13 +96,37 @@ export default function EloRatingChart({
               stroke="#64748b"
               fontSize={11}
               tickLine={false}
-            />
+              tickMargin={10}
+            >
+              {/* ПІДПИС ОСІ X */}
+              <Label
+                value="Порядковий номер матчу"
+                offset={-15}
+                position="insideBottom"
+                fill="#94a3b8"
+                fontSize={12}
+                fontWeight={600}
+              />
+            </XAxis>
             <YAxis
               stroke="#64748b"
               fontSize={11}
               domain={['dataMin - 50', 'dataMax + 50']}
               tickLine={false}
-            />
+              tickMargin={10}
+            >
+              {/* ПІДПИС ОСІ Y */}
+              <Label
+                value="Рейтинг Elo"
+                angle={-90}
+                position="insideLeft"
+                offset={-10}
+                style={{ textAnchor: 'middle' }}
+                fill="#94a3b8"
+                fontSize={12}
+                fontWeight={600}
+              />
+            </YAxis>
             <Tooltip
               content={<CustomTooltip />}
               cursor={{
