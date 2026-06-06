@@ -140,6 +140,14 @@ export default function MatchPostGameStats({ match }: MatchPostGameStatsProps) {
     );
   }
 
+  const mapData = selectedMapIndex !== 'all' ? maps[selectedMapIndex] : null;
+  const displayScoreA = mapData ? mapData.teamA?.score : match.scoreA;
+  const displayScoreB = mapData ? mapData.teamB?.score : match.scoreB;
+  const displayTitle =
+    mapData && mapData.mapName
+      ? `Статистика: ${mapData.mapName}`
+      : 'Загальна статистика серії';
+
   // 2. Безпечне визначення дисципліни турніру
   const isCS2 = useMemo(() => {
     const slug = match.tournament?.game?.slug || '';
@@ -184,6 +192,9 @@ export default function MatchPostGameStats({ match }: MatchPostGameStatsProps) {
         totalsA={totalsA}
         totalsB={totalsB}
         isCS2={isCS2}
+        scoreA={displayScoreA}
+        scoreB={displayScoreB}
+        title={displayTitle}
       />
 
       {/* ТАБЛИЦІ СТАТИСТИКИ */}

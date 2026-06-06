@@ -27,3 +27,23 @@ export const calculateKd = (
   const d = Number(deaths);
   return d > 0 ? (k / d).toFixed(2) : k.toFixed(2);
 };
+// 4. Визначення слова для віку
+export const getAgeWord = (age: number): string => {
+  const lastDigit = age % 10;
+  const lastTwoDigits = age % 100;
+
+  // Виняток для 11, 12, 13, 14 (завжди "років")
+  if (lastTwoDigits >= 11 && lastTwoDigits <= 14) {
+    return 'років';
+  }
+  // Закінчується на 1 (1, 21, 31...) -> "рік"
+  if (lastDigit === 1) {
+    return 'рік';
+  }
+  // Закінчується на 2, 3, 4 (2, 22, 24...) -> "роки"
+  if (lastDigit >= 2 && lastDigit <= 4) {
+    return 'роки';
+  }
+  // Все інше (0, 5, 6, 7, 8, 9) -> "років"
+  return 'років';
+};

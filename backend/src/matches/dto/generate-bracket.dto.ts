@@ -24,7 +24,7 @@ export class GenerateBracketDto {
   })
   @IsOptional()
   @IsInt()
-  @Min(2)
+  @Min(4)
   @Max(32)
   teamCount?: number;
 
@@ -35,7 +35,7 @@ export class GenerateBracketDto {
   })
   @IsOptional()
   @IsInt()
-  @Min(2)
+  @Min(1)
   @Max(16)
   groupCount?: number;
 }

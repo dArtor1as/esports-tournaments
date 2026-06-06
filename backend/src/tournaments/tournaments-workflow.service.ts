@@ -84,7 +84,7 @@ export class TournamentsWorkflowService {
         game: { select: { name: true } },
         _count: { select: { participants: true, matches: true } },
       },
-      orderBy: { id: 'desc' },
+      orderBy: { createdAt: 'desc' },
     });
 
     // 2. Дістаємо статистику матчів

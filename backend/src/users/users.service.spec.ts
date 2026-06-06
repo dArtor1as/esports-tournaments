@@ -115,6 +115,29 @@ describe('UsersService', () => {
     });
   });
 
+  describe('findAll', () => {
+    it('returns a list of users', async () => {
+      prisma.user.findMany.mockResolvedValueOnce([{ id: 'u1' }] as never);
+      await expect(service.findAll()).resolves.toEqual([{ id: 'u1' }]);
+    });
+  });
+
+  describe('findOne', () => {
+    it('returns a specific user', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce({ id: 'u1' } as never);
+      await expect(service.findOne('u1')).resolves.toEqual({ id: 'u1' });
+    });
+  });
+
+  describe('findByEmail', () => {
+    it('returns user by email', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce({ id: 'u1' } as never);
+      await expect(service.findByEmail('test@test.com')).resolves.toEqual({
+        id: 'u1',
+      });
+    });
+  });
+
   describe('getMe', () => {
     it('throws when user not found', async () => {
       prisma.user.findUnique.mockResolvedValueOnce(null);
@@ -138,6 +161,39 @@ describe('UsersService', () => {
       const [findUniqueArgs] = findUniqueSpy.mock.calls[0];
 
       expect(findUniqueArgs).toMatchObject({ where: { id: 'u1' } });
+    });
+  });
+
+  describe('requestDeletionCode', () => {
+    const mockUser = { userId: 'u1', role: Role.USER } as unknown as JwtPayload;
+
+    it('throws if user not found', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce(null);
+      await expect(service.requestDeletionCode('u1', mockUser)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('generates code, caches it and sends email', async () => {
+      prisma.user.findUnique.mockResolvedValueOnce({
+        id: 'u1',
+        email: 't@t.com',
+      } as never);
+      const cacheSetSpy = jest.spyOn(cacheManager, 'set');
+      const mailSpy = jest.spyOn(mailService, 'sendAccountDeletionCode');
+
+      await expect(
+        service.requestDeletionCode('u1', mockUser),
+      ).resolves.toEqual({
+        message: 'Код відправлено на пошту',
+      });
+
+      expect(cacheSetSpy).toHaveBeenCalledWith(
+        'delete_code_u1',
+        expect.any(String),
+        900000,
+      );
+      expect(mailSpy).toHaveBeenCalledWith('t@t.com', expect.any(String));
     });
   });
 
@@ -192,6 +248,72 @@ describe('UsersService', () => {
       await expect(service.remove('u1', mockUser, '123456')).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    it('throws if account is already deleted', async () => {
+      cacheManager.get.mockResolvedValueOnce('123456');
+      prisma.user.findUnique.mockResolvedValueOnce({
+        id: 'u1',
+        deletedAt: new Date(),
+      } as never);
+
+      await expect(service.remove('u1', mockUser, '123456')).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('reassigns captain in teams for users players', async () => {
+      cacheManager.get.mockResolvedValue('123456');
+      prisma.$transaction.mockImplementation(async (cb) => cb(prisma as never));
+
+      // Юзер має ігровий профіль, який знаходиться в команді
+      prisma.user.findUnique.mockResolvedValueOnce({
+        id: 'u1',
+        players: [{ id: 'p1', teamId: 't1' }],
+      } as never);
+
+      // Мок пошуку команди
+      prisma.team.findUnique.mockResolvedValueOnce({
+        id: 't1',
+        captainId: 'p1',
+        players: [{ id: 'p1' }, { id: 'p2' }],
+      } as never);
+
+      const updateTeamSpy = jest.spyOn(prisma.team, 'update');
+
+      await service.remove('u1', mockUser, '123456');
+
+      // Перевірка перепризначення в межах видалення юзера
+      expect(updateTeamSpy).toHaveBeenCalledWith({
+        where: { id: 't1' },
+        data: { captainId: 'p2' },
+      });
+    });
+
+    it('disbands team if users player was the last one', async () => {
+      cacheManager.get.mockResolvedValue('123456');
+      prisma.$transaction.mockImplementation(async (cb) => cb(prisma as never));
+
+      prisma.user.findUnique.mockResolvedValueOnce({
+        id: 'u1',
+        players: [{ id: 'p1', teamId: 't1' }],
+      } as never);
+
+      prisma.team.findUnique.mockResolvedValueOnce({
+        id: 't1',
+        captainId: 'p1',
+        players: [{ id: 'p1' }], // Тільки один гравець
+      } as never);
+
+      const updateTeamSpy = jest.spyOn(prisma.team, 'update');
+
+      await service.remove('u1', mockUser, '123456');
+
+      // Перевірка розпуску команди
+      expect(updateTeamSpy).toHaveBeenCalledWith({
+        where: { id: 't1' },
+        data: { status: 'DISBANDED' },
+      });
     });
 
     it('checks access and anonymizes user', async () => {

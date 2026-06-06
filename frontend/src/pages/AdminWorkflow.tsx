@@ -29,6 +29,7 @@ export default function AdminWorkflow() {
       const { data } = await api.get('/tournaments/workflow');
       return data;
     },
+    refetchInterval: 5000,
   });
 
   // СТАН ДЛЯ ФІЛЬТРІВ (З URL)

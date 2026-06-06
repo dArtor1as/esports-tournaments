@@ -9,12 +9,36 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Settings, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import DeleteConfirmationZone from './DeleteConfirmationZone';
+import countries from 'i18n-iso-countries';
+import ukLocale from 'i18n-iso-countries/langs/uk.json';
+
+// 1. РЕЄСТРУЄМО МОВУ В БІБЛІОТЕЦІ
+countries.registerLocale(ukLocale);
+
+// 2. ГЕНЕРУЄМО ПОВНИЙ СПИСОК КРАЇН УКРАЇНСЬКОЮ
+const REGIONS_COUNTRIES = Object.entries(
+  countries.getNames('uk', { select: 'official' }),
+)
+  .map(([code, name]) => ({
+    code: code.toUpperCase(),
+    name: name,
+  }))
+  .sort((a, b) => a.name.localeCompare(b.name));
+
+REGIONS_COUNTRIES.unshift({ code: 'INT', name: 'Міжнародний' });
 
 interface EditProfileModalProps {
   user: { id: string; username: string; countryCode?: string };
@@ -157,14 +181,19 @@ export default function EditProfileModal({
                 />
               </div>
               <div className="space-y-2">
-                <Label>Код країни (UA, PL, US)</Label>
-                <Input
-                  value={countryCode}
-                  onChange={(e) => setCountryCode(e.target.value)}
-                  placeholder="UA"
-                  className="bg-slate-800 border-slate-700 uppercase text-white"
-                  maxLength={2}
-                />
+                <Label>Країна</Label>
+                <Select value={countryCode} onValueChange={setCountryCode}>
+                  <SelectTrigger className="bg-slate-800 border-slate-700 text-white focus:ring-esports-primary">
+                    <SelectValue placeholder="Оберіть..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-800 border-slate-700 text-white max-h-64 overflow-y-auto">
+                    {REGIONS_COUNTRIES.map((c) => (
+                      <SelectItem key={c.code} value={c.code}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {error && <p className="text-red-500 text-sm">{error}</p>}

@@ -157,8 +157,7 @@ export class MatchesProgressionService {
     await this.clearTournamentCaches(tournamentId);
 
     return {
-      message:
-        'Перехід до плей-оф виконано. Топ-8 команд отримали нові посіви.',
+      message: `Перехід до плей-оф виконано. Топ-${playoffTeams.length} команд отримали нові посіви.`,
       playoffTeams: playoffTeams.map((t, index) => ({
         seed: index + 1,
         teamId: t.teamId,

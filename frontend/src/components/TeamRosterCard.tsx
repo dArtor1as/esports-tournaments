@@ -135,36 +135,40 @@ export default function TeamRosterCard({
         </div>
 
         <div className="flex gap-1">
-          {!isCaptain && isMe && (
-            <ConfirmModal
-              title="Покинути команду?"
-              description="Ви перейдете в статус вільного агента."
-              onConfirm={() => onLeave(player.id)}
-              confirmText="Покинути"
-            >
-              <button
-                onClick={(e) => e.stopPropagation()}
-                className="text-orange-500 hover:text-orange-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity rounded hover:bg-orange-500/10"
+          {isMe && !isPlayerCaptain && (
+            <div onClick={(e) => e.stopPropagation()}>
+              <ConfirmModal
+                title="Покинути команду?"
+                description="Ви перейдете в статус вільного агента."
+                onConfirm={() => onLeave(player.id)}
+                confirmText="Покинути"
               >
-                <LogOut size={14} />
-              </button>
-            </ConfirmModal>
+                <button
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-orange-500 hover:text-orange-400 p-1 opacity-60 hover:opacity-100 transition-opacity rounded hover:bg-orange-500/10"
+                >
+                  <LogOut size={16} />
+                </button>
+              </ConfirmModal>
+            </div>
           )}
 
           {isCaptain && !isPlayerCaptain && (
-            <ConfirmModal
-              title="Вилучити гравця?"
-              description={`Ви впевнені, що хочете кікнути ${player.nickname}?`}
-              onConfirm={() => onKick(player.id)}
-              confirmText="Вилучити"
-            >
-              <button
-                onClick={(e) => e.stopPropagation()}
-                className="text-red-500 hover:text-red-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity rounded hover:bg-red-500/10"
+            <div onClick={(e) => e.stopPropagation()}>
+              <ConfirmModal
+                title="Вилучити гравця?"
+                description={`Ви впевнені, що хочете кікнути ${player.nickname}?`}
+                onConfirm={() => onKick(player.id)}
+                confirmText="Вилучити"
               >
-                <Trash2 size={14} />
-              </button>
-            </ConfirmModal>
+                <button
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-red-500 hover:text-red-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity rounded hover:bg-red-500/10"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </ConfirmModal>
+            </div>
           )}
         </div>
       </div>

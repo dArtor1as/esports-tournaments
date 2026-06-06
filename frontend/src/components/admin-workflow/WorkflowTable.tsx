@@ -36,7 +36,7 @@ export default function WorkflowTable({
     if (tournament.requiresTransitionToPlayoffs) {
       return (
         <div className="flex items-center gap-2 text-emerald-400 font-black text-xs uppercase tracking-wider bg-emerald-500/10 px-3 py-1.5 rounded-md border border-emerald-500/20 w-fit">
-          <GitBranch size={14} /> Пора генерувати Плей-оф
+          <GitBranch size={14} /> Можна згенерувати стадію!
         </div>
       );
     }
