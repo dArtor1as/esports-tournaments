@@ -25,6 +25,7 @@ class TestStrategy extends BaseGeneticStrategy {
   ) {
     return this.evolvePopulation(
       populations,
+      this.generations,
       estimatedGenesNeeded,
       evaluatorFunc,
     );

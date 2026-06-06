@@ -71,7 +71,7 @@ describe('GroupStageStrategy', () => {
       stats: {},
     });
 
-    const result = strategy.execute(buildContext(), 1);
+    const result = strategy.execute(buildContext(), 10, 1);
 
     expect(result.algorithmType).toBe('GROUP_STAGE');
     expect(result.standings?.['team-a']).toMatchObject({
@@ -130,7 +130,7 @@ describe('GroupStageStrategy', () => {
     // Форсуємо рандом, щоб гарантовано покрити рядок 103: Math.random() > 0.5 ? 1 : -1
     const randomSpy = jest.spyOn(Math, 'random').mockReturnValue(0.9);
 
-    const result = strategy.execute(context, 1);
+    const result = strategy.execute(context, 10, 1);
 
     expect(result.algorithmType).toBe('GROUP_STAGE');
     // Перевіряємо, що стендінги успішно сформувались без падінь (тай-брейки відпрацювали)

@@ -25,7 +25,7 @@ export class SimulateTournamentDto {
   })
   @IsInt()
   @Min(10)
-  @Max(1000)
+  @Max(200)
   populations: number;
 
   @ApiPropertyOptional({ enum: Stage })
@@ -40,4 +40,15 @@ export class SimulateTournamentDto {
   @IsOptional()
   @IsBoolean()
   isDryRun?: boolean = true;
+
+  @ApiPropertyOptional({
+    example: 20,
+    description:
+      'Кількість поколінь (еволюційних циклів). Впливає на глибину пошуку.',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(25) // Обмежуємо, щоб не покласти сервер
+  generations?: number;
 }
