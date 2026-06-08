@@ -161,7 +161,9 @@ npx prisma migrate dev
 npm run start:dev
 
 # Запуск тестів
-npm test
+cd backend
+npm run test         # Звичайний запуск всіх тестів
+npm run test:cov     # Запуск тестів із відображенням звіту про покриття коду (coverage)
 
 # Перевірка форматування
 npm run format:check
@@ -210,9 +212,6 @@ esports-tournaments/
 │   ├── nginx.conf
 │   └── package.json
 │
-├── docs/                    # Документація
-│   ├── TECH_STACK.md       # Стек технологій
-│   └── SYSTEM_ANALYSIS.md  # Аналіз системи
 │
 ├── docker-compose.yml       # Конфігурація контейнерів
 └── README.md               # Цей файл
@@ -232,5 +231,5 @@ MIT
 
 ---
 
-**Версія**: 1.0  
-**Останнє оновлення**: 2026-05-20
+**Версія**: 2.0  
+**Останнє оновлення**: 2026-08-06

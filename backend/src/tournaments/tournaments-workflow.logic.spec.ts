@@ -39,6 +39,7 @@ describe('TournamentsWorkflowLogic', () => {
           stats: {},
           createdAt: new Date(),
           updatedAt: new Date(),
+          deletedAt: null,
         },
         {
           id: `p-coach-${i}`,
@@ -52,6 +53,7 @@ describe('TournamentsWorkflowLogic', () => {
           stats: {},
           createdAt: new Date(),
           updatedAt: new Date(),
+          deletedAt: null,
         },
         {
           id: `p-sub-${i}`,
@@ -65,6 +67,7 @@ describe('TournamentsWorkflowLogic', () => {
           stats: {},
           createdAt: new Date(),
           updatedAt: new Date(),
+          deletedAt: null,
         },
       ],
     }));
