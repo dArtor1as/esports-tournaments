@@ -138,34 +138,23 @@ export abstract class BaseGeneticStrategy {
       // Розрахунок Fitness
       if (winnerProb >= 0.5) {
         // 1. Основна нагорода: переміг фаворит
-        fitness += winnerProb * 10;
+        fitness += winnerProb * 8;
 
+        // бонус за суху перемогу, як у формулі
         const isSweep =
           (matchWinnerIsA && winsB === 0) || (!matchWinnerIsA && winsA === 0);
-
         if (isSweep) {
-          // 2. Фаворит виграв 2-0
-          if (winnerProb > 0.65) {
-            // Це логічно (ймовірність перемоги > 65%), даємо бонус
-            fitness += winnerProb * 3;
-          } else {
-            // Команди рівні (50-65%), але рахунок 2-0. Трохи штрафуємо, щоб стимулювати 2-1
-            fitness -= 1;
-          }
-        } else {
-          // 3. Фаворит виграв 2-1 (хтось віджав карту)
-          if (winnerProb <= 0.65) {
-            // Команди рівні, рахунок 2-1 - це ідеальний реалістичний сценарій! Даємо великий бонус
-            fitness += 4;
-          } else {
-            // Жорсткий фаворит віддав карту - це можливо, але не даємо за це бонусів
-          }
+          fitness += 2;
         }
       } else {
-        // Апсет (переміг андердог)
-        if (winnerProb > 0.4) fitness += 2;
-        else if (winnerProb > 0.25) fitness -= 5;
-        else fitness -= 30;
+        // Апсети
+        if (winnerProb > 0.35) {
+          fitness += 2; // невелика нагорода за незначний апсет
+        } else if (winnerProb > 0.2) {
+          fitness += 0; // не заохочуємо, але й не караємо
+        } else {
+          fitness -= 30; // кара за великий апсет
+        }
       }
 
       // Універсальне просування переможця (працює і для SE, і для DE)

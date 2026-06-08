@@ -14,6 +14,7 @@ interface TournamentParticipantsTabProps {
   tournamentTier: number;
   isCreatorOrAdmin: boolean;
   tournamentGameId: string;
+  creatorId: string;
   isFull?: boolean;
   isPlanned?: boolean;
 }
@@ -24,6 +25,7 @@ export default function TournamentParticipantsTab({
   tournamentTier,
   isCreatorOrAdmin,
   tournamentGameId,
+  creatorId,
   isFull = false,
   isPlanned = false,
 }: TournamentParticipantsTabProps) {
@@ -52,7 +54,7 @@ export default function TournamentParticipantsTab({
         <h3 className="text-lg font-black text-white">Список учасників</h3>
 
         {/* Кнопка запрошення (тільки до старту турніру) */}
-        {isCreatorOrAdmin && !isFull && isPlanned && (
+        {user?.id === creatorId && !isFull && isPlanned && (
           <InviteTeamModal
             tournamentId={tournamentId}
             tournamentTier={tournamentTier}

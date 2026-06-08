@@ -33,6 +33,7 @@ export default function TournamentDetails() {
 
   const [activeTab, setActiveTab] = useState('bracket');
   const [populations, setPopulations] = useState('100');
+  const [generations, setGenerations] = useState('20');
   const [simLoading, setSimLoading] = useState(false);
   const [bracketLoading, setBracketLoading] = useState(false);
 
@@ -115,6 +116,7 @@ export default function TournamentDetails() {
       const response = await api.post(endpoint, {
         tournamentId: id,
         populations: parseInt(populations),
+        generations: parseInt(generations),
         isDryRun,
         stage: isGroupStage ? 'GROUP' : 'PLAYOFF',
       });
@@ -366,6 +368,7 @@ export default function TournamentDetails() {
             tournamentTier={tournament.tier}
             tournamentGameId={tournament.gameId || tournament.game?.id}
             isCreatorOrAdmin={isCreator || isAdmin}
+            creatorId={tournament.creatorId}
             isFull={participants.length >= (tournament.maxParticipants || 0)}
             isPlanned={tournament.status === 'planned'}
           />
@@ -375,6 +378,8 @@ export default function TournamentDetails() {
           <TournamentGaSimulatorTab
             populations={populations}
             setPopulations={setPopulations}
+            generations={generations}
+            setGenerations={setGenerations}
             simLoading={simLoading}
             matchesLength={matches.length}
             tournamentStatus={tournament.status}

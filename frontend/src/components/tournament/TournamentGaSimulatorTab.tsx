@@ -6,6 +6,8 @@ import { Label } from '@/components/ui/label';
 interface TournamentGaSimulatorTabProps {
   populations: string;
   setPopulations: (val: string) => void;
+  generations: string;
+  setGenerations: (val: string) => void;
   simLoading: boolean;
   matchesLength: number;
   tournamentStatus: string;
@@ -17,6 +19,8 @@ interface TournamentGaSimulatorTabProps {
 export default function TournamentGaSimulatorTab({
   populations,
   setPopulations,
+  generations,
+  setGenerations,
   simLoading,
   matchesLength,
   tournamentStatus,
@@ -27,23 +31,48 @@ export default function TournamentGaSimulatorTab({
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* НАЛАШТУВАННЯ */}
         <div className="lg:col-span-1 bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-4 h-max">
           <h3 className="text-base font-black text-white uppercase tracking-wider flex items-center gap-2">
             <Cpu size={18} className="text-esports-accent" /> Налаштування
           </h3>
-          <div className="space-y-2">
-            <Label>Розмір популяції (Populations)</Label>
-            <Input
-              type="number"
-              value={populations}
-              onChange={(e) => setPopulations(e.target.value)}
-              className="bg-slate-950 border-slate-800 text-white font-mono"
-              min={10}
-              max={1000}
-            />
+
+          <div className="space-y-4 pt-2">
+            {/* ПОЛЕ: ПОПУЛЯЦІЇ */}
+            <div className="space-y-2">
+              <Label>Розмір популяції (Populations)</Label>
+              <Input
+                type="number"
+                value={populations}
+                onChange={(e) => setPopulations(e.target.value)}
+                className="bg-slate-950 border-slate-800 text-white font-mono"
+                min={10}
+                max={200}
+              />
+              <p className="text-[10px] text-slate-500">
+                Ширина пошуку варіантів (рекомендовано 50-200)
+              </p>
+            </div>
+
+            {/* ПОЛЕ: ГЕНЕРАЦІЇ */}
+            <div className="space-y-2">
+              <Label>Кількість поколінь (Generations)</Label>
+              <Input
+                type="number"
+                value={generations}
+                onChange={(e) => setGenerations(e.target.value)}
+                className="bg-slate-950 border-slate-800 text-white font-mono"
+                min={1}
+                max={25}
+              />
+              <p className="text-[10px] text-slate-500">
+                Глибина еволюції та схрещування (макс. 25)
+              </p>
+            </div>
           </div>
         </div>
 
+        {/* ПАНЕЛЬ ЗАПУСКУ */}
         <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl space-y-6">
           <div>
             <h3 className="text-xl font-black text-white mb-1">
@@ -55,14 +84,14 @@ export default function TournamentGaSimulatorTab({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* AI Forecast */}
+            {/* GA Forecast */}
             <div className="bg-slate-950 border border-slate-800 p-5 rounded-xl flex flex-col justify-between relative group overflow-hidden">
               <div className="space-y-2">
                 <div className="text-blue-400 font-black tracking-widest text-[10px] uppercase flex items-center gap-1">
                   <Eye size={12} /> Безпечний режим
                 </div>
                 <h4 className="text-lg font-bold text-white">
-                  ШІ-Прогнозування розвитку
+                  Прогнозування розвитку
                 </h4>
                 <p className="text-xs text-slate-400 leading-relaxed">
                   Алгоритм симулює тисячі комбінацій матчів у пам'яті без впливу

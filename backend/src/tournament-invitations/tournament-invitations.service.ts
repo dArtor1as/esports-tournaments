@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -43,8 +44,11 @@ export class TournamentInvitationsService {
       );
     }
 
-    this.accessPolicy.checkTournamentCreatorOrAdmin(tournament.creatorId, user);
-
+    if (tournament.creatorId !== user.userId) {
+      throw new ForbiddenException(
+        'Тільки організатор турніру може запрошувати команди',
+      );
+    }
     // перевірки перед створенням інвайту
     //  Перевірка регіонального обмеження для прямих інвайтів
     this.invitationPolicyService.checkRegionRestriction(

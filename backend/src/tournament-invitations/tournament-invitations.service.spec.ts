@@ -66,6 +66,7 @@ describe('TournamentInvitationsService', () => {
 
     it('успішно створює інвайт та відправляє лист', async () => {
       prisma.tournament.findUnique.mockResolvedValueOnce({
+        creatorId: 'u1',
         gameId: 'g1',
         region: Region.GLOBAL,
         tier: 2,
