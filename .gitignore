@@ -27,3 +27,6 @@ Thumbs.db
 # Кеш інструментів
 .eslintcache
 .vite/
+
+#бекапи бази даних
+*.dump

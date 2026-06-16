@@ -4,20 +4,31 @@ import { useNavigate } from 'react-router-dom';
 interface TournamentBracketProps {
   matches: any[];
   bracketType: string;
+  isForecast?: boolean;
 }
 
-const MatchNode = ({ match }: { match: any }) => {
+const MatchNode = ({
+  match,
+  isForecast,
+}: {
+  match: any;
+  isForecast?: boolean;
+  onMatchClick?: (match: any) => void;
+}) => {
   const navigate = useNavigate();
 
   const isTeamAWin = match.scoreA > match.scoreB;
   const isTeamBWin = match.scoreB > match.scoreA;
   const isPlayed =
     match.scoreA > 0 || match.scoreB > 0 || match.matchStatus === 'COMPLETED';
-
+  const handleNodeClick = () => {
+    if (isForecast) return; // Якщо це прогноз - нічого не робимо
+    navigate(`/match/${match.id}`);
+  };
   return (
     <div
-      onClick={() => navigate(`/match/${match.id}`)}
-      className="w-52 sm:w-60 bg-slate-900/80 border border-slate-700/60 rounded-xl overflow-hidden shadow-lg flex flex-col text-xs font-mono mb-4 flex-shrink-0 transition-all duration-300 hover:border-esports-primary hover:shadow-[0_0_15px_rgba(242,167,27,0.3)] cursor-pointer group" // <--- ДОДАЛИ cursor-pointer ТА hover:border
+      onClick={handleNodeClick}
+      className={`w-52 sm:w-60 bg-slate-900/80 border border-slate-700/60 rounded-xl overflow-hidden shadow-lg flex flex-col text-xs font-mono mb-4 flex-shrink-0 transition-all duration-300 ${!isForecast ? 'hover:border-esports-primary hover:shadow-[0_0_15px_rgba(242,167,27,0.3)] cursor-pointer group' : 'cursor-default'}`}
     >
       {/* TEAM A */}
       <div
@@ -57,10 +68,13 @@ const BracketTree = ({
   matches,
   title,
   colorClass = 'text-white',
+  isForecast,
 }: {
   matches: any[];
   title?: string;
   colorClass?: string;
+  isForecast?: boolean;
+  onMatchClick?: (match: any) => void;
 }) => {
   const rounds = matches.reduce((acc: any, match: any) => {
     if (!acc[match.round]) acc[match.round] = [];
@@ -92,7 +106,11 @@ const BracketTree = ({
             </div>
             <div className="flex flex-col gap-2 justify-center flex-1">
               {rounds[round].map((match: any) => (
-                <MatchNode key={match.id} match={match} />
+                <MatchNode
+                  key={match.id}
+                  match={match}
+                  isForecast={isForecast}
+                />
               ))}
             </div>
           </div>
@@ -105,6 +123,7 @@ const BracketTree = ({
 export default function TournamentBracket({
   matches,
   bracketType,
+  isForecast,
 }: TournamentBracketProps) {
   if (!matches || matches.length === 0) {
     return (
@@ -170,12 +189,14 @@ export default function TournamentBracket({
           matches={upperMatches}
           title="Upper Bracket (Верхня сітка)"
           colorClass="text-blue-400"
+          isForecast={isForecast}
         />
         {lowerMatches.length > 0 && (
           <BracketTree
             matches={lowerMatches}
             title="Lower Bracket (Нижня сітка)"
             colorClass="text-orange-400"
+            isForecast={isForecast}
           />
         )}
         {grandFinal.length > 0 && (
@@ -183,6 +204,7 @@ export default function TournamentBracket({
             matches={grandFinal}
             title="Grand Final (Гранд-Фінал)"
             colorClass="text-yellow-400"
+            isForecast={isForecast}
           />
         )}
       </div>
@@ -198,6 +220,7 @@ export default function TournamentBracket({
       matches={playoffMatches}
       title="Playoff Bracket"
       colorClass="text-esports-primary"
+      isForecast={isForecast}
     />
   );
 }

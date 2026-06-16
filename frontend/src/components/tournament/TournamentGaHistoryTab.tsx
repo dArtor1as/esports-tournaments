@@ -12,14 +12,17 @@ interface SimulationRun {
   executionTimeMs: number | null;
   isDryRun: boolean;
   createdAt: string;
+  predictedData?: any;
 }
 
 interface TournamentGaHistoryTabProps {
   tournamentId: string;
+  onViewRun?: (run: SimulationRun) => void;
 }
 
 export default function TournamentGaHistoryTab({
   tournamentId,
+  onViewRun,
 }: TournamentGaHistoryTabProps) {
   const [runs, setRuns] = useState<SimulationRun[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -112,7 +115,16 @@ export default function TournamentGaHistoryTab({
               {runs.map((run) => (
                 <tr
                   key={run.id}
-                  className="hover:bg-slate-800/20 transition-colors"
+                  onClick={() => {
+                    if (run.predictedData && onViewRun) {
+                      onViewRun(run);
+                    }
+                  }}
+                  className={`transition-all duration-200 ${
+                    run.predictedData
+                      ? 'cursor-pointer hover:bg-slate-800/40 hover:shadow-[inset_3px_0_0_0_#3b82f6]' // Підсвічування рядка та синя лінія зліва
+                      : 'opacity-50 cursor-not-allowed'
+                  }`}
                 >
                   {/* Дата */}
                   <td className="px-4 py-4 whitespace-nowrap">
