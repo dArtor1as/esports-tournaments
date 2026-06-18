@@ -40,7 +40,7 @@ export class TournamentsWorkflowController {
   }
 
   @Post('generate-test')
-  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Згенерувати тестовий турнір з командами' })
   generateTestTournament(
     @Body() dto: GenerateTestTournamentDto,

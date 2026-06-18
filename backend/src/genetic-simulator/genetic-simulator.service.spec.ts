@@ -174,7 +174,7 @@ describe('GeneticSimulatorService', () => {
       });
 
       expect(prepareSpy).toHaveBeenCalledWith('t1', Stage.PLAYOFF, user);
-      expect(executeSpy).toHaveBeenCalledWith(context, dto.populations, 20);
+      expect(executeSpy).toHaveBeenCalledWith(context, dto.populations, 15);
       expect(saveDryRunSpy).toHaveBeenCalledWith(
         't1',
         dto.populations,
@@ -208,7 +208,7 @@ describe('GeneticSimulatorService', () => {
         algorithmType: 'DOUBLE_ELIMINATION',
       });
 
-      expect(doubleSpy).toHaveBeenCalledWith(context, dto.populations, 20);
+      expect(doubleSpy).toHaveBeenCalledWith(context, dto.populations, 15);
       expect(singleSpy).not.toHaveBeenCalled();
       expect(saveDryRunSpy).toHaveBeenCalled();
     });
@@ -309,7 +309,7 @@ describe('GeneticSimulatorService', () => {
         algorithmType: 'GROUP_STAGE',
       });
 
-      expect(executeSpy).toHaveBeenCalledWith(context, dto.populations, 20);
+      expect(executeSpy).toHaveBeenCalledWith(context, dto.populations, 15);
       expect(saveDryRunSpy).toHaveBeenCalledWith(
         't1',
         dto.populations,

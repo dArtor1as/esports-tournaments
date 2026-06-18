@@ -32,8 +32,8 @@ export default function TournamentDetails() {
   } = useTournamentDetailsData(id);
 
   const [activeTab, setActiveTab] = useState('bracket');
-  const [populations, setPopulations] = useState('100');
-  const [generations, setGenerations] = useState('20');
+  const [populations, setPopulations] = useState('50');
+  const [generations, setGenerations] = useState('10');
   const [simLoading, setSimLoading] = useState(false);
   const [bracketLoading, setBracketLoading] = useState(false);
   const [predictionResult, setPredictionResult] = useState<any>(null);

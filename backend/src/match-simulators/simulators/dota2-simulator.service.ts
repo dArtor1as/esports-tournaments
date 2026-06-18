@@ -13,9 +13,9 @@ import { Dota2PlayerStat, BaseMapStat } from '../../stats/stats.types';
 export class Dota2SimulatorService implements IMatchSimulator {
   private readonly ROLE_MULTIPLIERS: Record<string, Dota2RoleMultiplier> = {
     POS_1: { gpm: 1.4, kills: 1.3, deaths: 0.8, assists: 0.7 }, // Кері фармить і вбиває, мало вмирає
-    POS_2: { gpm: 1.25, kills: 1.45, deaths: 1.0, assists: 1.0 }, // Мідер найчастіше бере участь у бійках
-    POS_3: { gpm: 1.0, kills: 0.9, deaths: 1.2, assists: 1.3 }, // Офлейнер ініціює (більше смертей і асистів)
-    POS_4: { gpm: 0.8, kills: 0.7, deaths: 1.3, assists: 1.6 }, // Сапорт-роумер
+    POS_2: { gpm: 1.25, kills: 1.45, deaths: 0.95, assists: 1.0 }, // Мідер найчастіше бере участь у бійках
+    POS_3: { gpm: 1.05, kills: 1.15, deaths: 1.05, assists: 1.3 }, // Офлейнер ініціює (більше смертей і асистів)
+    POS_4: { gpm: 0.8, kills: 0.55, deaths: 1.25, assists: 1.6 }, // Сапорт-роумер
     POS_5: { gpm: 0.6, kills: 0.4, deaths: 1.5, assists: 1.9 }, // Хард-сапорт: бідний, вмирає за команду, купа асистів
   };
 
@@ -42,18 +42,12 @@ export class Dota2SimulatorService implements IMatchSimulator {
 
       const durationMinutes = Math.floor(Math.random() * 25) + 30; // 30 - 55 хв
       totalDurationMinutes += durationMinutes;
-
-      // В Доті рахунок (score) - це кіли команди.
-      // Приблизно 0.8 кіла в хвилину для переможця, 0.4 для лузера
-      const winnerKills = Math.floor(
-        durationMinutes * (0.8 + Math.random() * 0.4),
+      // Рахуємо рахунок гри залежно від сили команди
+      const { scoreA, scoreB } = this.simulateGameScore(
+        aWinsThisMap,
+        expectedProbA,
+        durationMinutes,
       );
-      const loserKills = Math.floor(
-        durationMinutes * (0.3 + Math.random() * 0.3),
-      );
-
-      const scoreA = aWinsThisMap ? winnerKills : loserKills;
-      const scoreB = aWinsThisMap ? loserKills : winnerKills;
 
       mapDetails.push({ map: `Game ${gameNumber}`, scoreA, scoreB });
 
@@ -64,12 +58,16 @@ export class Dota2SimulatorService implements IMatchSimulator {
         mapStatsA,
         teamA.players,
         durationMinutes,
+        scoreA, // teamKills
+        scoreB, // teamDeaths
         aWinsThisMap,
       );
       this.accumulateDotaStats(
         mapStatsB,
         teamB.players,
         durationMinutes,
+        scoreB, // teamKills
+        scoreA, // teamDeaths
         !aWinsThisMap,
       );
 
@@ -96,6 +94,40 @@ export class Dota2SimulatorService implements IMatchSimulator {
     };
   }
 
+  // Залежність рахунку від сили команди
+  private simulateGameScore(
+    winnerIsA: boolean,
+    expectedProbA: number,
+    durationMinutes: number,
+  ): { scoreA: number; scoreB: number } {
+    const winnerProb = winnerIsA ? expectedProbA : 1 - expectedProbA;
+    const rand = Math.random();
+
+    let winnerKpm = 0; // Кіли за хвилину для переможця
+    let loserKpm = 0; // Кіли за хвилину для переможеного
+
+    if (winnerProb > 0.75) {
+      // Розгром (фаворит швидко і сильно душить)
+      winnerKpm = 0.9 + rand * 0.3; // 0.9 - 1.2
+      loserKpm = 0.2 + rand * 0.2; // 0.2 - 0.4
+    } else if (winnerProb < 0.6) {
+      // Рівний матч (багато бійок з обох сторін)
+      winnerKpm = 0.7 + rand * 0.2; // 0.7 - 0.9
+      loserKpm = 0.5 + rand * 0.3; // 0.5 - 0.8
+    } else {
+      // Стандартний матч
+      winnerKpm = 0.8 + rand * 0.2; // 0.8 - 1.0
+      loserKpm = 0.35 + rand * 0.25; // 0.35 - 0.60
+    }
+
+    const winnerKills = Math.floor(durationMinutes * winnerKpm);
+    const loserKills = Math.floor(durationMinutes * loserKpm);
+
+    return winnerIsA
+      ? { scoreA: winnerKills, scoreB: loserKills }
+      : { scoreA: loserKills, scoreB: winnerKills };
+  }
+
   private initTeamStats(team: TeamInput): Dota2PlayerStat[] {
     return team.players.map((participant) => ({
       playerId: participant.id,
@@ -114,79 +146,85 @@ export class Dota2SimulatorService implements IMatchSimulator {
     teamStats: Dota2PlayerStat[],
     players: PlayerInput[],
     durationMinutes: number,
+    teamKills: number,
+    teamDeaths: number,
     isWinner: boolean,
   ) {
-    const totalKills = Math.floor(durationMinutes * (isWinner ? 0.9 : 0.4));
-
-    // 1. Смарт-розподіл ролей (Fallback).
-    // Якщо ролі в БД не вказані, автоматично роздаємо їх по рейтингу
-    // (найбільший рейтинг = POS_1, найменший = POS_5)
     const sortedPlayers = [...players].sort((a, b) => b.rating - a.rating);
     const fallbackRoles = ['POS_1', 'POS_2', 'POS_3', 'POS_4', 'POS_5'];
 
-    const playersWithForm = players.map((participant) => {
-      const dailyForm = Math.random() * 0.6 + 0.7;
-      const playerRating =
-        teamStats.find((s) => s.playerId === participant.id)?.rating || 1000;
-
-      // Визначаємо роль: або з БД, або фолбек
+    // 1. Рахуємо вагу кожного гравця
+    const playersTemp = players.map((participant) => {
+      const dailyForm = Math.random() * 0.15 + 0.925;
       let role = participant.inGameRole;
+
       if (!role || !this.ROLE_MULTIPLIERS[role]) {
         const index = sortedPlayers.findIndex((sp) => sp.id === participant.id);
         role = fallbackRoles[index] || 'POS_5';
       }
 
-      const effectiveRating = Math.pow(playerRating * dailyForm, 0.9);
-      return { id: participant.id, effectiveRating, role };
+      const effectiveRating = Math.pow(participant.rating * dailyForm, 0.9);
+      const mult = this.ROLE_MULTIPLIERS[role];
+
+      return {
+        id: participant.id,
+        role,
+        weightK: effectiveRating * mult.kills,
+        weightD: mult.deaths * (1000 / effectiveRating),
+        weightA: mult.assists,
+        multGpm: mult.gpm,
+      };
     });
 
-    // 2. Рахуємо сумарний рейтинг для пропорцій (як і раніше)
-    const totalEffective = playersWithForm.reduce(
-      (sum, participant) => sum + participant.effectiveRating,
-      0,
-    );
+    const sumWeightK = playersTemp.reduce((acc, p) => acc + p.weightK, 0);
+    const sumWeightD = playersTemp.reduce((acc, p) => acc + p.weightD, 0);
+    const sumWeightA = playersTemp.reduce((acc, p) => acc + p.weightA, 0);
 
-    // 3. Застосовуємо множники
-    playersWithForm.forEach((playerForm) => {
-      const statIndex = teamStats.findIndex(
-        (s) => s.playerId === playerForm.id,
-      );
+    let currentKills = 0;
+    let currentDeaths = 0;
+    let currentAssists = 0;
+
+    // У Доті в середньому 1 кіл = 1.8-2.5 асистів
+    const targetAssists = Math.floor(teamKills * (1.8 + Math.random() * 0.7));
+
+    // 2. Розподіляємо пули
+    playersTemp.forEach((p, i) => {
+      const statIndex = teamStats.findIndex((s) => s.playerId === p.id);
       if (statIndex === -1) return;
 
-      const multipliers =
-        this.ROLE_MULTIPLIERS[playerForm.role] ||
-        this.ROLE_MULTIPLIERS['POS_3'];
-      const share = playerForm.effectiveRating / totalEffective;
+      let kills = Math.round((p.weightK / sumWeightK) * teamKills);
+      let deaths = Math.round((p.weightD / sumWeightD) * teamDeaths);
+      let assists = Math.round((p.weightA / sumWeightA) * targetAssists);
 
-      // КІЛИ: Базова частка * Множник ролі
-      let kills = Math.round(totalKills * share * multipliers.kills);
-      kills += Math.floor(Math.random() * 3) - 1;
-      if (kills < 0) kills = 0;
+      // Коригування залишків для останнього гравця
+      if (i === playersTemp.length - 1) {
+        kills = teamKills - currentKills;
+        deaths = teamDeaths - currentDeaths;
+        assists = targetAssists - currentAssists;
+      }
 
-      // СМЕРТІ: Залежать від ролі (сапорти вмирають частіше)
-      const baseDeaths = Math.floor(Math.random() * 8) + (isWinner ? 2 : 6);
-      const deaths = Math.floor(baseDeaths * multipliers.deaths);
+      currentKills += kills;
+      currentDeaths += deaths;
+      currentAssists += assists;
 
-      // АСИСТИ: Сапорти отримують буст
-      const baseAssists = Math.floor(totalKills * 0.4 * Math.random()) + 4;
-      const assists = Math.floor(baseAssists * multipliers.assists);
-      // Шкода: Кіли + Асисти + Рандом
-      const baseDamage = kills * 1200 + assists * 700 + Math.random() * 5000;
-      const damage = Math.floor(baseDamage * multipliers.kills);
+      // Урон = участь у вбивствах + базова шкода в хвилину за роль
+      const damagePerMin = p.role === 'POS_1' || p.role === 'POS_2' ? 650 : 300;
+      const damage = Math.floor(
+        kills * 1100 +
+          assists * 600 +
+          durationMinutes * damagePerMin * (0.8 + Math.random() * 0.4),
+      );
 
-      // GPM / XPM: Жорстка прив'язка до ролі
       const baseGpm = isWinner ? 550 : 350;
-      // Додаємо рандом, але рольовий множник вирішує все
-      const gpm = Math.floor((baseGpm + Math.random() * 100) * multipliers.gpm);
-
+      const gpm = Math.floor((baseGpm + (Math.random() * 80 - 40)) * p.multGpm);
       const netWorth = gpm * durationMinutes;
 
-      teamStats[statIndex].kills += kills;
-      teamStats[statIndex].deaths += deaths;
-      teamStats[statIndex].assists += assists;
-      teamStats[statIndex].damage += damage;
+      teamStats[statIndex].kills += Math.max(0, kills);
+      teamStats[statIndex].deaths += Math.max(0, deaths);
+      teamStats[statIndex].assists += Math.max(0, assists);
+      teamStats[statIndex].damage += Math.max(0, damage);
       teamStats[statIndex].gpm = gpm;
-      teamStats[statIndex].xpm = Math.floor(gpm * 1.1);
+      teamStats[statIndex].xpm = Math.floor(gpm * 1.15); // XPM зазвичай трохи вищий за GPM
       teamStats[statIndex].netWorth = netWorth;
     });
   }

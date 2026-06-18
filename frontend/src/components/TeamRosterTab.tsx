@@ -92,7 +92,6 @@ export default function TeamRosterTab({
           <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 shadow-xl space-y-6">
             <h3 className="text-lg font-black text-slate-300 flex items-center gap-2 border-b border-slate-800 pb-3">
               <UserPlus size={18} className="text-slate-400" /> Запасні гравці
-              (Substitutes)
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 w-full">
               {substitutes.map((sub) => (

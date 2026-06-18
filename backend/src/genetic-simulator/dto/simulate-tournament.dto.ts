@@ -20,7 +20,7 @@ export class SimulateTournamentDto {
   tournamentId: string;
 
   @ApiProperty({
-    example: 100,
+    example: 50,
     description: 'Кількість популяцій (симуляцій) для прогону алгоритму',
   })
   @IsInt()
@@ -42,7 +42,7 @@ export class SimulateTournamentDto {
   isDryRun?: boolean = true;
 
   @ApiPropertyOptional({
-    example: 20,
+    example: 15,
     description:
       'Кількість поколінь (еволюційних циклів). Впливає на глибину пошуку.',
   })

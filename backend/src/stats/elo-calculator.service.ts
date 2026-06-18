@@ -16,8 +16,10 @@ export class EloCalculatorService {
     if (stage === 'GROUP') baseK = 20;
     if (bracket === 'GRAND_FINAL') baseK = 40;
 
+    const isTopTier = ratingA > 3000 || ratingB > 3000;
+
     // 2. Якщо грають профи топ рівня (>3000 Elo), зменшуємо зміну рейтингу
-    if (ratingA > 3000 || ratingB > 3000) baseK = 16;
+    if (isTopTier) baseK = 16;
 
     const finalK = baseK * kFactor;
 
@@ -33,7 +35,10 @@ export class EloCalculatorService {
 
     // Бонус за чемпіонство
     if (bracket === 'GRAND_FINAL') {
-      const championshipBonus = Math.round(30 * kFactor);
+      // Для команд до 3000 Elo даємо солідний бонус (25), для еліти — символічний (8)
+      // Це дозволяє аутсайдерам швидко підніматися, а топам — залишатися в межах балансу
+      const baseBonus = isTopTier ? 8 : 25;
+      const championshipBonus = Math.round(baseBonus * kFactor);
       if (isAWinner) changeA += championshipBonus;
       else changeB += championshipBonus;
     }

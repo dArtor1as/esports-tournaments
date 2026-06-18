@@ -22,10 +22,10 @@ export class Cs2SimulatorService implements IMatchSimulator {
   ];
 
   private readonly ROLE_MULTIPLIERS: Record<string, Cs2RoleMultiplier> = {
-    SNIPER: { kills: 1.25, deaths: 0.7, assists: 0.5, hs_rate: 0.3 }, // Багато вбиває (AWP), рідко вмирає, мало асистів
-    ENTRY: { kills: 1.1, deaths: 1.3, assists: 1.0, hs_rate: 0.55 }, // Перший іде в бій,тому багато вбиває, але часто вмирає першим
-    IGL: { kills: 0.8, deaths: 1.05, assists: 1.3, hs_rate: 0.45 }, // Координує команду, фокус не на стрільбі, кидає флешки
-    SUPPORT: { kills: 0.9, deaths: 1.0, assists: 1.4, hs_rate: 0.4 }, // Сапорт: розкидки, грає на допомогу
+    SNIPER: { kills: 1.22, deaths: 0.8, assists: 0.5, hs_rate: 0.35 }, // Багато вбиває (AWP), рідко вмирає, мало асистів
+    ENTRY: { kills: 1.15, deaths: 1.15, assists: 0.9, hs_rate: 0.55 }, // Перший іде в бій,тому багато вбиває, але часто вмирає першим
+    IGL: { kills: 0.75, deaths: 1.05, assists: 1.2, hs_rate: 0.45 }, // Координує команду, фокус не на стрільбі, кидає флешки
+    SUPPORT: { kills: 0.85, deaths: 1.0, assists: 1.3, hs_rate: 0.4 }, // Сапорт: розкидки, грає на допомогу
     RIFLER: { kills: 1.0, deaths: 1.0, assists: 1.0, hs_rate: 0.5 }, // Стандартний гравець (якщо роль не вказана)
   };
   private readonly OVERTIME_PROBABILITY = 0.15;
@@ -91,19 +91,47 @@ export class Cs2SimulatorService implements IMatchSimulator {
     };
   }
 
-  private simulateMapScore(winnerIsA: boolean): {
-    scoreA: number;
-    scoreB: number;
-  } {
-    const isOvertime = Math.random() < this.OVERTIME_PROBABILITY;
-    const winnerScore = isOvertime ? 16 : this.ROUNDS_TO_WIN;
-    const loserScore = isOvertime
-      ? Math.floor(Math.random() * 2) + 14
-      : Math.floor(Math.random() * (this.ROUNDS_TO_WIN - 1));
+  private simulateMapScore(
+    winnerIsA: boolean,
+    expectedProbA: number = 0.5, // Тепер приймаємо ймовірність
+  ): { scoreA: number; scoreB: number } {
+    const isOvertime = Math.random() < 0.12;
+    if (isOvertime) {
+      const otLoser = Math.floor(Math.random() * 2) + 14;
+      return winnerIsA
+        ? { scoreA: 16, scoreB: otLoser }
+        : { scoreA: otLoser, scoreB: 16 };
+    }
+
+    // Визначаємо ймовірність переможця
+    const winnerProb = winnerIsA ? expectedProbA : 1 - expectedProbA;
+    let loserScore = 0;
+    const rand = Math.random();
+
+    // Якщо переможець був явним фаворитом (> 75% шанс)
+    if (winnerProb > 0.75) {
+      if (rand < 0.4)
+        loserScore = Math.floor(Math.random() * 4); // 0-3 (Розгром)
+      else if (rand < 0.8)
+        loserScore = Math.floor(Math.random() * 4) + 4; // 4-7
+      else loserScore = Math.floor(Math.random() * 5) + 8; // 8-12
+    }
+    // Якщо команди були рівні (< 60% шанс)
+    else if (winnerProb < 0.6) {
+      if (rand < 0.1)
+        loserScore = Math.floor(Math.random() * 4) + 4; // 4-7 (Рідкісний розгром)
+      else loserScore = Math.floor(Math.random() * 5) + 8; // 8-12 (Зазвичай щільна гра)
+    }
+    // Стандартний розподіл
+    else {
+      if (rand < 0.15) loserScore = Math.floor(Math.random() * 4);
+      else if (rand < 0.45) loserScore = Math.floor(Math.random() * 4) + 4;
+      else loserScore = Math.floor(Math.random() * 5) + 8;
+    }
 
     return winnerIsA
-      ? { scoreA: winnerScore, scoreB: loserScore }
-      : { scoreA: loserScore, scoreB: winnerScore };
+      ? { scoreA: 13, scoreB: loserScore }
+      : { scoreA: loserScore, scoreB: 13 };
   }
 
   private initTeamStats(team: TeamInput): Cs2PlayerStat[] {
@@ -126,20 +154,16 @@ export class Cs2SimulatorService implements IMatchSimulator {
     roundsWon: number,
     roundsLost: number,
   ) {
-    // За кожен виграний раунд команда робить ~4.2 кіла. За програний ~1.5 кіла.
-    const expectedKillsForWins = roundsWon * 4.2;
-    const expectedKillsForLosses = roundsLost * 1.5;
-    const mapTotalKills = Math.floor(
-      expectedKillsForWins + expectedKillsForLosses,
-    );
+    // Фіксовані пули для команди
+    const targetKills = Math.round(roundsWon * 4.3 + roundsLost * 1.8);
+    const targetDeaths = Math.round(roundsWon * 1.8 + roundsLost * 4.3);
 
     const sortedPlayers = [...players].sort((a, b) => b.rating - a.rating);
     const fallbackRoles = ['SNIPER', 'RIFLER', 'ENTRY', 'SUPPORT', 'IGL'];
 
-    // Рахуємо "Щоденну форму"
-    const playersWithForm = players.map((participant) => {
-      const dailyForm = Math.random() * 0.6 + 0.7;
-
+    // Рахуємо "вагу" кожного гравця для кілів і смертей
+    const playersTemp = players.map((participant) => {
+      const dailyForm = Math.random() * 0.3 + 0.85;
       let role = participant.inGameRole;
       if (!role || !this.ROLE_MULTIPLIERS[role]) {
         const index = sortedPlayers.findIndex((sp) => sp.id === participant.id);
@@ -147,53 +171,60 @@ export class Cs2SimulatorService implements IMatchSimulator {
       }
 
       const effectiveRating = Math.pow(participant.rating * dailyForm, 0.8);
-      return { id: participant.id, effectiveRating, role };
-    });
-    const totalEffective = playersWithForm.reduce(
-      (sum, participant) => sum + participant.effectiveRating,
-      0,
-    );
+      const mult = this.ROLE_MULTIPLIERS[role];
 
-    playersWithForm.forEach((playerForm) => {
-      const statIndex = teamStats.findIndex(
-        (s) => s.playerId === playerForm.id,
-      );
+      return {
+        id: participant.id,
+        role,
+        // Вага кілів: залежить від рейтингу та ролі
+        weightK: effectiveRating * mult.kills,
+        // Вага смертей: залежить від ролі. Гравці з меншим рейтингом вмирають трохи частіше
+        weightD: mult.deaths * (1000 / effectiveRating),
+        assistsMult: mult.assists,
+        hsRate: mult.hs_rate,
+      };
+    });
+
+    const sumWeightK = playersTemp.reduce((acc, p) => acc + p.weightK, 0);
+    const sumWeightD = playersTemp.reduce((acc, p) => acc + p.weightD, 0);
+
+    let currentKills = 0;
+    let currentDeaths = 0;
+
+    // Розподіляємо пули з точністю до 1
+    playersTemp.forEach((p, i) => {
+      const statIndex = teamStats.findIndex((s) => s.playerId === p.id);
       if (statIndex === -1) return;
 
-      const multipliers =
-        this.ROLE_MULTIPLIERS[playerForm.role] ||
-        this.ROLE_MULTIPLIERS['RIFLER'];
-      const share = playerForm.effectiveRating / totalEffective;
-      // Застосовуємо множники ролі
-      let kills = Math.round(mapTotalKills * share * multipliers.kills);
-      kills += Math.floor(Math.random() * 5) - 2;
-      if (kills < 0) kills = 0;
+      let kills = Math.round((p.weightK / sumWeightK) * targetKills);
+      let deaths = Math.round((p.weightD / sumWeightD) * targetDeaths);
 
-      const baseDeaths = roundsLost * 0.8 + roundsWon * 0.3;
-      const deaths = Math.floor(
-        (baseDeaths + Math.random() * 6 - 2) * multipliers.deaths,
-      );
-      const baseAssists = Math.floor(Math.random() * 6) + 2;
-      const assists = Math.floor(baseAssists * multipliers.assists);
+      // Останній гравець забирає залишок від округлення, щоб сума була ідеальною
+      if (i === playersTemp.length - 1) {
+        kills = targetKills - currentKills;
+        deaths = targetDeaths - currentDeaths;
+      }
+      currentKills += kills;
+      currentDeaths += deaths;
 
-      // Рахуємо ADR (Average Damage per Round)
-      // 1 кіл ~ 100 урону. 1 асист ~ 45 урону. Додаємо рандомний урон без вбивств.
-      const totalDamage = kills * 105 + assists * 45 + Math.random() * 250;
-
+      const assists = Math.round(targetKills * 0.2 * p.assistsMult);
       const totalRounds = roundsWon + roundsLost;
-      const adr = Math.floor(totalDamage / totalRounds);
+      const nonKillDamage =
+        Math.floor(Math.random() * 17 * totalRounds) + totalRounds * 8;
+      // Урон за кіл зменшено зі 105 до 95, щоб компенсувати додавання базової нелетальної шкоди
+      const totalDamage = kills * 95 + assists * 45 + nonKillDamage;
 
-      // Рахуємо Хедшоти з урахуванням ролі (снайпери б'ють у тіло)
-      const hsPercentage = multipliers.hs_rate + (Math.random() * 0.1 - 0.05);
-      const headshots = Math.floor(kills * hsPercentage);
-
-      teamStats[statIndex].kills = kills;
-      teamStats[statIndex].deaths = deaths;
-      teamStats[statIndex].assists = assists;
-      teamStats[statIndex].damage = Math.round(totalDamage);
-      teamStats[statIndex].headshots = headshots;
-      teamStats[statIndex].adr = adr;
-      teamStats[statIndex].roundsPlayed = totalRounds;
+      teamStats[statIndex].kills += Math.max(0, kills);
+      teamStats[statIndex].deaths += Math.max(0, deaths);
+      teamStats[statIndex].assists += Math.max(0, assists);
+      teamStats[statIndex].damage += Math.round(totalDamage);
+      teamStats[statIndex].headshots += Math.floor(
+        Math.max(0, kills) * (p.hsRate + (Math.random() * 0.1 - 0.05)),
+      );
+      teamStats[statIndex].adr = Math.floor(
+        teamStats[statIndex].damage / totalRounds,
+      );
+      teamStats[statIndex].roundsPlayed += totalRounds;
     });
   }
 }

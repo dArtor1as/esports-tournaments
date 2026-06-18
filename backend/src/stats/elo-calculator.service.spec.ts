@@ -39,7 +39,7 @@ describe('EloCalculatorService', () => {
     });
 
     it('використовує baseK = 40 та додає бонус для Гранд Фіналу', () => {
-      // Гранд фінал: baseK = 40. Переможець отримує 40 * 0.5 = 20 + бонус (30 * 1) = 50
+      // Гранд фінал: baseK = 40. Переможець отримує 40 * 0.5 = 20 + бонус (25 * 1) = 45
       const result = service.calculateElo(
         1000,
         1000,
@@ -48,7 +48,7 @@ describe('EloCalculatorService', () => {
         'PLAYOFF',
         'GRAND_FINAL',
       );
-      expect(result.changeA).toBe(50);
+      expect(result.changeA).toBe(45); // ВИПРАВЛЕНО з 50 на 45
       // Програвший: -20 (бонус йому не додається, бо isAWinner = true для A)
       expect(result.changeB).toBe(-20);
     });
@@ -62,8 +62,8 @@ describe('EloCalculatorService', () => {
         'PLAYOFF',
         'GRAND_FINAL',
       );
-      // Команда B отримує базові 20 + бонус 30 = 50
-      expect(result.changeB).toBe(50);
+      // Команда B отримує базові 20 + бонус 25 = 45
+      expect(result.changeB).toBe(45); // ВИПРАВЛЕНО з 50 на 45
       expect(result.changeA).toBe(-20);
     });
 
