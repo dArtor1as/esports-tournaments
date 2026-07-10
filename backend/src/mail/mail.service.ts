@@ -23,7 +23,6 @@ export class MailService {
         <a href="${inviteLink}" style="padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">
           Прийняти запрошення
         </a>
-        <p><small>Якщо кнопка не працює, скопіюйте це посилання: ${inviteLink}</small></p>
       `,
     });
   }

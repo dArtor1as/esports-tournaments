@@ -45,7 +45,7 @@ export class GeneticSimulatorService {
       );
 
     const isDryRun = dto.isDryRun ?? true;
-    const generations = dto.generations || 20;
+    const generations = dto.generations || 15;
 
     // 2. Валідація та кеш (Оркестрація Side-effects)
     if (!isDryRun) {
@@ -112,7 +112,7 @@ export class GeneticSimulatorService {
       );
 
     const isDryRun = dto.isDryRun ?? true;
-    const generations = dto.generations || 20;
+    const generations = dto.generations || 15;
 
     // 1. Валідація та кеш
     if (!isDryRun) {

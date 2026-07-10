@@ -1,4 +1,4 @@
-import { Info, GitBranch, Sparkles, CheckCircle } from 'lucide-react';
+import { Info, GitBranch, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import TournamentBracket from '@/components/TournamentBracket';
 
@@ -40,11 +40,11 @@ export default function GaResultsTab({
           <Info className="text-blue-400 mt-0.5 flex-shrink-0" size={18} />
           <div>
             <h4 className="text-sm font-bold text-blue-400 uppercase tracking-wider">
-              Дані тимчасові
+              Режим прогнозування
             </h4>
             <p className="text-xs text-slate-400">
-              Цей прогноз зберігається локально. Він зникне, якщо ви закриєте цю
-              вкладку.
+              Цей результат автоматично збережено в Журналі симуляцій. Він є
+              виключно аналітичним і не впливає на офіційний рейтинг гравців.
             </p>
           </div>
         </div>
@@ -84,13 +84,12 @@ export default function GaResultsTab({
       ) : (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
           <h3 className="text-lg font-black text-white flex items-center gap-2 mb-6 border-b border-slate-800 pb-4">
-            <GitBranch size={18} className="text-blue-400" />{' '}
-            <Sparkles size={16} className="text-blue-400" /> Гіпотетична сітка
-            від AI
+            <GitBranch size={18} className="text-blue-400" /> Гіпотетична сітка
           </h3>
           <TournamentBracket
             matches={enrichedBracket}
             bracketType={bracketType}
+            isForecast={true}
           />
         </div>
       )}

@@ -13,7 +13,7 @@ import TournamentParticipantsTab from '@/components/tournament/TournamentPartici
 import TournamentGaSimulatorTab from '@/components/tournament/TournamentGaSimulatorTab';
 import GaResultsTab from '@/components/tournament/GaResultsTab';
 import { useMyProfilesData } from '@/hooks/useProfileData';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import TournamentGaHistoryTab from '@/components/tournament/TournamentGaHistoryTab';
 
 export default function TournamentDetails() {
@@ -32,26 +32,47 @@ export default function TournamentDetails() {
   } = useTournamentDetailsData(id);
 
   const [activeTab, setActiveTab] = useState('bracket');
-  const [populations, setPopulations] = useState('100');
-  const [generations, setGenerations] = useState('20');
+  const [populations, setPopulations] = useState('50');
+  const [generations, setGenerations] = useState('10');
   const [simLoading, setSimLoading] = useState(false);
   const [bracketLoading, setBracketLoading] = useState(false);
-
-  // Зберігаємо результати в localStorage (Forecast і Live-Fitness)
-  const [predictionResult, setPredictionResult] = useState<any>(() => {
-    const saved = localStorage.getItem(`forecast_${id}`);
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [predictionResult, setPredictionResult] = useState<any>(null);
 
   const { data: myProfiles = [] } = useMyProfilesData(!!currentUser);
 
+  const isCreator = tournament?.creatorId === currentUser?.id;
+  const isAdmin = currentUser?.role === 'ADMIN';
+  const isTournamentOver =
+    tournament?.status === 'finished' || tournament?.status === 'cancelled';
+
+  // Додаємо запит для отримання запусків ГА
+  const { data: runsData } = useQuery({
+    queryKey: ['ga-runs', id],
+    queryFn: async () => {
+      const res = await api.get(`/genetic-simulator/tournament/${id}/runs`);
+      return res.data;
+    },
+    enabled: !!id && (isCreator || isAdmin), // Робимо запит тільки якщо це адмін/творець
+  });
+
+  // Автоматично підтягуємо останній ПРОГНОЗ (isDryRun === true) з БД, якщо він є
   useEffect(() => {
-    if (predictionResult) {
-      localStorage.setItem(`forecast_${id}`, JSON.stringify(predictionResult));
-    } else {
-      localStorage.removeItem(`forecast_${id}`);
+    if (runsData && runsData.length > 0 && !predictionResult) {
+      // Шукаємо найсвіжіший запис прогнозу
+      const latestForecast = runsData.find((r: any) => r.isDryRun === true);
+
+      if (latestForecast && latestForecast.predictedData) {
+        setPredictionResult({
+          isLive: false,
+          bestFitnessScore: latestForecast.fitnessScore,
+          bracket: latestForecast.predictedData.bracket,
+          standings: latestForecast.predictedData.standings,
+          statsMessage:
+            'Завантажено останній прогноз із журналу симуляцій (БД).',
+        });
+      }
     }
-  }, [predictionResult, id]);
+  }, [runsData]); // Спрацює, коли завантажаться дані з БД
 
   if (isLoading)
     return (
@@ -65,11 +86,6 @@ export default function TournamentDetails() {
         Турнір не знайдено.
       </div>
     );
-
-  const isCreator = tournament.creatorId === currentUser?.id;
-  const isAdmin = currentUser?.role === 'ADMIN';
-  const isTournamentOver =
-    tournament.status === 'finished' || tournament.status === 'cancelled';
 
   const handleGenerateBracket = async () => {
     setBracketLoading(true);
@@ -132,6 +148,10 @@ export default function TournamentDetails() {
         await refetchTournament();
         await queryClient.invalidateQueries({ queryKey: ['tournament'] });
         await queryClient.invalidateQueries({ queryKey: ['tournaments'] });
+        await queryClient.invalidateQueries({ queryKey: ['allTeams'] });
+        await queryClient.invalidateQueries({
+          queryKey: ['playersLeaderboard'],
+        });
       }
 
       setActiveTab('ga-forecast-results'); // Завжди перекидаємо на вкладку результатів, щоб показати Фітнес
@@ -273,6 +293,25 @@ export default function TournamentDetails() {
       );
     }
   };
+  // Закриваємо вкладку прогнозу і повертаємося на вкладку симулятора
+  const handleViewHistoricalRun = (run: any) => {
+    if (!run.predictedData) {
+      toast.error('Дані прогнозу відсутні для цього запуску.');
+      return;
+    }
+
+    // Встановлюємо вибраний прогноз у стейт
+    setPredictionResult({
+      isLive: !run.isDryRun,
+      bestFitnessScore: run.fitnessScore,
+      bracket: run.predictedData.bracket,
+      standings: run.predictedData.standings,
+      statsMessage: `Архівний прогноз від ${new Date(run.createdAt).toLocaleString('uk-UA')}`,
+    });
+
+    // Перекидаємо користувача на вкладку з результатами
+    setActiveTab('ga-forecast-results');
+  };
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500">
@@ -389,7 +428,10 @@ export default function TournamentDetails() {
           />
         </TabsContent>
         <TabsContent value="ga-history">
-          <TournamentGaHistoryTab tournamentId={tournament.id} />
+          <TournamentGaHistoryTab
+            tournamentId={tournament.id}
+            onViewRun={handleViewHistoricalRun}
+          />
         </TabsContent>
 
         {predictionResult && (

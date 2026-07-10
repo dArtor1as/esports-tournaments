@@ -92,7 +92,7 @@ export default function MatchPostGameStats({ match }: MatchPostGameStatsProps) {
           const s = agg[pid];
           if (s.mapCount > 0) {
             s.adr = s.adrSum / s.mapCount;
-            s.headshots = s.hsSum / s.mapCount;
+            s.headshots = s.hsSum;
             s.gpm = s.gpmSum / s.mapCount;
             s.xpm = s.xpmSum / s.mapCount;
             s.netWorth = s.nwSum / s.mapCount;

@@ -103,7 +103,7 @@ export default function TournamentGaSimulatorTab({
                 onClick={() => onRunAlgorithm(true)}
                 className="w-full mt-6 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider"
               >
-                {simLoading ? 'Процесинг ШІ...' : 'Запустити AI Forecast'}
+                {simLoading ? 'Процесинг ШІ...' : 'Запустити прогноз GA '}
               </Button>
             </div>
 
